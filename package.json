@@ -1,0 +1,28 @@
+{
+  "name": "dsh-forge",
+  "version": "0.1.0",
+  "description": "Plugin-combination analysis for the DeepSeek Harness: dependency trees, conflict detection, risk scoring with prediction, visualization, and combination simulation.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./core": "./core/index.js",
+    "./package.json": "./package.json"
+  },
+  "license": "MIT",
+  "files": [
+    "src",
+    "core",
+    "prompt",
+    "data",
+    "README.md"
+  ],
+  "dependencies": {
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6",
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1"
+  },
+  "packageManager": "pnpm@11.21.0+sha512.521705bce689924eac72f5a3587122f362689ef6571e55ba80076fd637c11132ecffada26fad4ea79c485bfddbfd3d5a2a5b05805a77e893de71ec8a6cca3bb1"
+}

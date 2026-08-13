@@ -1,0 +1,825 @@
+flowchart LR
+  classDef blocking fill:#d64545,color:#fff,stroke:#8b1a1a
+  classDef high fill:#e67e22,color:#fff,stroke:#a04000
+  classDef medium fill:#f1c40f,color:#333,stroke:#9a7d0a
+  classDef low fill:#27ae60,color:#fff,stroke:#145a32
+  classDef disabled fill:#95a5a6,color:#fff,stroke:#5d6d7e
+  subgraph _deepseek-ai_dsh-base["@deepseek-ai/dsh-base"]
+    timer["timer
+cordis-plugin-timer 1.1.3"]:::low
+    llm["llm
+dsh-llm 0.1.0-rc.6"]:::low
+    session["session
+dsh-session 0.1.0-rc.6"]:::low
+    typert["typert
+dsh-typert-registry 0.1.0-rc.6"]:::low
+    typert-loader["typert-loader
+dsh-typert-loader 0.1.0-rc.6"]:::low
+    typert-gateway["typert-gateway
+dsh-api-gateway 0.1.0-rc.6"]:::low
+    session-title["session-title
+dsh-session-title 0.1.0-rc.6"]:::low
+    session-title-llm["session-title-llm
+dsh-session-title-first-prompt-llm 0.1.0-rc.6"]:::low
+    user-questions["user-questions
+dsh-user-questions 0.1.0-rc.6"]:::low
+    agent["agent
+dsh-agent 0.1.0-rc.6"]:::low
+    agent-default-model["agent-default-model
+dsh-agent-default-model 0.1.0-rc.6"]:::low
+    jobs["jobs
+dsh-jobs-local 0.1.0-rc.6"]:::low
+    llm-retry["llm-retry
+dsh-llm-retry 0.1.0-rc.6"]:::low
+    settings["settings
+dsh-settings-file 0.1.0-rc.6"]:::low
+    credentials["credentials
+dsh-credentials-local 0.1.0-rc.6"]:::low
+    llm-pi-ai["llm-pi-ai
+dsh-llm-pi-ai 0.1.0-rc.6"]:::low
+    session-persistence-jsonl["session-persistence-jsonl
+dsh-session-persistence-jsonl 0.1.0-rc.6"]:::low
+    attachment-local["attachment-local
+dsh-attachment-local 0.1.0-rc.6"]:::low
+    session-projection["session-projection
+dsh-session-projection 0.1.0-rc.6"]:::low
+    session-telemetry-otel["session-telemetry-otel
+dsh-session-telemetry-otel 0.1.0-rc.6"]:::low
+    subprocess["subprocess
+dsh-subprocess-local 0.1.0-rc.6"]:::low
+    sandbox["sandbox
+dsh-sandbox-local 0.1.0-rc.6"]:::low
+    sandbox-policy["sandbox-policy
+dsh-sandbox-policy 0.1.0-rc.6"]:::low
+    bash-sandbox["bash-sandbox
+dsh-bash-sandbox 0.1.0-rc.6"]:::disabled
+    pwsh-sandbox["pwsh-sandbox
+dsh-pwsh-sandbox 0.1.0-rc.6"]:::low
+    approval["approval
+dsh-user-approval 0.1.0-rc.6"]:::low
+    permission["permission
+dsh-permission-presets 0.1.0-rc.6"]:::low
+    shell-env["shell-env
+dsh-shell-env 0.1.0-rc.6"]:::low
+    fs-observation-policy["fs-observation-policy
+dsh-fs-observation-policy 0.1.0-rc.6"]:::low
+    skill["skill
+dsh-skill 0.1.0-rc.6"]:::low
+    skill-badge["skill-badge
+dsh-skill-badge 0.1.0-rc.6"]:::disabled
+    commands["commands
+dsh-commands 0.1.0-rc.6"]:::low
+    command-feedback["command-feedback
+dsh-command-feedback 0.1.0-rc.6"]:::low
+    goal["goal
+dsh-goal 0.1.0-rc.6"]:::low
+    goal-round-driver["goal-round-driver
+dsh-goal-round-driver 0.1.0-rc.6"]:::low
+    command-goal["command-goal
+dsh-command-goal 0.1.0-rc.6"]:::low
+    token-meter["token-meter
+dsh-token-meter 0.1.0-rc.6"]:::low
+    subagent["subagent
+dsh-subagent 0.1.0-rc.6"]:::low
+    subagent-spawn-in-process["subagent-spawn-in-process
+dsh-subagent-spawn-in-process 0.1.0-rc.6"]:::low
+    subagent-fork-in-process["subagent-fork-in-process
+dsh-subagent-fork-in-process 0.1.0-rc.6"]:::low
+    tool-subagent-report["tool-subagent-report
+dsh-tool-subagent-report 0.1.0-rc.6"]:::low
+    timeout-policy["timeout-policy
+dsh-tool-call-timeout-policy 0.1.0-rc.6"]:::low
+    spill-local["spill-local
+dsh-spill-local 0.1.0-rc.6"]:::low
+    spill-policy["spill-policy
+dsh-spill-policy 0.1.0-rc.6"]:::low
+    session-checkpoint-policy["session-checkpoint-policy
+dsh-session-checkpoint-policy 0.1.0-rc.6"]:::low
+    repeat-tool-reminder["repeat-tool-reminder
+dsh-repeat-tool-reminder 0.1.0-rc.6"]:::low
+    web["web
+dsh-web 0.1.0-rc.6"]:::low
+    web-search-deepseek["web-search-deepseek
+dsh-web-search-deepseek 0.1.0-rc.6"]:::low
+    agent-loop["agent-loop
+dsh-agent-loop 0.1.0-rc.6"]:::low
+    fs-sandbox["fs-sandbox
+dsh-fs-sandbox 0.1.0-rc.6"]:::low
+    llm-deepseek["llm-deepseek
+dsh-llm-deepseek 0.1.0-rc.6"]:::low
+  end
+  subgraph _deepseek-ai_dsh-web-app["@deepseek-ai/dsh-web-app"]
+    hmr["hmr
+cordis-plugin-hmr 1.0.16"]:::disabled
+    session-query-sqlite["session-query-sqlite
+dsh-session-query-sqlite 0.1.0-rc.6"]:::low
+    tool-str-replace-editor["tool-str-replace-editor
+dsh-tool-str-replace-editor 0.1.0-rc.6"]:::disabled
+    tools["tools
+dsh-tools 0.1.0-rc.6"]:::low
+    system-prompt["system-prompt
+dsh-system-prompt 0.1.0-rc.6"]:::low
+    code-runtime["code-runtime
+dsh-code-runtime-worker-thread 0.1.0-rc.6"]:::low
+    storage["storage
+dsh-storage 0.1.0-rc.6"]:::low
+    storage-json["storage-json
+dsh-storage-json 0.1.0-rc.6"]:::low
+    storage-domain["storage-domain
+dsh-storage-domain 0.1.0-rc.6"]:::low
+    message-feedback["message-feedback
+dsh-message-feedback 0.1.0-rc.6"]:::low
+    session-log-download["session-log-download
+dsh-session-log-export 0.1.0-rc.6"]:::low
+    workspace["workspace
+dsh-workspace 0.1.0-rc.6"]:::low
+    session-projection-cache["session-projection-cache
+dsh-session-projection-cache 0.1.0-rc.6"]:::low
+    session-stats["session-stats
+dsh-session-stats 0.1.0-rc.6"]:::low
+    directory-picker["directory-picker
+dsh-host-directory-picker-auto 0.1.0-rc.6"]:::low
+    plugin-inventory["plugin-inventory
+dsh-host-plugin-inventory 0.1.0-rc.6"]:::low
+    api-gateway["api-gateway
+dsh-host-apiproxy 0.1.0-rc.6"]:::low
+    cordis-host-runner["cordis-host-runner
+dsh-cordis-host-runner 0.1.0-rc.6"]:::low
+    web-startup["web-startup
+dsh-web-app 0.1.0-rc.6"]:::low
+    webserver["webserver
+dsh-host-webserver 0.1.0-rc.6"]:::low
+    web-runtime["web-runtime
+dsh-web-app 0.1.0-rc.6"]:::low
+    client-hmr["client-hmr
+dsh-client-hmr 0.1.0-rc.6"]:::low
+    modules["modules
+dsh-client-modules 0.1.0-rc.6"]:::low
+    connection["connection
+dsh-client-connection 0.1.0-rc.6"]:::low
+    api-remotes["api-remotes
+dsh-api-remotes 0.1.0-rc.6"]:::low
+    client-runtime["client-runtime
+dsh-client-runtime 0.1.0-rc.6"]:::low
+    cordis-client-runner["cordis-client-runner
+dsh-cordis-client-runner 0.1.0-rc.6"]:::low
+    ui-theme["ui-theme
+dsh-client-ui-theme 0.1.0-rc.6"]:::low
+    locale["locale
+dsh-client-locale 0.1.0-rc.6"]:::low
+    ui-layout["ui-layout
+dsh-client-ui-layout 0.1.0-rc.6"]:::low
+    ui-sidebar["ui-sidebar
+dsh-client-ui-sidebar 0.1.0-rc.6"]:::low
+    ui-settings["ui-settings
+dsh-client-ui-settings 0.1.0-rc.6"]:::low
+    ui-settings-general["ui-settings-general
+dsh-client-ui-settings-general 0.1.0-rc.6"]:::low
+    ui-settings-models["ui-settings-models
+dsh-client-ui-settings-models 0.1.0-rc.6"]:::low
+    ui-settings-plugin-inventory["ui-settings-plugin-inventory
+dsh-client-ui-settings-plugin-inventory 0.1.0-rc.6"]:::low
+    ui-conversation["ui-conversation
+dsh-client-ui-conversation 0.1.0-rc.6"]:::low
+    ui-tool["ui-tool
+dsh-client-ui-tool 0.1.0-rc.6"]:::low
+    ui-cordis["ui-cordis
+dsh-client-ui-cordis 0.1.0-rc.6"]:::low
+    ui-workflow-run["ui-workflow-run
+dsh-client-ui-workflow-run 0.1.0-rc.6"]:::low
+    ui-deliverables["ui-deliverables
+dsh-client-ui-deliverables 0.1.0-rc.6"]:::low
+    ui-workspace["ui-workspace
+dsh-client-ui-workspace 0.1.0-rc.6"]:::low
+    ui-input-trigger["ui-input-trigger
+dsh-client-ui-input-trigger 0.1.0-rc.6"]:::low
+    ui-commands["ui-commands
+dsh-client-ui-commands 0.1.0-rc.6"]:::low
+    ui-skill["ui-skill
+dsh-client-ui-skill 0.1.0-rc.6"]:::low
+    ui-subagent["ui-subagent
+dsh-client-ui-subagent 0.1.0-rc.6"]:::low
+    ui-jobs["ui-jobs
+dsh-client-ui-jobs 0.1.0-rc.6"]:::low
+    ui-goal["ui-goal
+dsh-client-ui-goal 0.1.0-rc.6"]:::low
+    ui-message-feedback["ui-message-feedback
+dsh-client-ui-message-feedback 0.1.0-rc.6"]:::low
+    ui-model-selection["ui-model-selection
+dsh-client-ui-model-selection 0.1.0-rc.6"]:::low
+    ui-permission["ui-permission
+dsh-client-ui-permission-presets 0.1.0-rc.6"]:::low
+    ui-agent-preset["ui-agent-preset
+dsh-client-ui-agent-preset 0.1.0-rc.6"]:::low
+    ui-settings-plugins["ui-settings-plugins
+dsh-client-ui-settings-plugins 0.1.0-rc.6"]:::low
+    ui-plan["ui-plan
+dsh-client-ui-plan 0.1.0-rc.6"]:::low
+    ui-user-questions["ui-user-questions
+dsh-client-ui-user-questions 0.1.0-rc.6"]:::low
+    ui-trajectory["ui-trajectory
+dsh-client-ui-trajectory 0.1.0-rc.6"]:::low
+    agent-presets["agent-presets
+dsh-agent-presets 0.1.0-rc.6"]:::low
+  end
+  subgraph preset_standard["preset:standard"]
+    tool-bash["tool-bash
+dsh-tool-bash 0.1.0-rc.6"]:::disabled
+    tool-pwsh["tool-pwsh
+dsh-tool-pwsh 0.1.0-rc.6"]:::low
+    tool-jobs["tool-jobs
+dsh-tool-jobs 0.1.0-rc.6"]:::low
+    tool-fs["tool-fs
+dsh-tool-fs 0.1.0-rc.6"]:::low
+    tool-fs-search["tool-fs-search
+dsh-tool-fs-search 0.1.0-rc.6"]:::low
+    agent-instructions["agent-instructions
+dsh-agent-instructions 0.1.0-rc.6"]:::low
+    skill-filesystem["skill-filesystem
+dsh-skill-filesystem 0.1.0-rc.6"]:::low
+    tool-skill["tool-skill
+dsh-tool-skill 0.1.0-rc.6"]:::low
+    plan-mode["plan-mode
+dsh-plan-mode 0.1.0-rc.6"]:::low
+    compaction-basic["compaction-basic
+dsh-compaction-basic 0.1.0-rc.6"]:::low
+    command-compact["command-compact
+dsh-command-compact 0.1.0-rc.6"]:::low
+    tool-subagent-control["tool-subagent-control
+dsh-tool-subagent-control 0.1.0-rc.6"]:::low
+    tool-subagent-list-agents["tool-subagent-list-agents
+dsh-tool-subagent-control 0.1.0-rc.6"]:::low
+    tool-subagent["tool-subagent
+dsh-tool-subagent 0.1.0-rc.6"]:::low
+    tool-subagent-fork["tool-subagent-fork
+dsh-tool-subagent 0.1.0-rc.6"]:::low
+    workflow-worker-thread["workflow-worker-thread
+dsh-workflow-worker-thread 0.1.0-rc.6"]:::low
+    tool-workflow["tool-workflow
+dsh-tool-workflow 0.1.0-rc.6"]:::low
+    tool-result-pruner["tool-result-pruner
+dsh-compaction-tool-result-pruner 0.1.0-rc.6"]:::low
+    tool-todo["tool-todo
+dsh-tool-todo 0.1.0-rc.6"]:::low
+    tool-goal["tool-goal
+dsh-tool-goal 0.1.0-rc.6"]:::low
+    tool-ralph["tool-ralph
+dsh-tool-ralph 0.1.0-rc.6"]:::low
+    tool-web["tool-web
+dsh-tool-web 0.1.0-rc.6"]:::low
+    tool-subagent-codex["tool-subagent-codex
+dsh-tool-subagent 0.1.0-rc.6"]:::disabled
+    tool-subagent-claude-code["tool-subagent-claude-code
+dsh-tool-subagent 0.1.0-rc.6"]:::disabled
+  end
+  subgraph profile-patch["profile-patch"]
+  end
+  hmr -->|^1.1.3| @deepseek-ai/cordis-plugin-timer:::peer
+  session -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  typert-loader -->|^0.1.0-rc.6| @deepseek-ai/dsh-typert-registry:::peer
+  typert-gateway -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-connection:::peer
+  typert-gateway -->|^0.1.0-rc.6| @deepseek-ai/dsh-typert-registry:::peer
+  session-title -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  session-title -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  session-title -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-projection:::peer
+  session-title-llm -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  session-title-llm -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-title:::peer
+  session-title-llm -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  user-questions -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  user-questions -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  agent -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  agent -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  agent -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  agent-default-model -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  agent-default-model -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  jobs -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  llm-retry -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  llm-retry -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  llm-retry -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  llm-pi-ai -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  session-persistence-jsonl -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  session-query-sqlite -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  session-projection -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  session-telemetry-otel -->|^0.1.0-rc.6| @deepseek-ai/dsh-command-feedback:::peer
+  session-telemetry-otel -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  session-telemetry-otel -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  sandbox -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  sandbox -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  sandbox-policy -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  sandbox-policy -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  sandbox-policy -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  bash-sandbox -->|^0.1.0-rc.6| @deepseek-ai/dsh-sandbox-policy:::peer
+  pwsh-sandbox -->|^0.1.0-rc.6| @deepseek-ai/dsh-sandbox-policy:::peer
+  approval -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  approval -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  approval -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  approval -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  permission -->|^0.1.0-rc.6| @deepseek-ai/dsh-commands:::peer
+  permission -->|^0.1.0-rc.6| @deepseek-ai/dsh-sandbox-policy:::peer
+  permission -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  permission -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-projection:::peer
+  permission -->|^0.1.0-rc.6| @deepseek-ai/dsh-user-approval:::peer
+  shell-env -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  tool-bash -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  tool-bash -->|^0.1.0-rc.6| @deepseek-ai/dsh-shell-env:::peer
+  tool-bash -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  tool-bash -->|^0.1.0-rc.6| @deepseek-ai/dsh-sandbox-policy:::peer
+  tool-bash -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  tool-bash -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  tool-bash -->|^0.1.0-rc.6| @deepseek-ai/dsh-user-approval:::peer
+  tool-pwsh -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  tool-pwsh -->|^0.1.0-rc.6| @deepseek-ai/dsh-shell-env:::peer
+  tool-pwsh -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  tool-pwsh -->|^0.1.0-rc.6| @deepseek-ai/dsh-sandbox-policy:::peer
+  tool-pwsh -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  tool-pwsh -->|^0.1.0-rc.6| @deepseek-ai/dsh-user-approval:::peer
+  tool-pwsh -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  tool-jobs -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  tool-jobs -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  tool-jobs -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  tool-jobs -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  tool-fs -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  tool-fs -->|^0.1.0-rc.6| @deepseek-ai/dsh-sandbox-policy:::peer
+  tool-fs -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  tool-fs -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  tool-fs -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  tool-fs -->|^0.1.0-rc.6| @deepseek-ai/dsh-user-approval:::peer
+  tool-fs-search -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  tool-fs-search -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  tool-fs-search -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  tool-fs-search -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  agent-instructions -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  agent-instructions -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  agent-instructions -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  agent-instructions -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  skill -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  skill-filesystem -->|^0.1.0-rc.6| @deepseek-ai/dsh-skill:::peer
+  skill-badge -->|^0.1.0-rc.6| @deepseek-ai/dsh-skill:::peer
+  tool-skill -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  tool-skill -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  tool-skill -->|^0.1.0-rc.6| @deepseek-ai/dsh-skill:::peer
+  tool-skill -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  commands -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  commands -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  command-feedback -->|^0.1.0-rc.6| @deepseek-ai/dsh-commands:::peer
+  command-feedback -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  goal -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  goal -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-projection:::peer
+  goal -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  goal -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  goal-round-driver -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  goal-round-driver -->|^0.1.0-rc.6| @deepseek-ai/dsh-goal:::peer
+  goal-round-driver -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  goal-round-driver -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  command-goal -->|^0.1.0-rc.6| @deepseek-ai/dsh-goal:::peer
+  command-goal -->|^0.1.0-rc.6| @deepseek-ai/dsh-commands:::peer
+  plan-mode -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  plan-mode -->|^0.1.0-rc.6| @deepseek-ai/dsh-commands:::peer
+  plan-mode -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  plan-mode -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  plan-mode -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-projection:::peer
+  plan-mode -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  plan-mode -->|^0.1.0-rc.6| @deepseek-ai/dsh-user-questions:::peer
+  plan-mode -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  token-meter -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  token-meter -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  token-meter -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-projection:::peer
+  compaction-basic -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  compaction-basic -->|^0.1.0-rc.6| @deepseek-ai/dsh-commands:::peer
+  compaction-basic -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  compaction-basic -->|^0.1.0-rc.6| @deepseek-ai/dsh-token-meter:::peer
+  compaction-basic -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  compaction-basic -->|^0.1.0-rc.6| @deepseek-ai/dsh-compaction-tool-result-pruner:::peer
+  command-compact -->|^0.1.0-rc.6| @deepseek-ai/dsh-commands:::peer
+  subagent -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  subagent -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent-presets:::peer
+  subagent -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  subagent -->|^0.1.0-rc.6| @deepseek-ai/dsh-sandbox-policy:::peer
+  subagent -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  subagent -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-projection:::peer
+  subagent -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-projection-cache:::peer
+  subagent -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  subagent -->|^0.1.0-rc.6| @deepseek-ai/dsh-user-approval:::peer
+  subagent-spawn-in-process -->|^0.1.0-rc.6| @deepseek-ai/dsh-subagent:::peer
+  subagent-fork-in-process -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  subagent-fork-in-process -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  subagent-fork-in-process -->|^0.1.0-rc.6| @deepseek-ai/dsh-subagent:::peer
+  tool-subagent-control -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  tool-subagent-control -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  tool-subagent-control -->|^0.1.0-rc.6| @deepseek-ai/dsh-subagent:::peer
+  tool-subagent-control -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  tool-subagent-list-agents -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  tool-subagent-list-agents -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  tool-subagent-list-agents -->|^0.1.0-rc.6| @deepseek-ai/dsh-subagent:::peer
+  tool-subagent-list-agents -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  tool-subagent -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  tool-subagent -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  tool-subagent -->|^0.1.0-rc.6| @deepseek-ai/dsh-subagent:::peer
+  tool-subagent -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  tool-subagent -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  tool-subagent-fork -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  tool-subagent-fork -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  tool-subagent-fork -->|^0.1.0-rc.6| @deepseek-ai/dsh-subagent:::peer
+  tool-subagent-fork -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  tool-subagent-fork -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  tool-subagent-report -->|^0.1.0-rc.6| @deepseek-ai/dsh-subagent:::peer
+  tool-subagent-report -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  tool-subagent-report -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  tool-subagent-report -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  workflow-worker-thread -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  workflow-worker-thread -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  workflow-worker-thread -->|^0.1.0-rc.6| @deepseek-ai/dsh-subagent:::peer
+  workflow-worker-thread -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  workflow-worker-thread -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  tool-workflow -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  tool-workflow -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  tool-workflow -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  tool-workflow -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  tool-workflow -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  timeout-policy -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  timeout-policy -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  spill-policy -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  spill-policy -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  spill-policy -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  session-checkpoint-policy -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  session-checkpoint-policy -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  session-checkpoint-policy -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  session-checkpoint-policy -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  tool-result-pruner -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  tool-result-pruner -->|^0.1.0-rc.6| @deepseek-ai/dsh-token-meter:::peer
+  tool-result-pruner -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  tool-todo -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  tool-todo -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  tool-todo -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-projection:::peer
+  tool-todo -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  tool-goal -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  tool-goal -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  tool-goal -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  tool-goal -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  tool-goal -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  tool-goal -->|^0.1.0-rc.6| @deepseek-ai/dsh-goal:::peer
+  tool-ralph -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  tool-ralph -->|^0.1.0-rc.6| @deepseek-ai/dsh-subagent:::peer
+  tool-ralph -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  tool-ralph -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  tool-ralph -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  tool-str-replace-editor -->|^0.1.0-rc.6| @deepseek-ai/dsh-sandbox-policy:::peer
+  tool-str-replace-editor -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  repeat-tool-reminder -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  repeat-tool-reminder -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  web -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  web-search-deepseek -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  web-search-deepseek -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  web-search-deepseek -->|^0.1.0-rc.6| @deepseek-ai/dsh-web:::peer
+  tool-web -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  tool-web -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  tool-web -->|^0.1.0-rc.6| @deepseek-ai/dsh-web:::peer
+  tool-web -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  tools -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  tools -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  tools -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  tools -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  tools -->|^0.1.0-rc.6| @deepseek-ai/dsh-user-approval:::peer
+  system-prompt -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  agent-loop -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  agent-loop -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  agent-loop -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  agent-loop -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  agent-loop -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  fs-sandbox -->|^0.1.0-rc.6| @deepseek-ai/dsh-sandbox-policy:::peer
+  llm-deepseek -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  code-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  storage-json -->|^0.1.0-rc.6| @deepseek-ai/dsh-storage:::peer
+  storage-domain -->|^0.1.0-rc.6| @deepseek-ai/dsh-storage:::peer
+  message-feedback -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  message-feedback -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  message-feedback -->|^0.1.0-rc.6| @deepseek-ai/dsh-storage-domain:::peer
+  session-log-download -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  session-log-download -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  session-log-download -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-commands:::peer
+  session-log-download -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-conversation:::peer
+  session-log-download -->|^0.1.0-rc.6| @deepseek-ai/dsh-commands:::peer
+  workspace -->|^0.1.0-rc.6| @deepseek-ai/dsh-storage-domain:::peer
+  workspace -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  workspace -->|^0.1.0-rc.6| @deepseek-ai/dsh-storage:::peer
+  session-projection-cache -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  session-projection-cache -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-projection:::peer
+  session-projection-cache -->|^0.1.0-rc.6| @deepseek-ai/dsh-storage-domain:::peer
+  session-stats -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  session-stats -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  session-stats -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-projection:::peer
+  directory-picker -->|^0.1.0-rc.6| @deepseek-ai/dsh-host-webserver:::peer
+  api-gateway -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  api-gateway -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent-default-model:::peer
+  api-gateway -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  api-gateway -->|^0.1.0-rc.6| @deepseek-ai/dsh-commands:::peer
+  api-gateway -->|^0.1.0-rc.6| @deepseek-ai/dsh-goal:::peer
+  api-gateway -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  api-gateway -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  api-gateway -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-projection:::peer
+  api-gateway -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-projection-cache:::peer
+  api-gateway -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-title:::peer
+  api-gateway -->|^0.1.0-rc.6| @deepseek-ai/dsh-skill:::peer
+  api-gateway -->|^0.1.0-rc.6| @deepseek-ai/dsh-subagent:::peer
+  api-gateway -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  api-gateway -->|^0.1.0-rc.6| @deepseek-ai/dsh-user-approval:::peer
+  api-gateway -->|^0.1.0-rc.6| @deepseek-ai/dsh-user-questions:::peer
+  api-gateway -->|^0.1.0-rc.6| @deepseek-ai/dsh-workspace:::peer
+  api-gateway -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent-presets:::peer
+  api-gateway -->|^0.1.0-rc.6| @deepseek-ai/dsh-cordis-host-runner:::peer
+  cordis-host-runner -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  cordis-host-runner -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  cordis-host-runner -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  cordis-host-runner -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent-presets:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-connection:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-hmr:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-modules:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-agent-preset:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-commands:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-conversation:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-cordis:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-deliverables:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-message-feedback:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-goal:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-layout:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-model-selection:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-settings-models:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-settings-plugin-inventory:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-permission-presets:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-user-questions:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-settings:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-settings-general:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-sidebar:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-skill:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-input-trigger:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-subagent:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-jobs:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-theme:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-tool:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-workflow-run:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-trajectory:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-workspace:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-cordis-client-runner:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-plan:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-settings-plugins:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-host-apiproxy:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-host-directory-picker-auto:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-host-plugin-inventory:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-host-webserver:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-message-feedback:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-stats:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-storage:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-storage-domain:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-storage-json:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-cordis-host-runner:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-code-runtime-worker-thread:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-projection-cache:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-log-export:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-workspace:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-shell-env:::peer
+  web-startup -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent-presets:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-connection:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-hmr:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-modules:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-agent-preset:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-commands:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-conversation:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-cordis:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-deliverables:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-message-feedback:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-goal:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-layout:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-model-selection:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-settings-models:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-settings-plugin-inventory:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-permission-presets:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-user-questions:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-settings:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-settings-general:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-sidebar:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-skill:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-input-trigger:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-subagent:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-jobs:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-theme:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-tool:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-workflow-run:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-trajectory:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-workspace:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-cordis-client-runner:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-plan:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-settings-plugins:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-host-apiproxy:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-host-directory-picker-auto:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-host-plugin-inventory:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-host-webserver:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-message-feedback:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-stats:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-storage:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-storage-domain:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-storage-json:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-cordis-host-runner:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-code-runtime-worker-thread:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-projection-cache:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-log-export:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-workspace:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-shell-env:::peer
+  web-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  client-hmr -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-modules:::peer
+  client-hmr -->|^0.1.0-rc.6| @deepseek-ai/dsh-host-webserver:::peer
+  connection -->|^0.1.0-rc.6| @deepseek-ai/dsh-host-apiproxy:::peer
+  connection -->|^0.1.0-rc.6| @deepseek-ai/dsh-commands:::peer
+  connection -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  connection -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  connection -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  connection -->|^0.1.0-rc.6| @deepseek-ai/dsh-host-webserver:::peer
+  api-remotes -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  api-remotes -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-gateway:::peer
+  api-remotes -->|^0.1.0-rc.6| @deepseek-ai/dsh-commands:::peer
+  api-remotes -->|^0.1.0-rc.6| @deepseek-ai/dsh-goal:::peer
+  api-remotes -->|^0.1.0-rc.6| @deepseek-ai/dsh-cordis-host-runner:::peer
+  api-remotes -->|^0.1.0-rc.6| @deepseek-ai/dsh-host-plugin-inventory:::peer
+  api-remotes -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent-presets:::peer
+  api-remotes -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  api-remotes -->|^0.1.0-rc.6| @deepseek-ai/dsh-message-feedback:::peer
+  api-remotes -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  api-remotes -->|^0.1.0-rc.6| @deepseek-ai/dsh-typert-registry:::peer
+  client-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  client-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-connection:::peer
+  client-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-commands:::peer
+  client-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-host-apiproxy:::peer
+  client-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm-retry:::peer
+  client-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  client-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  client-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-projection:::peer
+  client-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-title:::peer
+  client-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  client-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  client-runtime -->|^0.1.0-rc.6| @deepseek-ai/dsh-typert-registry:::peer
+  cordis-client-runner -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  cordis-client-runner -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-connection:::peer
+  cordis-client-runner -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-modules:::peer
+  cordis-client-runner -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  cordis-client-runner -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-theme:::peer
+  ui-theme -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  ui-theme -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-connection:::peer
+  ui-theme -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-theme -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-theme -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-settings:::peer
+  ui-theme -->|^0.1.0-rc.6| @deepseek-ai/dsh-host-webserver:::peer
+  locale -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  locale -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-connection:::peer
+  locale -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-settings:::peer
+  locale -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-layout -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-layout -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-theme:::peer
+  ui-sidebar -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-sidebar -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-settings -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  ui-settings -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-connection:::peer
+  ui-settings -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-settings-general -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-connection:::peer
+  ui-settings-general -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  ui-settings-general -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-settings-general -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-settings-general -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-settings:::peer
+  ui-settings-general -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-sidebar:::peer
+  ui-settings-models -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  ui-settings-models -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-connection:::peer
+  ui-settings-models -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-settings-plugin-inventory -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  ui-settings-plugin-inventory -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-settings-plugin-inventory -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-settings-plugin-inventory -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-settings:::peer
+  ui-conversation -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  ui-conversation -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  ui-conversation -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-conversation -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-connection:::peer
+  ui-conversation -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-conversation -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-settings:::peer
+  ui-conversation -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-input-trigger:::peer
+  ui-conversation -->|^0.1.0-rc.6| @deepseek-ai/dsh-commands:::peer
+  ui-conversation -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm-retry:::peer
+  ui-conversation -->|^0.1.0-rc.6| @deepseek-ai/dsh-token-meter:::peer
+  ui-conversation -->|^0.1.0-rc.6| @deepseek-ai/dsh-session-stats:::peer
+  ui-conversation -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  ui-tool -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-tool -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-tool -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-conversation:::peer
+  ui-tool -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  ui-cordis -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-connection:::peer
+  ui-cordis -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  ui-cordis -->|^0.1.0-rc.6| @deepseek-ai/dsh-cordis-client-runner:::peer
+  ui-cordis -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-cordis -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-cordis -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-sidebar:::peer
+  ui-cordis -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-input-trigger:::peer
+  ui-cordis -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-tool:::peer
+  ui-workflow-run -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-workflow-run -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-workflow-run -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-conversation:::peer
+  ui-workflow-run -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  ui-workflow-run -->|^0.1.0-rc.6| @deepseek-ai/dsh-tool-workflow:::peer
+  ui-deliverables -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-connection:::peer
+  ui-deliverables -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-deliverables -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-conversation:::peer
+  ui-deliverables -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-deliverables -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  ui-workspace -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-workspace -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-input-trigger -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-input-trigger -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-commands -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-commands -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-commands -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-conversation:::peer
+  ui-commands -->|^0.1.0-rc.6| @deepseek-ai/dsh-commands:::peer
+  ui-commands -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  ui-commands -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-input-trigger:::peer
+  ui-skill -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-connection:::peer
+  ui-skill -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  ui-skill -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-skill -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-skill -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-input-trigger:::peer
+  ui-skill -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-tool:::peer
+  ui-subagent -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-subagent -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-subagent -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-conversation:::peer
+  ui-subagent -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-input-trigger:::peer
+  ui-subagent -->|^0.1.0-rc.6| @deepseek-ai/dsh-subagent:::peer
+  ui-subagent -->|^0.1.0-rc.6| @deepseek-ai/dsh-token-meter:::peer
+  ui-jobs -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-jobs -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-jobs -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-conversation:::peer
+  ui-goal -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-goal -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  ui-goal -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-goal -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-conversation:::peer
+  ui-goal -->|^0.1.0-rc.6| @deepseek-ai/dsh-commands:::peer
+  ui-goal -->|^0.1.0-rc.6| @deepseek-ai/dsh-goal:::peer
+  ui-message-feedback -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  ui-message-feedback -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-connection:::peer
+  ui-message-feedback -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-message-feedback -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-conversation:::peer
+  ui-message-feedback -->|^0.1.0-rc.6| @deepseek-ai/dsh-message-feedback:::peer
+  ui-message-feedback -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-model-selection -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  ui-model-selection -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-connection:::peer
+  ui-model-selection -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-model-selection -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-model-selection -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-commands:::peer
+  ui-model-selection -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-input-trigger:::peer
+  ui-model-selection -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-conversation:::peer
+  ui-permission -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  ui-permission -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-connection:::peer
+  ui-permission -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-permission -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-permission -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-commands:::peer
+  ui-permission -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-settings:::peer
+  ui-permission -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-input-trigger:::peer
+  ui-permission -->|^0.1.0-rc.6| @deepseek-ai/dsh-permission-presets:::peer
+  ui-agent-preset -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  ui-agent-preset -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-connection:::peer
+  ui-agent-preset -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-agent-preset -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-agent-preset -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-conversation:::peer
+  ui-agent-preset -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-settings:::peer
+  ui-settings-plugins -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  ui-settings-plugins -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-connection:::peer
+  ui-settings-plugins -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-settings-plugins -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-settings-plugins -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-settings:::peer
+  ui-plan -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  ui-plan -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-plan -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-plan -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-conversation:::peer
+  ui-plan -->|^0.1.0-rc.6| @deepseek-ai/dsh-plan-mode:::peer
+  ui-user-questions -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-connection:::peer
+  ui-user-questions -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-user-questions -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-ui-conversation:::peer
+  ui-user-questions -->|^0.1.0-rc.6| @deepseek-ai/dsh-api-remotes:::peer
+  ui-user-questions -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-trajectory -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  ui-trajectory -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-locale:::peer
+  ui-trajectory -->|^0.1.0-rc.6| @deepseek-ai/dsh-client-runtime:::peer
+  ui-trajectory -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  agent-presets -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  agent-presets -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
+  agent-presets -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  tool-subagent-codex -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  tool-subagent-codex -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  tool-subagent-codex -->|^0.1.0-rc.6| @deepseek-ai/dsh-subagent:::peer
+  tool-subagent-codex -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  tool-subagent-codex -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
+  tool-subagent-claude-code -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
+  tool-subagent-claude-code -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
+  tool-subagent-claude-code -->|^0.1.0-rc.6| @deepseek-ai/dsh-subagent:::peer
+  tool-subagent-claude-code -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  tool-subagent-claude-code -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer

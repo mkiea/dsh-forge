@@ -1,0 +1,307 @@
+├─ hmr [@deepseek-ai/cordis-plugin-hmr@1.0.16]
+│  └─ @deepseek-ai/cordis-plugin-timer [?]
+├─ typert-loader [@deepseek-ai/dsh-typert-loader@0.1.0-rc.6]
+│  └─ @deepseek-ai/dsh-typert-registry [?]
+├─ session-title-llm [@deepseek-ai/dsh-session-title-first-prompt-llm@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-session [?]
+│  ├─ @deepseek-ai/dsh-session-title [?]
+│  └─ @deepseek-ai/dsh-llm [?]
+├─ jobs [@deepseek-ai/dsh-jobs-local@0.1.0-rc.6]
+│  └─ @deepseek-ai/dsh-agent [?]
+├─ settings [@deepseek-ai/dsh-settings-file@0.1.0-rc.6]
+├─ credentials [@deepseek-ai/dsh-credentials-local@0.1.0-rc.6]
+├─ llm-pi-ai [@deepseek-ai/dsh-llm-pi-ai@0.1.0-rc.6]
+│  └─ @deepseek-ai/dsh-llm (cycle)
+├─ session-persistence-jsonl [@deepseek-ai/dsh-session-persistence-jsonl@0.1.0-rc.6]
+│  └─ @deepseek-ai/dsh-session (cycle)
+├─ attachment-local [@deepseek-ai/dsh-attachment-local@0.1.0-rc.6]
+├─ session-query-sqlite [@deepseek-ai/dsh-session-query-sqlite@0.1.0-rc.6]
+│  └─ @deepseek-ai/dsh-session (cycle)
+├─ session-telemetry-otel [@deepseek-ai/dsh-session-telemetry-otel@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-command-feedback [?]
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  └─ @deepseek-ai/dsh-session (cycle)
+├─ subprocess [@deepseek-ai/dsh-subprocess-local@0.1.0-rc.6]
+├─ sandbox [@deepseek-ai/dsh-sandbox-local@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  └─ @deepseek-ai/dsh-session (cycle)
+├─ bash-sandbox [@deepseek-ai/dsh-bash-sandbox@0.1.0-rc.6]
+│  └─ @deepseek-ai/dsh-sandbox-policy [?]
+├─ pwsh-sandbox [@deepseek-ai/dsh-pwsh-sandbox@0.1.0-rc.6]
+│  └─ @deepseek-ai/dsh-sandbox-policy (cycle)
+├─ tool-bash [@deepseek-ai/dsh-tool-bash@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-agent (cycle)
+│  ├─ @deepseek-ai/dsh-shell-env [?]
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  ├─ @deepseek-ai/dsh-sandbox-policy (cycle)
+│  ├─ @deepseek-ai/dsh-tools [?]
+│  ├─ @deepseek-ai/dsh-system-prompt [?]
+│  └─ @deepseek-ai/dsh-user-approval [?]
+├─ tool-pwsh [@deepseek-ai/dsh-tool-pwsh@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-agent (cycle)
+│  ├─ @deepseek-ai/dsh-shell-env (cycle)
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  ├─ @deepseek-ai/dsh-sandbox-policy (cycle)
+│  ├─ @deepseek-ai/dsh-system-prompt (cycle)
+│  ├─ @deepseek-ai/dsh-user-approval (cycle)
+│  └─ @deepseek-ai/dsh-tools (cycle)
+├─ tool-jobs [@deepseek-ai/dsh-tool-jobs@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-agent (cycle)
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  ├─ @deepseek-ai/dsh-tools (cycle)
+│  └─ @deepseek-ai/dsh-system-prompt (cycle)
+├─ fs-observation-policy [@deepseek-ai/dsh-fs-observation-policy@0.1.0-rc.6]
+├─ tool-fs [@deepseek-ai/dsh-tool-fs@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  ├─ @deepseek-ai/dsh-sandbox-policy (cycle)
+│  ├─ @deepseek-ai/dsh-session (cycle)
+│  ├─ @deepseek-ai/dsh-system-prompt (cycle)
+│  ├─ @deepseek-ai/dsh-tools (cycle)
+│  └─ @deepseek-ai/dsh-user-approval (cycle)
+├─ tool-fs-search [@deepseek-ai/dsh-tool-fs-search@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  ├─ @deepseek-ai/dsh-session (cycle)
+│  ├─ @deepseek-ai/dsh-system-prompt (cycle)
+│  └─ @deepseek-ai/dsh-tools (cycle)
+├─ agent-instructions [@deepseek-ai/dsh-agent-instructions@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-agent (cycle)
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  ├─ @deepseek-ai/dsh-session (cycle)
+│  └─ @deepseek-ai/dsh-tools (cycle)
+├─ skill-filesystem [@deepseek-ai/dsh-skill-filesystem@0.1.0-rc.6]
+│  └─ @deepseek-ai/dsh-skill [?]
+├─ skill-badge [@deepseek-ai/dsh-skill-badge@0.1.0-rc.6]
+│  └─ @deepseek-ai/dsh-skill (cycle)
+├─ tool-skill [@deepseek-ai/dsh-tool-skill@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  ├─ @deepseek-ai/dsh-agent (cycle)
+│  ├─ @deepseek-ai/dsh-skill (cycle)
+│  └─ @deepseek-ai/dsh-tools (cycle)
+├─ goal-round-driver [@deepseek-ai/dsh-goal-round-driver@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-agent (cycle)
+│  ├─ @deepseek-ai/dsh-goal [?]
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  └─ @deepseek-ai/dsh-session (cycle)
+├─ command-goal [@deepseek-ai/dsh-command-goal@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-goal (cycle)
+│  └─ @deepseek-ai/dsh-commands [?]
+├─ compaction-basic [@deepseek-ai/dsh-compaction-basic@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-agent (cycle)
+│  ├─ @deepseek-ai/dsh-commands (cycle)
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  ├─ @deepseek-ai/dsh-token-meter [?]
+│  ├─ @deepseek-ai/dsh-session (cycle)
+│  └─ @deepseek-ai/dsh-compaction-tool-result-pruner [?]
+├─ command-compact [@deepseek-ai/dsh-command-compact@0.1.0-rc.6]
+│  └─ @deepseek-ai/dsh-commands (cycle)
+├─ subagent-spawn-in-process [@deepseek-ai/dsh-subagent-spawn-in-process@0.1.0-rc.6]
+│  └─ @deepseek-ai/dsh-subagent [?]
+├─ subagent-fork-in-process [@deepseek-ai/dsh-subagent-fork-in-process@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-agent (cycle)
+│  ├─ @deepseek-ai/dsh-session (cycle)
+│  └─ @deepseek-ai/dsh-subagent (cycle)
+├─ tool-subagent-control [@deepseek-ai/dsh-tool-subagent-control@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  ├─ @deepseek-ai/dsh-session (cycle)
+│  ├─ @deepseek-ai/dsh-subagent (cycle)
+│  └─ @deepseek-ai/dsh-tools (cycle)
+├─ tool-subagent-list-agents [@deepseek-ai/dsh-tool-subagent-control@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  ├─ @deepseek-ai/dsh-session (cycle)
+│  ├─ @deepseek-ai/dsh-subagent (cycle)
+│  └─ @deepseek-ai/dsh-tools (cycle)
+├─ tool-subagent [@deepseek-ai/dsh-tool-subagent@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-agent (cycle)
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  ├─ @deepseek-ai/dsh-subagent (cycle)
+│  ├─ @deepseek-ai/dsh-system-prompt (cycle)
+│  └─ @deepseek-ai/dsh-tools (cycle)
+├─ tool-subagent-fork [@deepseek-ai/dsh-tool-subagent@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-agent (cycle)
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  ├─ @deepseek-ai/dsh-subagent (cycle)
+│  ├─ @deepseek-ai/dsh-system-prompt (cycle)
+│  └─ @deepseek-ai/dsh-tools (cycle)
+├─ tool-subagent-report [@deepseek-ai/dsh-tool-subagent-report@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-subagent (cycle)
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  ├─ @deepseek-ai/dsh-system-prompt (cycle)
+│  └─ @deepseek-ai/dsh-tools (cycle)
+├─ workflow-worker-thread [@deepseek-ai/dsh-workflow-worker-thread@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  ├─ @deepseek-ai/dsh-session (cycle)
+│  ├─ @deepseek-ai/dsh-subagent (cycle)
+│  ├─ @deepseek-ai/dsh-tools (cycle)
+│  └─ @deepseek-ai/dsh-agent (cycle)
+├─ timeout-policy [@deepseek-ai/dsh-tool-call-timeout-policy@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  └─ @deepseek-ai/dsh-tools (cycle)
+├─ spill-local [@deepseek-ai/dsh-spill-local@0.1.0-rc.6]
+├─ spill-policy [@deepseek-ai/dsh-spill-policy@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  ├─ @deepseek-ai/dsh-session (cycle)
+│  └─ @deepseek-ai/dsh-tools (cycle)
+├─ session-checkpoint-policy [@deepseek-ai/dsh-session-checkpoint-policy@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-agent (cycle)
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  ├─ @deepseek-ai/dsh-session (cycle)
+│  └─ @deepseek-ai/dsh-tools (cycle)
+├─ tool-todo [@deepseek-ai/dsh-tool-todo@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-agent (cycle)
+│  ├─ @deepseek-ai/dsh-session (cycle)
+│  ├─ @deepseek-ai/dsh-session-projection [?]
+│  └─ @deepseek-ai/dsh-tools (cycle)
+├─ tool-goal [@deepseek-ai/dsh-tool-goal@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-agent (cycle)
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  ├─ @deepseek-ai/dsh-session (cycle)
+│  ├─ @deepseek-ai/dsh-system-prompt (cycle)
+│  ├─ @deepseek-ai/dsh-tools (cycle)
+│  └─ @deepseek-ai/dsh-goal (cycle)
+├─ tool-ralph [@deepseek-ai/dsh-tool-ralph@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-agent (cycle)
+│  ├─ @deepseek-ai/dsh-subagent (cycle)
+│  ├─ @deepseek-ai/dsh-system-prompt (cycle)
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  └─ @deepseek-ai/dsh-tools (cycle)
+├─ tool-str-replace-editor [@deepseek-ai/dsh-tool-str-replace-editor@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-sandbox-policy (cycle)
+│  └─ @deepseek-ai/dsh-tools (cycle)
+├─ repeat-tool-reminder [@deepseek-ai/dsh-repeat-tool-reminder@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-agent (cycle)
+│  └─ @deepseek-ai/dsh-tools (cycle)
+├─ web-search-deepseek [@deepseek-ai/dsh-web-search-deepseek@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-agent (cycle)
+│  ├─ @deepseek-ai/dsh-session (cycle)
+│  └─ @deepseek-ai/dsh-web [?]
+├─ tool-web [@deepseek-ai/dsh-tool-web@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-system-prompt (cycle)
+│  ├─ @deepseek-ai/dsh-tools (cycle)
+│  ├─ @deepseek-ai/dsh-web (cycle)
+│  └─ @deepseek-ai/dsh-llm (cycle)
+├─ agent-loop [@deepseek-ai/dsh-agent-loop@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-agent (cycle)
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  ├─ @deepseek-ai/dsh-session (cycle)
+│  ├─ @deepseek-ai/dsh-system-prompt (cycle)
+│  └─ @deepseek-ai/dsh-tools (cycle)
+├─ fs-sandbox [@deepseek-ai/dsh-fs-sandbox@0.1.0-rc.6]
+│  └─ @deepseek-ai/dsh-sandbox-policy (cycle)
+├─ llm-deepseek [@deepseek-ai/dsh-llm-deepseek@0.1.0-rc.6]
+│  └─ @deepseek-ai/dsh-llm (cycle)
+├─ web-startup [@deepseek-ai/dsh-web-app@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-api-remotes [?]
+│  ├─ @deepseek-ai/dsh-agent-presets [?]
+│  ├─ @deepseek-ai/dsh-client-connection [?]
+│  ├─ @deepseek-ai/dsh-client-hmr [?]
+│  ├─ @deepseek-ai/dsh-client-locale [?]
+│  ├─ @deepseek-ai/dsh-client-modules [?]
+│  ├─ @deepseek-ai/dsh-client-runtime [?]
+│  ├─ @deepseek-ai/dsh-client-ui-agent-preset [?]
+│  ├─ @deepseek-ai/dsh-client-ui-commands [?]
+│  ├─ @deepseek-ai/dsh-client-ui-conversation [?]
+│  ├─ @deepseek-ai/dsh-client-ui-cordis [?]
+│  ├─ @deepseek-ai/dsh-client-ui-deliverables [?]
+│  ├─ @deepseek-ai/dsh-client-ui-message-feedback [?]
+│  ├─ @deepseek-ai/dsh-client-ui-goal [?]
+│  ├─ @deepseek-ai/dsh-client-ui-layout [?]
+│  ├─ @deepseek-ai/dsh-client-ui-model-selection [?]
+│  ├─ @deepseek-ai/dsh-client-ui-settings-models [?]
+│  ├─ @deepseek-ai/dsh-client-ui-settings-plugin-inventory [?]
+│  ├─ @deepseek-ai/dsh-client-ui-permission-presets [?]
+│  ├─ @deepseek-ai/dsh-client-ui-user-questions [?]
+│  ├─ @deepseek-ai/dsh-client-ui-settings [?]
+│  ├─ @deepseek-ai/dsh-client-ui-settings-general [?]
+│  ├─ @deepseek-ai/dsh-client-ui-sidebar [?]
+│  ├─ @deepseek-ai/dsh-client-ui-skill [?]
+│  ├─ @deepseek-ai/dsh-client-ui-input-trigger [?]
+│  ├─ @deepseek-ai/dsh-client-ui-subagent [?]
+│  ├─ @deepseek-ai/dsh-client-ui-jobs [?]
+│  ├─ @deepseek-ai/dsh-client-ui-theme [?]
+│  ├─ @deepseek-ai/dsh-client-ui-tool [?]
+│  ├─ @deepseek-ai/dsh-client-ui-workflow-run [?]
+│  ├─ @deepseek-ai/dsh-client-ui-trajectory [?]
+│  ├─ @deepseek-ai/dsh-client-ui-workspace [?]
+│  ├─ @deepseek-ai/dsh-cordis-client-runner [?]
+│  ├─ @deepseek-ai/dsh-client-ui-plan [?]
+│  ├─ @deepseek-ai/dsh-client-ui-settings-plugins [?]
+│  ├─ @deepseek-ai/dsh-host-apiproxy [?]
+│  ├─ @deepseek-ai/dsh-host-directory-picker-auto [?]
+│  ├─ @deepseek-ai/dsh-host-plugin-inventory [?]
+│  ├─ @deepseek-ai/dsh-host-webserver [?]
+│  ├─ @deepseek-ai/dsh-message-feedback [?]
+│  ├─ @deepseek-ai/dsh-session-stats [?]
+│  ├─ @deepseek-ai/dsh-storage [?]
+│  ├─ @deepseek-ai/dsh-storage-domain [?]
+│  ├─ @deepseek-ai/dsh-storage-json [?]
+│  ├─ @deepseek-ai/dsh-cordis-host-runner [?]
+│  ├─ @deepseek-ai/dsh-code-runtime-worker-thread [?]
+│  ├─ @deepseek-ai/dsh-session-projection-cache [?]
+│  ├─ @deepseek-ai/dsh-session-log-export [?]
+│  ├─ @deepseek-ai/dsh-workspace [?]
+│  ├─ @deepseek-ai/dsh-shell-env (cycle)
+│  └─ @deepseek-ai/dsh-system-prompt (cycle)
+├─ web-runtime [@deepseek-ai/dsh-web-app@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-api-remotes (cycle)
+│  ├─ @deepseek-ai/dsh-agent-presets (cycle)
+│  ├─ @deepseek-ai/dsh-client-connection (cycle)
+│  ├─ @deepseek-ai/dsh-client-hmr (cycle)
+│  ├─ @deepseek-ai/dsh-client-locale (cycle)
+│  ├─ @deepseek-ai/dsh-client-modules (cycle)
+│  ├─ @deepseek-ai/dsh-client-runtime (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-agent-preset (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-commands (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-conversation (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-cordis (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-deliverables (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-message-feedback (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-goal (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-layout (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-model-selection (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-settings-models (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-settings-plugin-inventory (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-permission-presets (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-user-questions (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-settings (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-settings-general (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-sidebar (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-skill (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-input-trigger (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-subagent (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-jobs (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-theme (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-tool (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-workflow-run (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-trajectory (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-workspace (cycle)
+│  ├─ @deepseek-ai/dsh-cordis-client-runner (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-plan (cycle)
+│  ├─ @deepseek-ai/dsh-client-ui-settings-plugins (cycle)
+│  ├─ @deepseek-ai/dsh-host-apiproxy (cycle)
+│  ├─ @deepseek-ai/dsh-host-directory-picker-auto (cycle)
+│  ├─ @deepseek-ai/dsh-host-plugin-inventory (cycle)
+│  ├─ @deepseek-ai/dsh-host-webserver (cycle)
+│  ├─ @deepseek-ai/dsh-message-feedback (cycle)
+│  ├─ @deepseek-ai/dsh-session-stats (cycle)
+│  ├─ @deepseek-ai/dsh-storage (cycle)
+│  ├─ @deepseek-ai/dsh-storage-domain (cycle)
+│  ├─ @deepseek-ai/dsh-storage-json (cycle)
+│  ├─ @deepseek-ai/dsh-cordis-host-runner (cycle)
+│  ├─ @deepseek-ai/dsh-code-runtime-worker-thread (cycle)
+│  ├─ @deepseek-ai/dsh-session-projection-cache (cycle)
+│  ├─ @deepseek-ai/dsh-session-log-export (cycle)
+│  ├─ @deepseek-ai/dsh-workspace (cycle)
+│  ├─ @deepseek-ai/dsh-shell-env (cycle)
+│  └─ @deepseek-ai/dsh-system-prompt (cycle)
+├─ tool-subagent-codex [@deepseek-ai/dsh-tool-subagent@0.1.0-rc.6]
+│  ├─ @deepseek-ai/dsh-agent (cycle)
+│  ├─ @deepseek-ai/dsh-llm (cycle)
+│  ├─ @deepseek-ai/dsh-subagent (cycle)
+│  ├─ @deepseek-ai/dsh-system-prompt (cycle)
+│  └─ @deepseek-ai/dsh-tools (cycle)
+└─ tool-subagent-claude-code [@deepseek-ai/dsh-tool-subagent@0.1.0-rc.6]
+   ├─ @deepseek-ai/dsh-agent (cycle)
+   ├─ @deepseek-ai/dsh-llm (cycle)
+   ├─ @deepseek-ai/dsh-subagent (cycle)
+   ├─ @deepseek-ai/dsh-system-prompt (cycle)
+   └─ @deepseek-ai/dsh-tools (cycle)
