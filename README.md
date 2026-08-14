@@ -1,6 +1,6 @@
 # dsh-forge
 
-> 版本：0.1.0 (v0.1.0-20260814-85e0b81) · harnessVersion: 0.1.0-rc.6
+> 版本：0.1.0 (v0.1.0-20260814-620b84f) · harnessVersion: 0.1.0-rc.6
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
 
@@ -67,7 +67,8 @@ ui-plugin/    浏览器端客户端插件（sidebar 入口 + modal 仪表盘）
 ### 第 1 步：获取源码
 
 ```bash
-git clone https://gitee.com/mkieaAG367/dsh-forge.git
+git clone https://gitee.com/mkieaAG367/dsh-forge.git # 从 Gitee 克隆
+git clone https://github.com/mkiea/dsh-forge # 从 GitHub 克隆
 cd dsh-forge
 ```
 
