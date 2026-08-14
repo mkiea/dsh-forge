@@ -1,6 +1,6 @@
 # dsh-forge 架构文档
 
-> 版本：0.1.3 · 最后更新：2026-08-14
+> 版本：0.1.0 · 最后更新：2026-08-14
 
 ## 1. 总览
 
@@ -198,7 +198,7 @@ check_upgrades execute(args)
 
 ## 7. 版本策略
 
-- 遵循三位 SemVer（X.Y.Z），使用 prerelease 后缀标识开发阶段（如 `alpha-v0.1.3`）
-- hotfix/patch 使用 prerelease 后缀（如 `alpha-v0.1.3-patch.1`），不使用第四位版本号
+- 遵循三位 SemVer（X.Y.Z），使用 prerelease 后缀标识开发阶段（如 `alpha-v0.1.0`）
+- hotfix/patch 使用 prerelease 后缀（如 `alpha-v0.1.0-patch.1`），不使用第四位版本号
 - harnessVersion 绑定：`0.1.0-rc.6`
 - 知识库模式声明验证版本，版本漂移输出 `knowledge-version-drift` 告警
