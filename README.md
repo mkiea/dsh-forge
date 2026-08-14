@@ -1,6 +1,6 @@
 # dsh-forge
 
-> 版本：0.1.0 (v0.1.0-20260814-85e0b81) · harnessVersion: 0.1.0-rc.6
+> 版本：0.1.0 (v0.1.0-20260814-620b84f) · harnessVersion: 0.1.0-rc.6
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
 
