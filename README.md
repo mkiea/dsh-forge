@@ -51,11 +51,65 @@ src/          cordis 插件壳（13 个工具的 schema 定义 + 注册）
 ui-plugin/    浏览器端客户端插件（sidebar 入口 + modal 仪表盘）
 ```
 
-## 挂载（当前状态：已挂载并验证）
+## 插件安装步骤
 
-通过 `dsh plugin` 以 `link:` 依赖装入 `$DSH_HOME/profiles/web/node_modules`
-（symlink 指向本工作区，改代码即生效），并在 `$DSH_HOME/profiles/web/cordis.patch.yml`
-加入两行 insert：
+本插件由两个包组成，均通过 **link 依赖** 持久化装入 dsh profile（symlink 指向源码，改代码即生效）：
+
+- **dsh-forge**（host 插件）：13 个分析工具，在 HOST 平面运行
+- **dsh-forge-ui**（client 插件）：GUI 右侧 sidebar 底部「▦ 插件仪表盘」入口，点击弹窗显示 `reports/dashboard.html`（iframe 内嵌）
+
+### 前置条件
+
+- Node.js ≥ 20（实测 v24.18.0）
+- 已安装 DeepSeek Harness CLI：`npx @deepseek-ai/dsh --version` 可执行
+- 已有目标 profile（默认 `web`，位于 `$HOME/.dsh/profiles/web/`；`dsh` 目录即 `$DSH_HOME`）
+
+### 第 1 步：获取源码
+
+```bash
+git clone https://gitee.com/mkieaAG367/dsh-forge.git
+cd dsh-forge
+```
+
+### 第 2 步：持久化安装到 profile（link 依赖，推荐）
+
+dsh 的 profile 本身是一个 pnpm 工作区（`package.json` + `pnpm-workspace.yaml`），
+`dsh plugin` 命令是 **pnpm 透传封装**（`npx @deepseek-ai/dsh plugin --profile web <pnpm 子命令>`）。
+用 `link:` 依赖把插件链进 profile，`node_modules` 中出现指向源码的 symlink：
+
+```bash
+# host 插件（13 个分析工具）
+npx @deepseek-ai/dsh plugin --profile web add "dsh-forge@link:C:/Users/<you>/DeepForge/dsh-forge"
+
+# client 插件（GUI 仪表盘入口）
+npx @deepseek-ai/dsh plugin --profile web add "dsh-forge-ui@link:C:/Users/<you>/DeepForge/dsh-forge/ui-plugin"
+```
+
+> 路径请使用 Windows 绝对路径（`C:/...` 正斜杠）。若插件名带 `link:` 前缀被 shell 转义，可在路径外加引号。
+
+**等价手工方式**（不依赖 dsh plugin）：编辑 `$HOME/.dsh/profiles/web/package.json` 的 `dependencies` 追加两行：
+
+```json
+{
+  "dependencies": {
+    "dsh-forge": "link:C:/Users/<you>/DeepForge/dsh-forge",
+    "dsh-forge-ui": "link:C:/Users/<you>/DeepForge/dsh-forge/ui-plugin"
+  }
+}
+```
+
+然后在 profile 目录执行 `pnpm install`（同 `npx @deepseek-ai/dsh plugin --profile web install`）。
+
+完成后确认：
+
+```powershell
+Get-Item "$HOME\.dsh\profiles\web\node_modules\dsh-forge" | Select-Object -ExpandProperty Target
+# -> C:\Users\<you>\DeepForge\dsh-forge
+```
+
+### 第 3 步：配置组合补丁 cordis.patch.yml
+
+编辑 `$HOME/.dsh/profiles/web/cordis.patch.yml`，**追加**两行 insert（文件顶部注释说明了 patch 层语义）：
 
 ```yaml
 - insert:
@@ -68,17 +122,52 @@ ui-plugin/    浏览器端客户端插件（sidebar 入口 + modal 仪表盘）
       name: 'dsh-forge-ui'
 ```
 
-- **host 插件**（dsh-forge）：13 个分析工具，HOST 平面运行。
-- **client 插件**（dsh-forge-ui）：GUI 右侧 sidebar 底部「▦ 插件仪表盘」入口，点击弹窗显示 `reports/dashboard.html`（iframe 内嵌）。
+> `config.profile` 告诉 host 插件从哪个 profile 发现组合；`forge-ui` 不需要 config。
+> 已存在同名 insert 时不要重复追加（追加后 harness 会重复注册插件）。
+
+### 第 4 步：重启 harness
+
+```bash
+npx @deepseek-ai/dsh web
+```
+
+成功标志：启动日志无 `Cannot find module` / schema 校验（`JsonSchemaError`）报错，服务监听 `http://127.0.0.1:3080`。
+
+### 第 5 步：验证
+
+1. 浏览器打开 `http://127.0.0.1:3080`，控制台无报错
+2. 右侧 sidebar 底部出现「▦ 插件仪表盘」按钮（点击弹窗显示仪表盘）
+3. 对话中可调用 13 个工具（`analyze_dependencies` / `check_conflicts` / `visualize_plugins` / `simulate_combination` / ...）
+4. 离线快速自检（不依赖 harness）：
+
+```bash
+cd dsh-forge && node --input-type=module -e "import('./src/index.js').then(m => console.log('plugin import OK:', m.name))"
+```
+
+### 开发模式：改动生效机制
+
+| 改动内容 | 生效方式 |
+| --- | --- |
+| host 插件代码（`core/`、`src/`） | **必须重启 harness**（模块已在进程中缓存，且 `defineTool` 在 apply 时编译 schema） |
+| client 插件内容（`ui-plugin/lib/client.js`） | symlink 即时同步，但 manifest / 插件集合变更需重启 |
+| 仪表盘内容（`web/`、`reports/dashboard.html`） | `node scripts/build-ui.mjs`（重新内嵌 dashboard.html 到 client.js）→ 重启 |
+| 一键挂载（免手工复制） | `node scripts/mount-ui.mjs`（复制 ui-plugin 到部署 node_modules + 写 patch；支持 `DSH_DEPLOY_NM` / `DSH_PROFILE_PATCH` 环境变量覆盖） |
+
+### 卸载
+
+```bash
+cd "$HOME/.dsh/profiles/web"
+npx @deepseek-ai/dsh plugin --profile web remove dsh-forge dsh-forge-ui
+```
+
+并从 `cordis.patch.yml` 移除对应两行 insert，重启 harness。
+
+### 组合发现机制（host 插件运行时）
 
 插件运行时从 `$DSH_HOME/profiles/<profile>` 自动发现组合：
 profile 根 `cordis.yml` → **bundle 补丁（dsh-base / dsh-web-app，自动定位部署根）** →
 `cordis.patch.yml`；包清单与已安装版本从部署 node_modules 读取（无需传 `root`）。
 也可传 `compositionSources` / `dataset`（离线快照）/ `root` 覆盖。
-
-> 注意：host 插件代码（core/）更新后需**重启 harness** 才生效（模块已在进程中缓存）；
-> client 插件内容（ui-plugin/lib/client.js）经 symlink 即时同步，但 manifest 变更同样需重启。
-
 ## 离线快照
 
 `data/ecosystem.json` 是分析时生成的快照（`format: dsh-forge-ecosystem@1`），
@@ -93,15 +182,6 @@ const r = runAnalysis({ profile: 'web' });
 console.log(JSON.stringify(r.assessment, null, 1));
 "
 ```
-
-## Harness 右侧入口（已挂载）
-
-`ui-plugin/` 是浏览器端客户端插件：在 GUI 右侧 sidebar 底部注入「插件仪表盘」按钮，
-点击以弹窗（modal + iframe）显示 `reports/dashboard.html`。
-
-- 已挂载到：部署 node_modules/dsh-forge-ui + `$DSH_HOME/profiles/web/cordis.patch.yml`（行 `forge-ui`）
-- **重启 harness 后生效**（客户端插件集合变更需重启；内容更新只需重新构建并重启）
-- 更新仪表盘内容：`node scripts/build-ui.mjs`（重新内嵌 dashboard.html 到 client.js）→ 复制 lib/client.js 到部署目录 → 重启
 
 ## 验证状态
 
