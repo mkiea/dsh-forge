@@ -125,6 +125,15 @@ Get-Item "$HOME\.dsh\profiles\web\node_modules\dsh-forge" | Select-Object -Expan
 > `config.profile` 告诉 host 插件从哪个 profile 发现组合；`forge-ui` 不需要 config。
 > 已存在同名 insert 时不要重复追加（追加后 harness 会重复注册插件）。
 
+**背景说明**：
+
+- profile 根 `cordis.yml` 是空入口 `[]`，组合树完全由 patch 层构成：
+  `package.json` 的 `dsh.profile.bundles`（dsh-base / dsh-web-app）→ `cordis.patch.yml` → `--patch` 覆盖。
+  因此**只改 cordis.patch.yml，不改 cordis.yml**。
+- 每个 `- insert:` 是一个顶层 loader patch entry：`id` 是行标识（幂等去重键），
+  `name` 是包名（从 profile 的 node_modules 解析），`config` 传给插件的 `apply(ctx, config)`。
+  patch 层还支持 id 定向的 config 覆盖、disables 与 `!!js` 表达式（见文件顶部注释）。
+
 ### 第 4 步：重启 harness
 
 ```bash
