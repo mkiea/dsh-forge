@@ -355,8 +355,8 @@ export function auditTool(config) {
       schema: {
         type: "object", additionalProperties: false,
         properties: {
-          summary: { type: "object", required: true },
-          findings: { type: "array", required: true, items: { type: "object" } }
+          summary: { type: "object", required: true, additionalProperties: true },
+          findings: { type: "array", required: true, items: { type: "object", additionalProperties: true } }
         }
       },
       render(_a, v) {
@@ -380,17 +380,17 @@ export function diffTool(config) {
     description: "Compare two plugin combinations (two dataset/snapshot paths, or one snapshot vs the live combination): added/removed/changed rows with config differences. Read-only.",
     parameters: {
       ...SOURCES_PARAMS,
-      datasetA: { type: "string", required: false, description: "First combination: dataset snapshot path (or omit to use the live combination)." },
-      datasetB: { type: "string", required: false, description: "Second combination: dataset snapshot path (required when comparing two snapshots)." }
+      datasetA: { type: "string", description: "First combination: dataset snapshot path (or omit to use the live combination)." },
+      datasetB: { type: "string", description: "Second combination: dataset snapshot path (required when comparing two snapshots)." }
     },
     output: {
       schema: {
         type: "object", additionalProperties: false,
         properties: {
-          summary: { type: "object", required: true },
-          added: { type: "array", required: true, items: { type: "object" } },
-          removed: { type: "array", required: true, items: { type: "object" } },
-          changed: { type: "array", required: true, items: { type: "object" } },
+          summary: { type: "object", required: true, additionalProperties: true },
+          added: { type: "array", required: true, items: { type: "object", additionalProperties: true } },
+          removed: { type: "array", required: true, items: { type: "object", additionalProperties: true } },
+          changed: { type: "array", required: true, items: { type: "object", additionalProperties: true } },
           riskDelta: { type: "number" }
         }
       },
@@ -427,15 +427,15 @@ export function historyTool(config) {
     description: "List archived ecosystem snapshots (auto-archived analyses) with timestamps and row counts; pass file to load one snapshot's summary. Read-only.",
     parameters: {
       ...SOURCES_PARAMS,
-      file: { type: "string", required: false, description: "Optional snapshot filename to load and summarize." }
+      file: { type: "string", description: "Optional snapshot filename to load and summarize." }
     },
     output: {
       schema: {
         type: "object", additionalProperties: false,
         properties: {
           count: { type: "integer", required: true },
-          snapshots: { type: "array", required: true, items: { type: "object" } },
-          loaded: { type: "object" }
+          snapshots: { type: "array", required: true, items: { type: "object", additionalProperties: true } },
+          loaded: { type: "object", additionalProperties: true }
         }
       },
       render(_a, v) {
@@ -463,7 +463,7 @@ export function archiveTool(config) {
     description: "Archive the current combination as a snapshot file under data/history for later diff/trend analysis. Writes only inside the dsh-forge data directory; the composition itself is never modified. Read-only with respect to the composition.",
     parameters: {
       ...SOURCES_PARAMS,
-      label: { type: "string", required: false, description: "Optional label for the archive entry." }
+      label: { type: "string", description: "Optional label for the archive entry." }
     },
     output: {
       schema: {
@@ -490,14 +490,14 @@ export function presetTool(config) {
     name: "preset_compare",
     description: "Compare the shipped agent presets (standard / code / minimal / cordis) by row set and tool surface: presence matrix plus per-preset row counts. Read-only.",
     parameters: {
-      agentPresetsDir: { type: "string", required: false, description: "Optional path to the agent-presets directory (defaults to auto-discovery)." }
+      agentPresetsDir: { type: "string", description: "Optional path to the agent-presets directory (defaults to auto-discovery)." }
     },
     output: {
       schema: {
         type: "object", additionalProperties: false,
         properties: {
-          presets: { type: "array", required: true, items: { type: "object" } },
-          matrix: { type: "array", required: true, items: { type: "object" } }
+          presets: { type: "array", required: true, items: { type: "object", additionalProperties: true } },
+          matrix: { type: "array", required: true, items: { type: "object", additionalProperties: true } }
         }
       },
       render(_a, v) {
@@ -534,10 +534,10 @@ export function verifyTool(config) {
       schema: {
         type: "object", additionalProperties: false,
         properties: {
-          summary: { type: "object", required: true },
-          issues: { type: "array", required: true, items: { type: "object" } },
-          checked: { type: "array", required: true, items: { type: "object" } },
-          runtimeProbe: { type: "object" }
+          summary: { type: "object", required: true, additionalProperties: true },
+          issues: { type: "array", required: true, items: { type: "object", additionalProperties: true } },
+          checked: { type: "array", required: true, items: { type: "object", additionalProperties: true } },
+          runtimeProbe: { type: "object", additionalProperties: true }
         }
       },
       render(_a, v) {
@@ -593,15 +593,15 @@ export function upgradeTool(config) {
     description: "Query the npm registry for newer versions of composed @deepseek-ai packages and predict which consumers' declared ranges would reject the upgrade (blocking upgrades). Network required; failures degrade gracefully. Read-only.",
     parameters: {
       ...SOURCES_PARAMS,
-      limit: { type: "integer", required: false, description: "Max packages to check (default 40)." }
+      limit: { type: "integer", description: "Max packages to check (default 40)." }
     },
     output: {
       schema: {
         type: "object", additionalProperties: false,
         properties: {
           checked: { type: "integer", required: true },
-          candidates: { type: "array", required: true, items: { type: "object" } },
-          summary: { type: "object", required: true }
+          candidates: { type: "array", required: true, items: { type: "object", additionalProperties: true } },
+          summary: { type: "object", required: true, additionalProperties: true }
         }
       },
       render(_a, v) {
@@ -627,14 +627,14 @@ export function statsTool(config) {
     name: "history_stats",
     description: "Trend statistics over archived snapshots: row/package/health evolution over time. Read-only.",
     parameters: {
-      historyDir: { type: "string", required: false, description: "Optional history directory (defaults to dsh-forge/data/history)." }
+      historyDir: { type: "string", description: "Optional history directory (defaults to dsh-forge/data/history)." }
     },
     output: {
       schema: {
         type: "object", additionalProperties: false,
         properties: {
           count: { type: "integer", required: true },
-          series: { type: "array", required: true, items: { type: "object" } }
+          series: { type: "array", required: true, items: { type: "object", additionalProperties: true } }
         }
       },
       render(_a, v) {
