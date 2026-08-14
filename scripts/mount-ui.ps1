@@ -2,8 +2,8 @@
 # Mount dsh-forge-ui into the deployment: copy package + patch web profile.
 $ErrorActionPreference = 'Stop'
 $src = 'C:/Users/SolimPurmiss/Desktop/DeepForge/dsh-forge/ui-plugin'
-$dst = 'C:/Users/SolimPurmiss/.npm_cache/_npx/1e7f6d9597241db0/node_modules/dsh-forge-ui'
-$patch = 'C:/Users/SolimPurmiss/.dsh/profiles/web/cordis.patch.yml'
+$dst = if ($env:DSH_DEPLOY_NM) { Join-Path $env:DSH_DEPLOY_NM 'dsh-forge-ui' } else { Join-Path $env:USERPROFILE '.npm_cache/_npx/1e7f6d9597241db0/node_modules/dsh-forge-ui' }
+$patch = if ($env:DSH_HOME) { Join-Path $env:DSH_HOME 'profiles/web/cordis.patch.yml' } else { Join-Path $env:USERPROFILE '.dsh/profiles/web/cordis.patch.yml' }
 
 New-Item -ItemType Directory -Force -Path (Join-Path $dst 'lib') | Out-Null
 Copy-Item (Join-Path $src 'package.json') -Destination $dst -Force

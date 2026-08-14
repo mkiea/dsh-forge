@@ -19,6 +19,57 @@ function esc(s) {
 const SEV_COLOR = { blocking: "#d64545", high: "#e67e22", medium: "#f1c40f", low: "#27ae60", disabled: "#95a5a6" };
 
 // Browser-mirror semver (satisfaction only), kept in sync with core/semver.js.
+// Partial-version normalization (^1.2 / ~1.2 / 1.x / 1.2.x / 1.2 / >=1.2 ...).
+function normalizeRange(range) {
+  const r = String(range).trim();
+  if (r === "" || r === "*" || r === "x" || r === "X") return r;
+  return r.split("||").map(function (u) {
+    return u.trim().split(/\s+/).map(function (tok) {
+      const m = /^(\^|~|>=|<=|>|<|=)?\s*(\d+)(?:\.(\d+|x|X|\*))?(?:\.(\d+|x|X|\*))?(?:-([0-9A-Za-z.-]+))?$/.exec(tok);
+      if (!m) return tok;
+      const op = m[1] || "=";
+      const major = m[2];
+      const minorRaw = m[3];
+      const patchRaw = m[4];
+      const pre = m[5];
+      const minor = minorRaw === undefined || /^[xX*]$/.test(minorRaw) ? null : Number(minorRaw);
+      const patch = patchRaw === undefined || /^[xX*]$/.test(patchRaw) ? null : Number(patchRaw);
+      const full = function (mi, pa) { return major + "." + mi + "." + pa + (pre ? "-" + pre : ""); };
+      if (op === "^") {
+        if (minor === null) return ">=" + full(0, 0) + " <" + (Number(major) + 1) + ".0.0";
+        if (patch === null) return ">=" + full(minor, 0) + " <" + (Number(major) + 1) + ".0.0";
+        return tok;
+      }
+      if (op === "~") {
+        if (minor === null) return ">=" + full(0, 0) + " <" + (Number(major) + 1) + ".0.0";
+        if (patch === null) return ">=" + full(minor, 0) + " <" + major + "." + (minor + 1) + ".0";
+        return tok;
+      }
+      if (op === "=" && (minor === null || patch === null)) {
+        if (minor === null) return ">=" + full(0, 0) + " <" + (Number(major) + 1) + ".0.0";
+        return ">=" + full(minor, 0) + " <" + major + "." + (minor + 1) + ".0";
+      }
+      if (op === ">=" && (minor === null || patch === null)) {
+        if (minor === null) return ">=" + full(0, 0);
+        return ">=" + full(minor, 0);
+      }
+      if (op === ">" && (minor === null || patch === null)) {
+        if (minor === null) return ">=" + (Number(major) + 1) + ".0.0";
+        return ">=" + major + "." + (minor + 1) + ".0";
+      }
+      if (op === "<" && (minor === null || patch === null)) {
+        if (minor === null) return "<" + (Number(major) + 1) + ".0.0";
+        return "<" + major + "." + minor + ".0";
+      }
+      if (op === "<=" && (minor === null || patch === null)) {
+        if (minor === null) return "<" + (Number(major) + 1) + ".0.0";
+        return "<" + major + "." + (minor + 1) + ".0";
+      }
+      return tok;
+    }).join(" ");
+  }).join("||");
+}
+
 function satisfies(versionRaw, rangeRaw) {
   const parse = (v) => {
     const m = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?/.exec(String(v).trim());
@@ -33,6 +84,7 @@ function satisfies(versionRaw, rangeRaw) {
     for (let i = 0; i < Math.max(a.pre.length, b.pre.length); i++) {
       if (a.pre[i] === undefined) return -1;
       if (b.pre[i] === undefined) return 1;
+      if (a.pre[i] === b.pre[i]) continue;
       const na = /^\d+$/.test(a.pre[i]), nb = /^\d+$/.test(b.pre[i]);
       if (na && nb) return +a.pre[i] < +b.pre[i] ? -1 : 1;
       if (na) return -1;
@@ -43,7 +95,7 @@ function satisfies(versionRaw, rangeRaw) {
   };
   const v = parse(versionRaw);
   if (!v) return null;
-  const range = String(rangeRaw).trim();
+  const range = normalizeRange(String(rangeRaw).trim());
   if (!range || range === "*") return !v.pre;
   for (const union of range.split("||").map((s) => s.trim())) {
     let ok = true;

@@ -8,8 +8,9 @@ import {
   collectEcosystem, loadSnapshot, buildGraph, assess, checkConflicts,
   simulateCombination, html, mermaid, asciiTree, dashboard, resolveNmRoot,
   auditConfiguration, diffCombinations, archiveSnapshot, listHistory, loadHistory,
-  comparePresets, verifyRows, suggestPatch, checkUpgrades, historyStats
+  comparePresets, verifyRows, suggestPatch, checkUpgrades, historyStats, scanLeaks
 } from "../core/index.js";
+import { loadTruthEcosystem } from "../core/truth.js";
 
 function baseOpts(config) {
   return {
@@ -38,6 +39,10 @@ const SOURCES_PARAMS = {
   profile: {
     type: "string",
     description: "Profile name to analyze (default web)."
+  },
+  truthSource: {
+    type: "string",
+    description: "Ground truth source: 'dump-config' runs dsh --dump-config (the exact composed rows the harness would mount, with provenance); 'scan' reconstructs from source; 'auto' (default) prefers dump-config and falls back to scan with a warning."
   }
 };
 
@@ -45,13 +50,31 @@ function analysisFor(eco, graph, conflicts, assessment) {
   return { ecosystem: eco, graph, conflicts, assessment, patterns: [], deprecations: [], verified: [] };
 }
 
-function selectEco(args, config) {
+async function selectEco(args, config) {
   const opts = baseOpts(config);
   if (args.compositionSources) opts.compositionSources = args.compositionSources;
   if (args.dataset) opts.datasetPath = args.dataset;
   if (args.root) opts.root = args.root;
   if (args.profile) opts.profile = args.profile;
-  const eco = opts.datasetPath ? loadSnapshot(opts.datasetPath) : collectEcosystem(opts);
+  if (opts.datasetPath) return { eco: loadSnapshot(opts.datasetPath), opts };
+  const want = args.truthSource || "auto";
+  if (want === "dump-config" || want === "auto") {
+    try {
+      const lt = await loadTruthEcosystem({ home: opts.home, profile: opts.profile });
+      if (lt.ok) {
+        const eco = lt.ecosystem;
+        eco.truthFallback = null;
+        return { eco, opts };
+      }
+      if (want === "dump-config") {
+        throw new Error("dump-config unavailable: " + (lt.error || "unknown") + " (pass truthSource=scan to fall back)");
+      }
+    } catch (e) {
+      if (want === "dump-config") throw e;
+    }
+  }
+  const eco = collectEcosystem(opts);
+  eco.truthFallback = "scan (dump-config unavailable; scan reconstructs from source and may diverge from the resolved composition)";
   return { eco, opts };
 }
 
@@ -110,7 +133,10 @@ export function analyzeTool(config) {
             }
           },
           trees: { type: "object", required: true, additionalProperties: true },
-          warnings: { type: "array", required: true, items: { type: "string" } }
+          warnings: { type: "array", required: true, items: { type: "string" } },
+          truthSource: { type: "string" },
+          harnessVersion: { type: "string" },
+          disclaimer: { type: "string" }
         }
       },
       render(_args, v) {
@@ -137,10 +163,11 @@ export function analyzeTool(config) {
         return [{ type: "text", text: lines.join("\n") }];
       }
     },
-    execute(args) {
-      const { eco, opts } = selectEco(args, config);
+    async execute(args) {
+      const { eco, opts } = await selectEco(args, config);
       const graph = buildGraph(eco);
       const warnings = [];
+      if (eco.truthFallback) warnings.push(eco.truthFallback);
       for (const e of graph.edges) {
         if (e.satisfied === false) {
           warnings.push(e.from + " requires " + e.to + " " + e.range + " but installed is " + (e.installed || "?"));
@@ -157,6 +184,9 @@ export function analyzeTool(config) {
         edges: graph.edges.map((e) => ({ from: e.from, to: e.to, kind: e.kind, range: e.range, satisfied: e.satisfied })),
         sharedDeps: graph.shared.map((s) => ({ dep: s.dep, installed: s.installed, ranges: s.ranges.map((r) => ({ range: r.range, count: r.count, satisfied: r.satisfied })) })),
         trees: Object.fromEntries(Object.entries(graph.trees).map(([k, v]) => [k, { transitive: v.length, chain: v }])),
+        truthSource: eco.truthSource || "scan",
+        harnessVersion: eco.harnessVersion || null,
+        disclaimer: "风险分为未校准启发式（无事故数据校准），不代表故障概率；contract 类冲突（工具/服务重名）由 harness 注册契约直接拒绝，属启动期确定行为。",
         warnings
       };
     },
@@ -192,7 +222,10 @@ export function conflictsTool(config) {
               }
             }
           },
-          serviceProviders: { type: "object", required: true, additionalProperties: true }
+          serviceProviders: { type: "object", required: true, additionalProperties: true },
+          leaks: { type: "array", required: true, items: { type: "object" } },
+          truthSource: { type: "string" },
+          disclaimer: { type: "string" }
         }
       },
       render(_args, v) {
@@ -210,14 +243,18 @@ export function conflictsTool(config) {
         return [{ type: "text", text: lines.join("\n") }];
       }
     },
-    execute(args) {
-      const { eco } = selectEco(args, config);
+    async execute(args) {
+      const { eco } = await selectEco(args, config);
       const graph = buildGraph(eco);
       const result = checkConflicts(eco, { graph });
+      const leaks = scanLeaks(eco.packages);
       return {
         summary: result.summary,
         conflicts: result.conflicts,
-        serviceProviders: Object.fromEntries(Object.entries(result.services.provides).map(([p, svcs]) => [p, svcs]))
+        serviceProviders: Object.fromEntries(Object.entries(result.services.provides).map(([p, svcs]) => [p, svcs])),
+        leaks: leaks.findings,
+        truthSource: eco.truthSource || "scan",
+        disclaimer: "静态扫描为疑似清单（static-suspect），非 harness 实际拒绝的确认；kind=contract 表示 harness 契约确定行为，heuristic 为未校准信号。"
       };
     },
     presentCall: (args) => ({ card: "generic", title: "Check plugin conflicts", kind: "other", rawInput: args })

@@ -12,7 +12,12 @@ const BUILTIN_SERVICES = new Set([
   "harness", "app", "loader", "timer", "status", "server", "reload", "logger"
 ]);
 
+// scan patterns for tool registrations: literal defineTool blocks and
+// common dynamic variants (name via variable is NOT statically resolvable ->
+// reported as a scan limitation, not silently missed)
 const TOOL_RE = /defineTool\s*\(\s*\{[\s\S]*?name:\s*["']([^"']+)["']/g;
+const TOOL_RE2 = /registerTool\([^)]*?defineTool\(\s*\{[\s\S]*?name:\s*["']([^"']+)["']/g;
+const TOOL_RE3 = /toolName:\s*["']([^"']+)["']/g;
 // Service registration idioms: ctx.service('x'), ctx.provide('x'), and the
 // cordis class pattern: class X extends Service { constructor(ctx) { super(ctx, "x") } }
 const PROVIDE_RE = /(?:ctx\.(?:service|provide)\(\s*["']|super\(ctx,\s*["'])([^"']+)["']/g;
@@ -23,18 +28,24 @@ const IDENT_RE = /^[a-zA-Z][a-zA-Z0-9]*$/;
 // Collect registered tool names per package by scanning shipped sources.
 export function scanToolNames(packages) {
   const perPackage = {};
+  let dynamicHint = false;
   for (const [p, m] of Object.entries(packages)) {
     const names = new Set();
     for (const f of sourceFiles(m.dir)) {
       let text;
       try { text = fs.readFileSync(f, "utf8"); } catch { continue; }
       if (text.length > 400000) continue;
-      TOOL_RE.lastIndex = 0;
-      let mm;
-      while ((mm = TOOL_RE.exec(text))) names.add(mm[1]);
+      for (const re of [TOOL_RE, TOOL_RE2, TOOL_RE3]) {
+        re.lastIndex = 0;
+        let mm;
+        while ((mm = re.exec(text))) names.add(mm[1]);
+      }
+      // dynamic registration hint (name not a string literal)
+      if (/defineTool\(\s*\{[\s\S]*?name:\s*[A-Za-z_$]/.test(text)) dynamicHint = true;
     }
     if (names.size) perPackage[p] = [...names];
   }
+  perPackage.__dynamicRegistrationHint = dynamicHint;
   return perPackage;
 }
 
@@ -124,6 +135,8 @@ export function checkConflicts(eco, { graph } = {}) {
       const coreDep = CORE_RUNTIME.has(e.to);
       conflicts.push({
         type: "version-conflict",
+        kind: "heuristic",
+        evidenceTier: "static-suspect",
         severity: e.kind === "plugin" || coreDep ? "high" : "medium",
         message: e.from + " (" + e.fromPackage + ") requires " + e.to + " " + e.range + " but installed is " + (e.installed || "unknown"),
         evidence: "package.json dependency/peerDependency of " + e.fromPackage,
@@ -139,6 +152,7 @@ export function checkConflicts(eco, { graph } = {}) {
   const toolNames = eco.toolNames || scanToolNames(packages);
   const byTool = new Map();
   for (const [p, names] of Object.entries(toolNames)) {
+    if (!Array.isArray(names)) continue;
     for (const n of names) {
       if (!byTool.has(n)) byTool.set(n, []);
       byTool.get(n).push(p);
@@ -148,6 +162,8 @@ export function checkConflicts(eco, { graph } = {}) {
     if (pkgs.length > 1) {
       conflicts.push({
         type: "tool-collision",
+        kind: "contract",
+        evidenceTier: "static-suspect",
         severity: "high",
         message: "Tool name '" + tool + "' is registered by " + pkgs.join(", "),
         evidence: "defineTool(name) found in shipped sources",
@@ -172,6 +188,8 @@ impact: "Verified: the tools registry rejects the duplicate registration with a 
     if (pkgs.length > 1) {
       conflicts.push({
         type: "service-collision",
+        kind: "contract",
+        evidenceTier: "static-suspect",
         severity: "high",
         message: "Service '" + svc + "' is provided by " + pkgs.join(", "),
         evidence: "ctx.service()/ctx.provide() registrations in shipped sources",
@@ -193,6 +211,8 @@ impact: "Verified: the tools registry rejects the duplicate registration with a 
         // statically visible in the leaf package source
         conflicts.push({
           type: "provider-indirection",
+          kind: "heuristic",
+          evidenceTier: "static-suspect",
           severity: "info",
           message: "Service '" + s + "' consumed by " + p + " is likely provided by " + prov + " via a shared base class (not statically verifiable)",
           evidence: "name-based provider inference",
@@ -206,6 +226,8 @@ impact: "Verified: the tools registry rejects the duplicate registration with a 
       // client-plane services are invisible to this host-side scan
       conflicts.push({
         type: "missing-provider",
+        kind: "heuristic",
+        evidenceTier: "static-suspect",
         severity: "medium",
         message: "Service '" + s + "' is consumed by " + p + " but no composed package provides it (host-side scan)",
         evidence: "ctx.get()/inject entries in shipped sources",
@@ -222,6 +244,8 @@ impact: "Verified: the tools registry rejects the duplicate registration with a 
     if (row.layers.length > 1) {
       conflicts.push({
         type: "row-override",
+        kind: "contract",
+        evidenceTier: "contract-source",
         severity: "info",
         message: "Row '" + row.id + "' is written by multiple layers: " + row.layers.join(" -> "),
         evidence: "composition layers",
@@ -238,6 +262,8 @@ impact: "Verified: the tools registry rejects the duplicate registration with a 
     if (row.disabled === true) {
       conflicts.push({
         type: "disabled-row",
+        kind: "contract",
+        evidenceTier: "contract-source",
         severity: "info",
         message: "Row '" + row.id + "' (" + row.name + ") is disabled",
         evidence: "composition disabled: true",

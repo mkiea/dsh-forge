@@ -43,10 +43,22 @@ export const KNOWN_LIBS = new Set([
 // Known-issue patterns observed in this deployment's composition.
 // Encodes the shipped bundle comments (telemetry, sqlite search, pi-ai,
 // hmr, subagent toolName rows, platform-switched rows).
+// The harness version these pattern facts were verified against.
+export const PATTERNS_HARNESS_VERSION = "0.1.0-rc.6";
+
 export function knownPatterns(ctx) {
   const { rows } = ctx;
   const notes = [];
   const row = (id) => rows.find((r) => r.id === id);
+  if (ctx.harnessVersion && ctx.harnessVersion !== PATTERNS_HARNESS_VERSION) {
+    notes.push({
+      id: "knowledge-version-drift",
+      severity: "warning",
+      message: "知识库模式基于 harness " + PATTERNS_HARNESS_VERSION + " 验证，当前部署为 " + ctx.harnessVersion + "（rc 系列可能有破坏性变更）：以下模式结论可能过时。",
+      evidence: "harnessVersion=" + ctx.harnessVersion + " vs PATTERNS_HARNESS_VERSION",
+      confidence: "high"
+    });
+  }
 
   const sq = row("session-query-sqlite");
   if (sq && sq.configText && /openAt:\s*never/.test(sq.configText)) {

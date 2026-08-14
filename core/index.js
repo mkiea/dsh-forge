@@ -19,6 +19,7 @@ import { verifyRows } from "./verify.js";
 import { suggestPatch } from "./suggest.js";
 import { checkUpgrades } from "./upgrade.js";
 import { historyStats } from "./stats.js";
+import { scanLeaks } from "./leaks.js";
 
 import { knownPatterns, scanDeprecations, KNOWN_LIBS, CLIENT_PLANE_SERVICES, runtimeVerified } from "./knowledge.js";
 import { satisfies, compareVersions, parseVersion, maxSatisfying } from "./semver.js";
@@ -36,6 +37,7 @@ export { verifyRows };
 export { suggestPatch };
 export { checkUpgrades };
 export { historyStats };
+export { scanLeaks };
 
 export { knownPatterns, scanDeprecations, KNOWN_LIBS, CLIENT_PLANE_SERVICES, runtimeVerified };
 export { satisfies, compareVersions, parseVersion, maxSatisfying };
@@ -55,6 +57,7 @@ export function saveSnapshot(eco, file) {
     format: "dsh-forge-ecosystem@1",
     collectedAt: new Date().toISOString(),
     nmRoot: eco.nmRoot || null,
+    harnessVersion: eco.harnessVersion || null,
     toolNames,
     services,
     layers: eco.layers.map((l) => ({
@@ -87,6 +90,7 @@ export function loadSnapshot(file) {
     toolNames: snap.toolNames || null,
     services: snap.services || null,
     nmRoot: snap.nmRoot,
+    harnessVersion: snap.harnessVersion || null,
     snapshot: true,
     collectedAt: snap.collectedAt
   };
@@ -102,7 +106,8 @@ export function runAnalysis(opts = {}) {
   const patterns = knownPatterns(eco);
   const deprecations = scanDeprecations(eco.packages);
   const verified = runtimeVerified(eco);
-  return { ecosystem: eco, graph, conflicts, assessment, patterns, deprecations, verified };
+  const leaks = scanLeaks(eco.packages);
+  return { ecosystem: eco, graph, conflicts, assessment, patterns, deprecations, verified, leaks };
 }
 
 // Default node_modules root discovery for live runs.

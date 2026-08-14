@@ -208,6 +208,8 @@ export function riskScore(pl, ctx) {
   return {
     score: capped,
     severity: capped >= 60 ? "blocking" : capped >= 40 ? "high" : capped >= 20 ? "medium" : "low",
+    calibrated: false,
+    calibrationNote: "未校准启发式：分数是对信号权重的序数化加总，不是概率。0-100 不代表故障概率。",
     signals
   };
 }
@@ -253,6 +255,9 @@ export function assess(eco, conflicts) {
   const fragilePath = fragile ? { id: fragile.id, package: fragile.package, score: risk[fragile.id].score, chain: graph.trees[fragile.id] } : null;
   return {
     health,
+    calibrated: false,
+    harnessVersion: eco.harnessVersion || null,
+    disclaimer: "健康度与风险分为未校准启发式（无事故数据校准）：A/B/C/D 是信号序数化结果，不代表上线放行依据；contract 类硬错（工具/服务重名等）由 harness 注册契约直接拒绝，属启动期确定行为而非概率风险。",
     avgScore: Math.round(avg * 10) / 10,
     maxScore: max,
     bySeverity,

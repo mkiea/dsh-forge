@@ -150,6 +150,51 @@ export function discoverSources({ home, profile, root } = {}) {
   return layers;
 }
 
+// Collect package manifests for a row set. Resolution roots: explicit root,
+// else the deployment root inferred from any resolved bundle dir, else the
+// profile's own node_modules; the profile node_modules is always a secondary
+// root so user link: packages are included.
+export function collectManifests(rows, opts = {}) {
+  const { home, profile, root, layers } = opts;
+  const packages = {};
+  const order = [];
+  let nmRoot = root || null;
+  if (!nmRoot && layers) {
+    const bd = layers.find((l) => l.kind === "bundle" && l.dir);
+    if (bd && bd.dir) {
+      const idx = bd.dir.indexOf("node_modules");
+      if (idx >= 0) nmRoot = bd.dir.slice(0, idx + "node_modules".length);
+    }
+  }
+  if (!nmRoot) nmRoot = home ? path.join(home, "profiles", profile || "web", "node_modules") : null;
+  const profileNm = home ? path.join(home, "profiles", profile || "web", "node_modules") : null;
+  const roots = [];
+  if (nmRoot) roots.push(nmRoot);
+  if (profileNm && profileNm !== nmRoot && fs.existsSync(profileNm)) roots.push(profileNm);
+  for (const row of rows) {
+    const p = packageOf(row.name);
+    if (!p || packages[p]) continue;
+    let dir = null;
+    for (const r of roots) {
+      const probe = path.join(r, ...p.split("/"), "package.json");
+      if (fs.existsSync(probe)) { dir = resolvePkgDir(r, p); break; }
+    }
+    const manifest = dir ? readJson(path.join(dir, "package.json")) : null;
+    if (manifest) {
+      packages[p] = {
+        version: manifest.version,
+        description: manifest.description || "",
+        dependencies: manifest.dependencies || {},
+        peerDependencies: manifest.peerDependencies || {},
+        deprecated: manifest.deprecated || null,
+        dir
+      };
+      order.push(p);
+    }
+  }
+  return { packages, order, nmRoot };
+}
+
 // Merge rows across layers: later layers win per row id (last write wins).
 export function mergeRows(layers) {
   const byId = new Map();
@@ -184,48 +229,7 @@ export function collectEcosystem(opts = {}) {
     layers = discoverSources({ home, profile, root });
   }
   const rows = mergeRows(layers);
-  const packages = {};
-  const order = [];
-  // package resolution root: explicit root, else the deployment root inferred
-  // from any resolved bundle dir, else the profile's own node_modules
-  let nmRoot = root || null;
-  if (!nmRoot) {
-    const bd = layers.find((l) => l.kind === "bundle" && l.dir);
-    if (bd && bd.dir) {
-      const idx = bd.dir.indexOf("node_modules");
-      if (idx >= 0) nmRoot = bd.dir.slice(0, idx + "node_modules".length);
-    }
-  }
-  if (!nmRoot) nmRoot = home ? path.join(home, "profiles", profile || "web", "node_modules") : null;
-  // secondary root: the profile's own node_modules holds user link: packages
-  const profileNm = home ? path.join(home, "profiles", profile || "web", "node_modules") : null;
-  const roots = [];
-  if (nmRoot) roots.push(nmRoot);
-  if (profileNm && profileNm !== nmRoot && fs.existsSync(profileNm)) roots.push(profileNm);
-
-  for (const row of rows) {
-    const p = packageOf(row.name);
-    if (!p || packages[p]) continue;
-    let dir = null;
-    for (const r of roots) {
-      const probe = path.join(r, ...p.split("/"), "package.json");
-      if (fs.existsSync(probe)) { dir = resolvePkgDir(r, p); break; }
-    }
-    const manifest = dir ? readJson(path.join(dir, "package.json")) : null;
-    if (manifest) {
-      packages[p] = {
-        version: manifest.version,
-        description: manifest.description || "",
-        dependencies: manifest.dependencies || {},
-        peerDependencies: manifest.peerDependencies || {},
-        deprecated: manifest.deprecated || null,
-        dir
-      };
-      order.push(p);
-    }
-  }
-
-  // installed versions: top-level + per-consumer nested resolution.
+  const { packages, order, nmRoot } = collectManifests(rows, { home, profile, root, layers });  // installed versions: top-level + per-consumer nested resolution.
   // Node semantics: a consumer's own node_modules wins, then walk up.
   const installed = {};
   const nested = {}; // dep -> { consumerPkg -> version }
@@ -262,7 +266,16 @@ export function collectEcosystem(opts = {}) {
     if (versions.size) nested[d] = Object.fromEntries(versions);
   }
 
-  return { layers, rows, packages, installed, nested, nmRoot };
+  // harness version: dsh package version from any resolved root (drift detection)
+  let harnessVersion = null;
+  for (const r of [nmRoot, home ? path.join(home, "profiles", profile || "web", "node_modules") : null]) {
+    if (!r) continue;
+    try {
+      const m = readJson(path.join(r, "@deepseek-ai", "dsh", "package.json"));
+      if (m && m.version) { harnessVersion = m.version; break; }
+    } catch { /* skip */ }
+  }
+  return { layers, rows, packages, installed, nested, nmRoot, harnessVersion };
 }
 
 // Verify a range against the installed version; null when unknown.

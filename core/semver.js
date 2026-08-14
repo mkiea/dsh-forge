@@ -127,11 +127,64 @@ function andClause(ver, clause) {
   return ok;
 }
 
+// Normalize partial-version ranges to full comparators:
+//   ^1.2 -> >=1.2.0 <2.0.0    ~1.2 -> >=1.2.0 <1.3.0
+//   1.x / 1 / 1.2.x / 1.2    -> >=1.2.0 <1.3.0 (npm treats bare partials as x-ranges)
+export function normalizeRange(range) {
+  const r = String(range).trim();
+  if (r === "" || r === "*" || r === "x" || r === "X") return r;
+  return r.split("||").map((u) => u.trim().split(/\s+/).map((tok) => {
+    const m = /^(\^|~|>=|<=|>|<|=)?\s*(\d+)(?:\.(\d+|x|X|\*))?(?:\.(\d+|x|X|\*))?(?:-([0-9A-Za-z.-]+))?$/.exec(tok);
+    if (!m) return tok; // leave untouched (full version or unknown)
+    const op = m[1] || "=";
+    const major = m[2];
+    const minorRaw = m[3];
+    const patchRaw = m[4];
+    const pre = m[5];
+    const minor = minorRaw === undefined || /^[xX*]$/.test(minorRaw) ? null : Number(minorRaw);
+    const patch = patchRaw === undefined || /^[xX*]$/.test(patchRaw) ? null : Number(patchRaw);
+    const full = (mi, pa) => major + "." + mi + "." + pa + (pre ? "-" + pre : "");
+    if (op === "^") {
+      if (minor === null) return ">=" + full(0, 0) + " <" + (Number(major) + 1) + ".0.0";
+      if (patch === null) return ">=" + full(minor, 0) + " <" + (Number(major) + 1) + ".0.0";
+      return tok;
+    }
+    if (op === "~") {
+      if (minor === null) return ">=" + full(0, 0) + " <" + (Number(major) + 1) + ".0.0";
+      if (patch === null) return ">=" + full(minor, 0) + " <" + major + "." + (minor + 1) + ".0";
+      return tok;
+    }
+    if (op === "=" && (minor === null || patch === null)) {
+      if (minor === null) return ">=" + full(0, 0) + " <" + (Number(major) + 1) + ".0.0";
+      return ">=" + full(minor, 0) + " <" + major + "." + (minor + 1) + ".0";
+    }
+    // partial comparisons: npm semantics (>=1.2 => >=1.2.0, >1.2 => >=1.3.0,
+    // <=1.2 => <1.3.0, <1.2 => <1.2.0)
+    if (op === ">=" && (minor === null || patch === null)) {
+      if (minor === null) return ">=" + full(0, 0);
+      return ">=" + full(minor, 0);
+    }
+    if (op === ">" && (minor === null || patch === null)) {
+      if (minor === null) return ">=" + (Number(major) + 1) + ".0.0";
+      return ">=" + major + "." + (minor + 1) + ".0";
+    }
+    if (op === "<" && (minor === null || patch === null)) {
+      if (minor === null) return "<" + (Number(major) + 1) + ".0.0";
+      return "<" + major + "." + minor + ".0";
+    }
+    if (op === "<=" && (minor === null || patch === null)) {
+      if (minor === null) return "<" + (Number(major) + 1) + ".0.0";
+      return "<" + major + "." + (minor + 1) + ".0";
+    }
+    return tok;
+  }).join(" ")).join("||");
+}
+
 // returns true / false / null(unknown due to unparseable range)
 export function satisfies(versionRaw, rangeRaw) {
   const ver = parseVersion(versionRaw);
   if (!ver) return null;
-  const range = String(rangeRaw).trim();
+  const range = normalizeRange(rangeRaw);
   if (range === "" || range === "*") return !ver.prerelease;
   const unions = range.split("||").map((s) => s.trim());
   let anyOk = false, unknown = false;

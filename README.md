@@ -89,6 +89,12 @@ console.log(JSON.stringify(r.assessment, null, 1));
 - 自动化测试：`test/ui-test.mjs` 36 项 + `test/ui-plugin-test.mjs` 22 项全部通过
   （结果见 `reports/ui-test-results.md`、`reports/ui-plugin-test-results.md`）
 
+## 评审整改（R0–R5）
+
+第三版项目经理评审的验收标准已逐条落实：dump-config 真相源（R0）、未校准声明 + contract/heuristic 分级（R1）、
+harnessVersion 绑定与知识库版本门控（R2）、泄漏扫描（R3）、证据分级 static-suspect/contract-source（R4）。
+详见 `reports/PM-remediation.md` 与 `CHANGELOG.md`。
+
 ## 未实现项（受静态插件数据通路限制）
 
 | 功能 | 原因 | 替代方案 |

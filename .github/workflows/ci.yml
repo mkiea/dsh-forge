@@ -1,0 +1,17 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --check src/index.js && node --check src/tools.js
+      - run: node --input-type=module -e "import('./core/index.js').then(m => console.log('core ok', Object.keys(m).length))"
+      - run: node test/semver-consistency.mjs
