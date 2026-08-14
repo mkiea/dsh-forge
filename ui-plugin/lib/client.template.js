@@ -244,7 +244,7 @@ window.__ModuleLoader__.load({
         ctx.slots.register({ name: "conversation.session.header.actions", id: "forge-ui", locale: NS }, HeaderEntry);
       }, "dsh-forge-ui: header entry");
       ctx.effect(function () {
-        ctx.slots.register({ name: "conversation.chat.turnTail", id: "forge-ui", locale: NS }, TurnTailCard);
+        ctx.slots.register({ name: "conversation.chat.turnTail", id: "forge-ui", locale: NS, select: function () { return true; } }, TurnTailCard);
       }, "dsh-forge-ui: turn-tail card");
     }
     var inject = ["slots", "locale"];
