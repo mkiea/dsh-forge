@@ -12,6 +12,7 @@
 import z from "@deepseek-ai/schemastery";
 import { defineTool } from "@deepseek-ai/dsh-tools";
 import { analyzeTool, conflictsTool, visualizeTool, simulateTool, auditTool, diffTool, historyTool, archiveTool, presetTool, verifyTool, suggestTool, upgradeTool, statsTool } from "./tools.js";
+import { createCalibration, staticCalibration } from "../core/index.js";
 
 export const name = "dsh-forge";
 export const inject = ["tools"];
@@ -49,12 +50,14 @@ function probeRuntime(ctx) {
 }
 
 export function apply(ctx, config = {}) {
+  const calibration = (ctx && typeof ctx.on === "function") ? createCalibration(ctx) : staticCalibration();
   const cfg = {
     profile: config.profile || "web",
     root: config.root,
     compositionSources: config.compositionSources,
     datasetPath: config.datasetPath,
-    runtimeProbe: probeRuntime(ctx)
+    runtimeProbe: probeRuntime(ctx),
+    calibration
   };
   for (const factory of ALL_TOOLS) {
     ctx.tools.register(defineTool(factory(cfg)));

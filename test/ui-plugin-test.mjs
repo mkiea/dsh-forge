@@ -95,7 +95,10 @@ if (plugin) {
   const regs = [];
   const ctxMock = {
     effect: (fn) => fn(),
-    slots: { register: (def, comp) => regs.push({ def, comp }) }
+    slots: {
+      register: (def, comp) => regs.push({ def, comp }),
+      inject: (_name, fn) => fn()
+    }
   };
   plugin.apply(ctxMock);
   const names = regs.map((r) => r.def.name);
@@ -144,7 +147,7 @@ if (plugin) {
 
 if (plugin) {
   const regs = [];
-  const ctxMock = { effect: (fn) => fn(), slots: { register: (def, comp) => regs.push({ def, comp }) } };
+  const ctxMock = { effect: (fn) => fn(), slots: { register: (def, comp) => regs.push({ def, comp }), inject: (_name, fn) => fn() } };
   plugin.apply(ctxMock);
   // title + aria-label always carry the name; the label SPAN renders only when wide
   const spansWithText = (n, text, acc) => {

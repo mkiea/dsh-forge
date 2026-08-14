@@ -110,6 +110,20 @@ export function knownPatterns(ctx) {
       confidence: "high"
     });
   }
+  // client-runner redirects bare timers into harness-owned timers so they
+  // stay reversible; a leak scan flagging these is a false positive.
+  for (const p of Object.keys(ctx.packages || {})) {
+    if (p.includes("dsh-cordis-client-runner") || p.includes("dsh-cordis-host-runner")) {
+      notes.push({
+        id: "client-runner-timer-redirect",
+        severity: "info",
+        message: p + " 把裸 setTimeout/setInterval 重定向到 harness 自有计时器（可逆设计）：泄漏扫描对此包的定时器告警为误报。",
+        evidence: "DYNAMIC_CLIENT_REDIRECTS / TIMER_REDIRECT 源码模式",
+        confidence: "high"
+      });
+      break;
+    }
+  }
   const hmr = row("hmr");
   if (hmr && hmr.configText && /root:\s*\[/.test(hmr.configText)) {
     notes.push({

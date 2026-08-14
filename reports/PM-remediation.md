@@ -72,3 +72,59 @@
 2. dump-config 不求值 `!!js`（官方设计）；平台切换行以 scan 求值为准（两者行集一致已实证）。
 3. 泄漏扫描为启发式（注册/清理计数配对），low confidence。
 4. 无事故数据集，所有风险分保持"未校准启发式"定位。
+
+
+---
+
+## 补充：审视报告（PM-review-v4）P0/P1 修复落实
+
+### P0-1 作用域感知冲突判定（E3）
+- 新增 `core/scope.js`：`scanScopeHints` 扫描每包源码的作用域标记（agent.ctx / agentCtx / scoped / per-agent / scopeOf），
+  产出 `global | scoped | scoped-context-present` 提示；`classifyCollision` 按作用域分级：
+  - 全部 scoped → `tool-name-scoped-variant`（heuristic/info：合法 per-agent 变体）
+  - 含全局 → `tool-collision`（contract/high：注册拒绝硬错，静态疑似）
+- check_conflicts 输出带 scope hints 证据；自包含测试覆盖三态分类。
+
+### P0-2 事件流校准（E6）
+- 新增 `core/calibration.js`：`createCalibration(ctx)` 订阅 `session/event`（tool/call、tool/result、turn/end），
+  统计调用数/失败数/失败率/TOP 工具；`staticCalibration` 离线诚实返回无基线。
+- src/index.js apply 时创建校准（无事件流自动降级）；check_conflicts 输出 `calibration` 字段。
+- 独立于本机：数据只来自运行期 ctx 事件，无路径依赖；测试用 mock 事件验证。
+
+### P1 泄漏扫描 apply 路径切片 + provide 语义中性化
+- `scanLeaks` 按 apply 文件切片：注册/清理仅在 apply 路径内对账（`leak-suspect`），
+  非 apply 文件注册降为 `leak-context`（info）；输出带文件位置证据。
+- service-collision impact 文本改为"待实证"（cordis fiber 作用域注册，同 scope 重复 provide 语义源码未见分支）。
+- **顺带修复真实缺陷**：模板字面量转义把 `\b` 写成退格字符（0x08），导致 BARE_REG 的
+  setInterval/setTimeout/addEventListener 规则静默失效——已全局修复并加验证。
+- 知识库新增 client-runner-timer-redirect 模式（客户端定时器重定向为可逆设计，泄漏误报排除）。
+
+### 测试
+- `test/review-fixes.test.mjs`：15/15（作用域三态、mock 校准统计、泄漏切片含位置证据、清理后无泄漏）——自包含、零本机依赖。
+- 全量回归：ui-test 36/36 · ui-plugin-test 22/22 · semver-consistency 30/30。
+- 真实组合：conflicts 82（contract 53 + heuristic 29）、leaks 12（4 medium 候选 + 8 info；已知误报模式已入知识库）。
+
+
+---
+
+## 三点确认（审视者复核）的修复记录
+
+### 1. "排除误报"落地到输出层 ✅
+- 修复 knowledge 循环 break bug（原只记录第一个匹配包，与泄漏候选不对应）。
+- 在 `core/leaks.js` 输出层内置已知安全过滤（KNOWN_SAFE_TIMER_PACKAGES + KNOWN_SAFE_TIMER_RULES）：
+  匹配包+规则 → kind 降级为 `leak-known-safe`（info，evidence 注明源码核实的可逆重定向设计）。
+- 实测（scan 实时组合）：leak-suspect **4 → 2**；client-runner 的 setInterval/setTimeout 已降级为 leak-known-safe。
+- 剩余 2 个 suspect（dsh-client-connection、dsh-client-ui-trajectory）为真实候选，保持 low confidence 待人工核对。
+
+### 2. conflicts 82 vs 63 差异归因 ✅（非 bug，输入集不同）
+- scan 实时（131 行，无 preset 层）：provider-indirection 29 + row-override 27 + disabled-row 26 = **82**。
+- 快照（138 行，含 preset:standard 层）：29 + 27 + **7** = **63**。
+- 差异 = disabled-row（26 vs 7，差 19）：preset:standard 重新启用了 19 个被 web-app 禁用的行——合理语义。
+- 输出已带 `inputScope` 字段（rows/packages/layers/disabledRows/truthSource），任何环境可复现与归因；
+  harness 挂载环境的最终数字以 inputScope 为准。
+
+### 3. 小瑕疵清理 ✅
+- review-fixes.test.mjs：清除 DBG3/DEBUG 残留与内联复现块；`.tmp-tests` 硬编码路径改为
+  `import.meta` 推导的项目相对路径（ROOT/.tmp-tests），测试结束清理。
+- smoke13.mjs：`require("node:fs")` 改为 ESM `import * as fs`；实测 13 工具全部 OK。
+- 全量回归：36/36 + 22/22 + 30/30 + 15/15。

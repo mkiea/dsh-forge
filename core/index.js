@@ -20,6 +20,7 @@ import { suggestPatch } from "./suggest.js";
 import { checkUpgrades } from "./upgrade.js";
 import { historyStats } from "./stats.js";
 import { scanLeaks } from "./leaks.js";
+import { createCalibration, staticCalibration } from "./calibration.js";
 
 import { knownPatterns, scanDeprecations, KNOWN_LIBS, CLIENT_PLANE_SERVICES, runtimeVerified } from "./knowledge.js";
 import { satisfies, compareVersions, parseVersion, maxSatisfying } from "./semver.js";
@@ -37,7 +38,7 @@ export { verifyRows };
 export { suggestPatch };
 export { checkUpgrades };
 export { historyStats };
-export { scanLeaks };
+export { scanLeaks, createCalibration, staticCalibration };
 
 export { knownPatterns, scanDeprecations, KNOWN_LIBS, CLIENT_PLANE_SERVICES, runtimeVerified };
 export { satisfies, compareVersions, parseVersion, maxSatisfying };

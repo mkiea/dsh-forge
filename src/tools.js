@@ -223,7 +223,9 @@ export function conflictsTool(config) {
             }
           },
           serviceProviders: { type: "object", required: true, additionalProperties: true },
-          leaks: { type: "array", required: true, items: { type: "object" } },
+          leaks: { type: "array", required: true, items: { type: "object", additionalProperties: true } },
+          calibration: { type: "object", additionalProperties: true },
+          inputScope: { type: "object", additionalProperties: true },
           truthSource: { type: "string" },
           disclaimer: { type: "string" }
         }
@@ -248,11 +250,14 @@ export function conflictsTool(config) {
       const graph = buildGraph(eco);
       const result = checkConflicts(eco, { graph });
       const leaks = scanLeaks(eco.packages);
+      const calibration = config.calibration ? config.calibration.snapshot() : null;
       return {
         summary: result.summary,
         conflicts: result.conflicts,
         serviceProviders: Object.fromEntries(Object.entries(result.services.provides).map(([p, svcs]) => [p, svcs])),
         leaks: leaks.findings,
+        inputScope: { rows: eco.rows.length, packages: Object.keys(eco.packages).length, layers: eco.layers.map((l) => l.layer), disabledRows: eco.rows.filter((r) => r.disabled === true).length, truthSource: eco.truthSource || "scan" },
+        calibration,
         truthSource: eco.truthSource || "scan",
         disclaimer: "静态扫描为疑似清单（static-suspect），非 harness 实际拒绝的确认；kind=contract 表示 harness 契约确定行为，heuristic 为未校准信号。"
       };
@@ -295,8 +300,8 @@ export function visualizeTool(config) {
         return [{ type: "text", text }];
       }
     },
-    execute(args) {
-      const { eco } = selectEco(args, config);
+    async execute(args) {
+      const { eco } = await selectEco(args, config);
       const graph = buildGraph(eco);
       const conflicts = checkConflicts(eco, { graph });
       const assessment = assess(eco, conflicts);
@@ -370,8 +375,8 @@ export function simulateTool(config) {
         return [{ type: "text", text: lines.join("\n") }];
       }
     },
-    execute(args) {
-      const { eco } = selectEco(args, config);
+    async execute(args) {
+      const { eco } = await selectEco(args, config);
       const result = simulateCombination(eco, {
         add: args.add || [],
         remove: args.remove || [],
@@ -402,8 +407,8 @@ export function auditTool(config) {
         return [{ type: "text", text: lines.join("\n") }];
       }
     },
-    execute(args) {
-      const { eco } = selectEco(args, config);
+    async execute(args) {
+      const { eco } = await selectEco(args, config);
       return auditConfiguration(eco);
     },
     presentCall: (args) => ({ card: "generic", title: "Audit plugin configuration", kind: "other", rawInput: args })
@@ -439,8 +444,8 @@ export function diffTool(config) {
         return [{ type: "text", text: lines.join("\n") }];
       }
     },
-    execute(args) {
-      const { eco } = selectEco(args, config);
+    async execute(args) {
+      const { eco } = await selectEco(args, config);
       let ecoA, ecoB;
       if (args.datasetB) {
         ecoA = loadSnapshot(args.datasetA || args.dataset);
@@ -481,7 +486,7 @@ export function historyTool(config) {
         return [{ type: "text", text: lines.join("\n") }];
       }
     },
-    execute(args) {
+    async execute(args) {
       const list = listHistory();
       let loaded = null;
       if (args.file) {
@@ -512,8 +517,8 @@ export function archiveTool(config) {
       },
       render(_a, v) { return [{ type: "text", text: "已存档: " + v.file + " (" + v.rows + " 行)" }]; }
     },
-    execute(args) {
-      const { eco } = selectEco(args, config);
+    async execute(args) {
+      const { eco } = await selectEco(args, config);
       const file = archiveSnapshot(eco, { label: args.label || "manual" });
       return { file, rows: eco.rows.length };
     },
@@ -549,7 +554,7 @@ export function presetTool(config) {
         return [{ type: "text", text: lines.join("\n") }];
       }
     },
-    execute(args) {
+    async execute(args) {
       const nmRoot = resolveNmRoot(config.profile || "web");
       const dir = args.agentPresetsDir || (nmRoot ? nmRoot + "/@deepseek-ai/dsh/config/agent-presets" : null);
       if (!dir || !fs.existsSync(dir)) {
@@ -587,8 +592,8 @@ export function verifyTool(config) {
         return [{ type: "text", text: lines.join("\n") }];
       }
     },
-    execute(args) {
-      const { eco } = selectEco(args, config);
+    async execute(args) {
+      const { eco } = await selectEco(args, config);
       const result = verifyRows(eco);
       result.runtimeProbe = config.runtimeProbe || null;
       return result;
@@ -613,8 +618,8 @@ export function suggestTool(config) {
       },
       render(_a, v) { return [{ type: "text", text: v.patch }]; }
     },
-    execute(args) {
-      const { eco } = selectEco(args, config);
+    async execute(args) {
+      const { eco } = await selectEco(args, config);
       const graph = buildGraph(eco);
       const conflicts = checkConflicts(eco, { graph });
       return { patch: suggestPatch(conflicts), notes: ["suggest_patch 只生成文本，不写盘；应用前请人工审查"] };
@@ -630,29 +635,43 @@ export function upgradeTool(config) {
     description: "Query the npm registry for newer versions of composed @deepseek-ai packages and predict which consumers' declared ranges would reject the upgrade (blocking upgrades). Network required; failures degrade gracefully. Read-only.",
     parameters: {
       ...SOURCES_PARAMS,
-      limit: { type: "integer", description: "Max packages to check (default 40)." }
+      limit: { type: "integer", description: "Max packages to check (default 40)." },
+      registry: { type: "string", description: "Primary npm registry. Defaults to registry.npmjs.org, falls back to npmmirror on repeated failures." },
+      timeoutMs: { type: "integer", description: "Per-request timeout in ms (default 3500)." }
     },
     output: {
       schema: {
         type: "object", additionalProperties: false,
         properties: {
           checked: { type: "integer", required: true },
+          registry: { type: "string", required: true },
+          registrySource: { type: "string", required: true },
+          elapsedMs: { type: "integer", required: true },
+          networkFailures: { type: "array", required: true, items: { type: "string" } },
           candidates: { type: "array", required: true, items: { type: "object", additionalProperties: true } },
           summary: { type: "object", required: true, additionalProperties: true }
         }
       },
       render(_a, v) {
         const s = v.summary;
-        const lines = ["## 升级检查: " + v.checked + " 包, " + s.upgradable + " 可升级, " + s.blockingUpgrades + " 有阻断"];
+        const src = v.registrySource === "fallback" ? "镜像降级" : "主源";
+        const lines = ["## 升级检查: " + v.checked + " 包, " + s.upgradable + " 可升级, " + s.blockingUpgrades + " 有阻断 (" + src + ", " + v.elapsedMs + "ms)"];
+        if (v.networkFailures.length) lines.push("- 网络失败 " + v.networkFailures.length + " 包（已跳过）: " + v.networkFailures.slice(0, 5).join(", "));
         for (const c of v.candidates.slice(0, 12)) {
           lines.push("- " + c.package + ": " + c.installed + " -> " + c.latest + (c.blockers.length ? " [阻断: " + c.blockers.map((b) => b.row + "@" + b.range).join(", ") + "]" : ""));
+          lines.push("  `" + c.installCmd + "`");
         }
         return [{ type: "text", text: lines.join("\n") }];
       }
     },
-    execute(args) {
-      const { eco } = selectEco(args, config);
-      return checkUpgrades(eco, { limit: args.limit || 40 });
+    async execute(args) {
+      const { eco } = await selectEco(args, config);
+      return checkUpgrades(eco, {
+        limit: args.limit || 40,
+        registry: args.registry || config.registry,
+        timeoutMs: args.timeoutMs || config.upgradeTimeoutMs,
+        concurrency: config.upgradeConcurrency
+      });
     },
     presentCall: (args) => ({ card: "generic", title: "Check plugin upgrades", kind: "other", rawInput: args })
   };

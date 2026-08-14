@@ -7,6 +7,7 @@ import * as path from "node:path";
 import { satisfies } from "./semver.js";
 import { packageOf, resolveInstalled } from "./composition.js";
 import { CLIENT_PLANE_SERVICES } from "./knowledge.js";
+import { scanScopeHints, classifyCollision } from "./scope.js";
 
 const BUILTIN_SERVICES = new Set([
   "harness", "app", "loader", "timer", "status", "server", "reload", "logger"
@@ -150,6 +151,7 @@ export function checkConflicts(eco, { graph } = {}) {
 
   // 2) tool-name collisions (prefer persisted scan results from snapshots)
   const toolNames = eco.toolNames || scanToolNames(packages);
+  const scopeHints = eco.scopeHints || scanScopeHints(packages);
   const byTool = new Map();
   for (const [p, names] of Object.entries(toolNames)) {
     if (!Array.isArray(names)) continue;
@@ -160,16 +162,20 @@ export function checkConflicts(eco, { graph } = {}) {
   }
   for (const [tool, pkgs] of byTool) {
     if (pkgs.length > 1) {
+      const cls = classifyCollision(tool, pkgs, scopeHints);
+      const scopedVariant = cls.kind === "scoped-variant";
       conflicts.push({
-        type: "tool-collision",
-        kind: "contract",
+        type: scopedVariant ? "tool-name-scoped-variant" : "tool-collision",
+        kind: scopedVariant ? "heuristic" : "contract",
         evidenceTier: "static-suspect",
-        severity: "high",
-        message: "Tool name '" + tool + "' is registered by " + pkgs.join(", "),
-        evidence: "defineTool(name) found in shipped sources",
-impact: "Verified: the tools registry rejects the duplicate registration with a loud error (tool \"X\" is already registered) — the second plugin fails to mount and its features are unavailable.",
-        advice: "Rename one tool or mount only one of the packages.",
-        confidence: "high",
+        severity: scopedVariant ? "info" : "high",
+        message: "Tool name '" + tool + "' is registered by " + pkgs.join(", ") + (scopedVariant ? " (all registrations carry scope markers)" : ""),
+        evidence: "defineTool(name) found in shipped sources; scope hints: " + pkgs.map((p) => p + "=" + (scopeHints[p] ? scopeHints[p].hint : "unknown")).join(", "),
+        impact: scopedVariant
+          ? "同名注册均带作用域标记（agent.ctx/scoped）：可能是合法 per-agent 变体；若确为全局注册需人工核对。"
+          : "Verified: the tools registry rejects the duplicate registration with a loud error (tool \"X\" is already registered) — the second plugin fails to mount and its features are unavailable.",
+        advice: scopedVariant ? "核对作用域归属：per-agent 变体合法，全局注册需改名。" : "Rename one tool or mount only one of the packages.",
+        confidence: scopedVariant ? "low" : "high",
         packages: pkgs
       });
     }
@@ -193,7 +199,7 @@ impact: "Verified: the tools registry rejects the duplicate registration with a 
         severity: "high",
         message: "Service '" + svc + "' is provided by " + pkgs.join(", "),
         evidence: "ctx.service()/ctx.provide() registrations in shipped sources",
-        impact: "Registration race: the later provider wins; the earlier provider's features silently vanish.",
+        impact: "待实证：cordis 注册为 fiber 作用域（卸载自动注销）；同作用域重复 provide 的拒绝/覆盖语义在源码中未见明确分支——需运行期实证后定论。",
         advice: "Keep a single provider for the service, or split service names.",
         confidence: "medium",
         packages: pkgs
