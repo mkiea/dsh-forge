@@ -6,7 +6,9 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import {
   collectEcosystem, loadSnapshot, buildGraph, assess, checkConflicts,
-  simulateCombination, html, mermaid, asciiTree, dashboard, resolveNmRoot
+  simulateCombination, html, mermaid, asciiTree, dashboard, resolveNmRoot,
+  auditConfiguration, diffCombinations, archiveSnapshot, listHistory, loadHistory,
+  comparePresets, verifyRows, suggestPatch, checkUpgrades, historyStats
 } from "../core/index.js";
 
 function baseOpts(config) {
@@ -343,3 +345,308 @@ export function simulateTool(config) {
     presentCall: (args) => ({ card: "generic", title: "Simulate plugin combination", kind: "other", rawInput: args })
   };
 }
+// ── 5) audit_configuration ────────────────────────────────────────────────
+export function auditTool(config) {
+  return {
+    name: "audit_configuration",
+    description: "Audit every composed row's config (configText) against evidence-based rules: risky key settings (openAt, telemetry mode, in-memory paths, fetch enabled), with severity, evidence and confidence. Read-only.",
+    parameters: SOURCES_PARAMS,
+    output: {
+      schema: {
+        type: "object", additionalProperties: false,
+        properties: {
+          summary: { type: "object", required: true },
+          findings: { type: "array", required: true, items: { type: "object" } }
+        }
+      },
+      render(_a, v) {
+        const lines = ["## 配置审计: " + v.summary.total + " 条发现"];
+        for (const f of v.findings) lines.push("- [" + f.severity + "] " + f.row + " / " + f.key + ": " + f.message + " (" + f.evidence + ")");
+        return [{ type: "text", text: lines.join("\n") }];
+      }
+    },
+    execute(args) {
+      const { eco } = selectEco(args, config);
+      return auditConfiguration(eco);
+    },
+    presentCall: (args) => ({ card: "generic", title: "Audit plugin configuration", kind: "other", rawInput: args })
+  };
+}
+
+// ── 6) diff_combinations ──────────────────────────────────────────────────
+export function diffTool(config) {
+  return {
+    name: "diff_combinations",
+    description: "Compare two plugin combinations (two dataset/snapshot paths, or one snapshot vs the live combination): added/removed/changed rows with config differences. Read-only.",
+    parameters: {
+      ...SOURCES_PARAMS,
+      datasetA: { type: "string", required: false, description: "First combination: dataset snapshot path (or omit to use the live combination)." },
+      datasetB: { type: "string", required: false, description: "Second combination: dataset snapshot path (required when comparing two snapshots)." }
+    },
+    output: {
+      schema: {
+        type: "object", additionalProperties: false,
+        properties: {
+          summary: { type: "object", required: true },
+          added: { type: "array", required: true, items: { type: "object" } },
+          removed: { type: "array", required: true, items: { type: "object" } },
+          changed: { type: "array", required: true, items: { type: "object" } },
+          riskDelta: { type: "number" }
+        }
+      },
+      render(_a, v) {
+        const lines = ["## 组合对比: +" + v.summary.added + " / -" + v.summary.removed + " / ~" + v.summary.changed];
+        for (const r of v.added) lines.push("- 新增: " + r.id + " (" + r.name + ")");
+        for (const r of v.removed) lines.push("- 移除: " + r.id + " (" + r.name + ")");
+        for (const r of v.changed.slice(0, 20)) lines.push("- 变更: " + r.id + (r.configChanged ? " [config]" : "") + (r.disabledChanged ? " [disabled]" : "") + (r.nameChanged ? " [name]" : ""));
+        return [{ type: "text", text: lines.join("\n") }];
+      }
+    },
+    execute(args) {
+      const { eco } = selectEco(args, config);
+      let ecoA, ecoB;
+      if (args.datasetB) {
+        ecoA = loadSnapshot(args.datasetA || args.dataset);
+        ecoB = loadSnapshot(args.datasetB);
+      } else if (args.datasetA || args.dataset) {
+        ecoA = eco;
+        ecoB = loadSnapshot(args.datasetA || args.dataset);
+      } else {
+        throw new Error("diff_combinations needs datasetB (two snapshots) or datasetA (live vs snapshot)");
+      }
+      return diffCombinations(ecoA, ecoB);
+    },
+    presentCall: (args) => ({ card: "generic", title: "Diff plugin combinations", kind: "other", rawInput: args })
+  };
+}
+
+// ── 7) snapshot_history / archive_snapshot ────────────────────────────────
+export function historyTool(config) {
+  return {
+    name: "snapshot_history",
+    description: "List archived ecosystem snapshots (auto-archived analyses) with timestamps and row counts; pass file to load one snapshot's summary. Read-only.",
+    parameters: {
+      ...SOURCES_PARAMS,
+      file: { type: "string", required: false, description: "Optional snapshot filename to load and summarize." }
+    },
+    output: {
+      schema: {
+        type: "object", additionalProperties: false,
+        properties: {
+          count: { type: "integer", required: true },
+          snapshots: { type: "array", required: true, items: { type: "object" } },
+          loaded: { type: "object" }
+        }
+      },
+      render(_a, v) {
+        const lines = ["## 快照历史: " + v.count + " 个"];
+        for (const s of v.snapshots.slice(0, 15)) lines.push("- " + s.file + "  rows=" + s.rows + (s.health ? "  health=" + s.health : ""));
+        return [{ type: "text", text: lines.join("\n") }];
+      }
+    },
+    execute(args) {
+      const list = listHistory();
+      let loaded = null;
+      if (args.file) {
+        const snap = loadHistory(args.file);
+        loaded = { file: args.file, rows: snap.rows.length, packages: Object.keys(snap.packages).length, collectedAt: snap.collectedAt };
+      }
+      return { count: list.length, snapshots: list, loaded };
+    },
+    presentCall: (args) => ({ card: "generic", title: "List snapshot history", kind: "other", rawInput: args })
+  };
+}
+
+export function archiveTool(config) {
+  return {
+    name: "archive_snapshot",
+    description: "Archive the current combination as a snapshot file under data/history for later diff/trend analysis. Writes only inside the dsh-forge data directory; the composition itself is never modified. Read-only with respect to the composition.",
+    parameters: {
+      ...SOURCES_PARAMS,
+      label: { type: "string", required: false, description: "Optional label for the archive entry." }
+    },
+    output: {
+      schema: {
+        type: "object", additionalProperties: false,
+        properties: {
+          file: { type: "string", required: true },
+          rows: { type: "integer", required: true }
+        }
+      },
+      render(_a, v) { return [{ type: "text", text: "已存档: " + v.file + " (" + v.rows + " 行)" }]; }
+    },
+    execute(args) {
+      const { eco } = selectEco(args, config);
+      const file = archiveSnapshot(eco, { label: args.label || "manual" });
+      return { file, rows: eco.rows.length };
+    },
+    presentCall: (args) => ({ card: "generic", title: "Archive combination snapshot", kind: "other", rawInput: args })
+  };
+}
+
+// ── 8) preset_compare ─────────────────────────────────────────────────────
+export function presetTool(config) {
+  return {
+    name: "preset_compare",
+    description: "Compare the shipped agent presets (standard / code / minimal / cordis) by row set and tool surface: presence matrix plus per-preset row counts. Read-only.",
+    parameters: {
+      agentPresetsDir: { type: "string", required: false, description: "Optional path to the agent-presets directory (defaults to auto-discovery)." }
+    },
+    output: {
+      schema: {
+        type: "object", additionalProperties: false,
+        properties: {
+          presets: { type: "array", required: true, items: { type: "object" } },
+          matrix: { type: "array", required: true, items: { type: "object" } }
+        }
+      },
+      render(_a, v) {
+        const lines = ["## 预设对比"];
+        for (const p of v.presets) lines.push("- " + p.id + ": " + p.rowCount + " 行" + (p.meta && p.meta.name ? " (" + p.meta.name + ")" : ""));
+        lines.push("### 差异行（非全预设一致）");
+        for (const m of v.matrix) {
+          const entries = Object.entries(m).filter(([k]) => k !== "id");
+          const vals = entries.map(([k, v2]) => k + "=" + (v2 || "-"));
+          if (new Set(entries.map(([, v2]) => v2)).size > 1) lines.push("- " + m.id + ": " + vals.join(" | "));
+        }
+        return [{ type: "text", text: lines.join("\n") }];
+      }
+    },
+    execute(args) {
+      const nmRoot = resolveNmRoot(config.profile || "web");
+      const dir = args.agentPresetsDir || (nmRoot ? nmRoot + "/@deepseek-ai/dsh/config/agent-presets" : null);
+      if (!dir || !fs.existsSync(dir)) {
+        throw new Error("agent-presets directory not found; pass agentPresetsDir explicitly");
+      }
+      return comparePresets(dir);
+    },
+    presentCall: (args) => ({ card: "generic", title: "Compare agent presets", kind: "other", rawInput: args })
+  };
+}
+
+// ── 9) verify_rows ────────────────────────────────────────────────────────
+export function verifyTool(config) {
+  return {
+    name: "verify_rows",
+    description: "Row-level mount preflight: package resolvable, dsh.client declaration present, client bundle built. Detects rows that would fail to mount. Read-only.",
+    parameters: SOURCES_PARAMS,
+    output: {
+      schema: {
+        type: "object", additionalProperties: false,
+        properties: {
+          summary: { type: "object", required: true },
+          issues: { type: "array", required: true, items: { type: "object" } },
+          checked: { type: "array", required: true, items: { type: "object" } },
+          runtimeProbe: { type: "object" }
+        }
+      },
+      render(_a, v) {
+        const s = v.summary;
+        const lines = ["## 装载预检: " + s.rows + " 行, " + s.ok + " OK, " + s.issues + " 问题"];
+        if (v.runtimeProbe) {
+          lines.push("运行期服务: 提供 " + v.runtimeProbe.found.length + " / " + (v.runtimeProbe.found.length + v.runtimeProbe.missing.length) + " (缺失: " + (v.runtimeProbe.missing.join(", ") || "无") + ")");
+        }
+        for (const i of v.issues) lines.push("- [" + i.severity + "] " + i.row + ": " + i.message + " (" + i.check + ")");
+        return [{ type: "text", text: lines.join("\n") }];
+      }
+    },
+    execute(args) {
+      const { eco } = selectEco(args, config);
+      const result = verifyRows(eco);
+      result.runtimeProbe = config.runtimeProbe || null;
+      return result;
+    },
+    presentCall: (args) => ({ card: "generic", title: "Verify composition rows", kind: "other", rawInput: args })
+  };
+}
+
+// ── 10) suggest_patch ─────────────────────────────────────────────────────
+export function suggestTool(config) {
+  return {
+    name: "suggest_patch",
+    description: "Generate a cordis.patch.yml snippet from current conflict findings. Output is text only: the composition is never modified. Read-only.",
+    parameters: SOURCES_PARAMS,
+    output: {
+      schema: {
+        type: "object", additionalProperties: false,
+        properties: {
+          patch: { type: "string", required: true },
+          notes: { type: "array", required: true, items: { type: "string" } }
+        }
+      },
+      render(_a, v) { return [{ type: "text", text: v.patch }]; }
+    },
+    execute(args) {
+      const { eco } = selectEco(args, config);
+      const graph = buildGraph(eco);
+      const conflicts = checkConflicts(eco, { graph });
+      return { patch: suggestPatch(conflicts), notes: ["suggest_patch 只生成文本，不写盘；应用前请人工审查"] };
+    },
+    presentCall: (args) => ({ card: "generic", title: "Suggest composition patch", kind: "other", rawInput: args })
+  };
+}
+
+// ── 11) check_upgrades ────────────────────────────────────────────────────
+export function upgradeTool(config) {
+  return {
+    name: "check_upgrades",
+    description: "Query the npm registry for newer versions of composed @deepseek-ai packages and predict which consumers' declared ranges would reject the upgrade (blocking upgrades). Network required; failures degrade gracefully. Read-only.",
+    parameters: {
+      ...SOURCES_PARAMS,
+      limit: { type: "integer", required: false, description: "Max packages to check (default 40)." }
+    },
+    output: {
+      schema: {
+        type: "object", additionalProperties: false,
+        properties: {
+          checked: { type: "integer", required: true },
+          candidates: { type: "array", required: true, items: { type: "object" } },
+          summary: { type: "object", required: true }
+        }
+      },
+      render(_a, v) {
+        const s = v.summary;
+        const lines = ["## 升级检查: " + v.checked + " 包, " + s.upgradable + " 可升级, " + s.blockingUpgrades + " 有阻断"];
+        for (const c of v.candidates.slice(0, 12)) {
+          lines.push("- " + c.package + ": " + c.installed + " -> " + c.latest + (c.blockers.length ? " [阻断: " + c.blockers.map((b) => b.row + "@" + b.range).join(", ") + "]" : ""));
+        }
+        return [{ type: "text", text: lines.join("\n") }];
+      }
+    },
+    execute(args) {
+      const { eco } = selectEco(args, config);
+      return checkUpgrades(eco, { limit: args.limit || 40 });
+    },
+    presentCall: (args) => ({ card: "generic", title: "Check plugin upgrades", kind: "other", rawInput: args })
+  };
+}
+
+// ── 12) history_stats ─────────────────────────────────────────────────────
+export function statsTool(config) {
+  return {
+    name: "history_stats",
+    description: "Trend statistics over archived snapshots: row/package/health evolution over time. Read-only.",
+    parameters: {
+      historyDir: { type: "string", required: false, description: "Optional history directory (defaults to dsh-forge/data/history)." }
+    },
+    output: {
+      schema: {
+        type: "object", additionalProperties: false,
+        properties: {
+          count: { type: "integer", required: true },
+          series: { type: "array", required: true, items: { type: "object" } }
+        }
+      },
+      render(_a, v) {
+        const lines = ["## 历史趋势: " + v.count + " 个快照"];
+        for (const s of v.series.slice(-10)) lines.push("- " + s.collectedAt.slice(0, 19) + "  rows=" + s.rows + "  health=" + s.health);
+        return [{ type: "text", text: lines.join("\n") }];
+      }
+    },
+    execute() {
+      return historyStats({ buildGraph, assess });
+    },
+    presentCall: (args) => ({ card: "generic", title: "Snapshot trend statistics", kind: "other", rawInput: args })
+  };
+}
+

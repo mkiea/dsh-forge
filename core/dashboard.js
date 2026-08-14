@@ -177,8 +177,26 @@ export function buildEmbedData(analysis, extra = {}) {
     patterns: patterns.map((p) => ({ id: p.id, severity: p.severity, message: p.message, evidence: p.evidence, confidence: p.confidence })),
     verified: verified.map((v) => ({ id: v.id, note: v.note, scoreDelta: v.scoreDelta, confidence: v.confidence })),
     rows: rowsData,
-    candidates
+    candidates,
+    history: historySeries()
   };
+}
+
+function historySeries() {
+  try {
+    const dir = path.join(__dirname, "..", "data", "history");
+    if (!fs.existsSync(dir)) return [];
+    const out = [];
+    for (const f of fs.readdirSync(dir).filter((x) => x.endsWith(".json")).sort()) {
+      try {
+        const snap = JSON.parse(fs.readFileSync(path.join(dir, f), "utf8"));
+        out.push({ file: f, collectedAt: snap.collectedAt, rows: snap.rows ? snap.rows.length : null });
+      } catch { /* skip */ }
+    }
+    return out.slice(-12);
+  } catch {
+    return [];
+  }
 }
 
 function donut(bySeverity) {
@@ -310,6 +328,10 @@ export function dashboard(analysis, extra = {}) {
   L.push('<div class="kpi health"><div class="kpi-v badge ' + embed.health + '">' + embed.health + '</div><div class="kpi-k">整体健康度</div></div>');
   L.push("</div>");
   L.push('<div class="panels">' + donut(embed.bySeverity) + layerBars(analysis) + "</div>");
+  if (embed.history && embed.history.length) {
+    const items = embed.history.map((h) => '<div class="lbar"><span class="lname">' + esc(h.file.slice(0, 19)) + '</span><div class="ltrack"><div class="lfill" style="width:100%"></div></div><span class="ln">' + h.rows + "</span></div>").join("");
+    L.push('<div class="panel" style="grid-column:1/-1"><h3>快照历史（最近 ' + embed.history.length + ' 条）</h3>' + items + "</div>");
+  }
 
   L.push("<section><h2>组件状态表（" + embed.pluginCount + " 行 · 点击表头排序）</h2>");
   L.push('<div class="filters"><input id="q" placeholder="搜索 id / 包名 / 版本…" oninput="window.__DSH_APP__ && window.__DSH_APP__.apply()">');

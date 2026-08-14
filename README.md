@@ -2,16 +2,32 @@
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
 
-## 工具
+## 工具（13 个，全部只读；simulate_combination / archive_snapshot 不碰组合本体）
 
+### 分析
 | 工具 | 说明 |
 | --- | --- |
 | `analyze_dependencies` | 组合依赖树 + 共享依赖摘要 + 范围满足性 |
 | `check_conflicts` | 版本冲突 / 工具重名 / 服务覆盖 / 缺失提供者 / 行覆盖 |
-| `visualize_plugins` | HTML（内联 SVG 图谱）/ Mermaid / ASCII / **dashboard**（交互组件仪表盘）输出 |
+| `visualize_plugins` | HTML / Mermaid / ASCII / **dashboard**（交互仪表盘）输出 |
 | `simulate_combination` | 假设组合模拟：新增/解除冲突、风险增量、判定 |
+| `audit_configuration` | 逐行配置审计（openAt / telemetry mode / 内存路径 / fetch 等） |
+| `diff_combinations` | 两个快照（或快照 vs 当前）的行增删改 + 风险增量 |
+| `preset_compare` | standard / code / minimal / cordis 预设行集与工具面对比 |
+| `verify_rows` | 行级装载预检（包可解析 / dsh.client / client.js 构建）+ **运行期服务探测** |
 
-所有工具**只读**；`simulate_combination` 不落盘。
+### 生命周期
+| 工具 | 说明 |
+| --- | --- |
+| `archive_snapshot` | 存档当前组合到 data/history（快照历史） |
+| `snapshot_history` | 列出/加载历史快照 |
+| `history_stats` | 历史趋势统计（行数/健康度时间序列，仪表盘含趋势面板） |
+
+### 决策支持
+| 工具 | 说明 |
+| --- | --- |
+| `suggest_patch` | 冲突建议 → cordis.patch.yml 补丁文本（只输出，不写盘） |
+| `check_upgrades` | npm registry 最新版本检查 + 升级阻断预测（网络失败优雅降级） |
 
 ## 挂载（当前状态：已挂载并验证）
 
@@ -69,9 +85,17 @@ console.log(JSON.stringify(r.assessment, null, 1));
 
 - `dsh web` 正常启动于 http://127.0.0.1:3080，浏览器无报错，4 个工具注册成功
 - `analyze_dependencies` 真实执行：4 层组合（profile 根 + dsh-base + dsh-web-app + patch），
-  129 插件行 / 126 包 / 1226 依赖边 / 0 冲突警告
-- 自动化测试：`test/ui-test.mjs` 36 项 + `test/ui-plugin-test.mjs` 18 项全部通过
+  138 插件行（含 forge/forge-ui）/ 128 包 / 1226+ 依赖边 / 0 冲突警告
+- 自动化测试：`test/ui-test.mjs` 36 项 + `test/ui-plugin-test.mjs` 22 项全部通过
   （结果见 `reports/ui-test-results.md`、`reports/ui-plugin-test-results.md`）
+
+## 未实现项（受静态插件数据通路限制）
+
+| 功能 | 原因 | 替代方案 |
+| --- | --- | --- |
+| 实时仪表盘（host.call 拉取） | `harness` 仅存在于 cordis 动态插件沙箱（Builtin），静态插件不可靠注入 | 静态内嵌 + `node scripts/build-ui.mjs` 重建（symlink 即同步，重启生效） |
+| 工具调用专属卡片（tool.call.toolview） | 替换产品默认卡片，契约（ToolCallOwnerProps）未公开，替换有 UI 回归风险 | 保持默认卡片 + 对话流 turnTail 引导卡片 |
+| 会话事件实时统计 | 静态客户端插件无运行期事件订阅通道 | `history_stats` 快照趋势替代 |
 
 ## 目录
 

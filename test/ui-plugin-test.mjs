@@ -18,6 +18,17 @@ function check(name, cond, detail) {
 }
 
 // ---- react mock (createElement/useState/useEffect/Fragment) ----
+// zh dictionary stub for t()
+const zhT = { title: "dsh-forge 插件仪表盘", subtitle: "插件组合分析", open: "插件仪表盘", openShort: "仪表盘", close: "关闭", hint: "提示" };
+const tFn = (k) => zhT[k] || k;
+
+// mini renderer: expand function components into plain trees
+function renderNode(n) {
+  if (!n || typeof n !== "object") return n;
+  if (typeof n.type === "function") return renderNode(n.type(n.props));
+  return { type: n.type, props: n.props, children: (n.children || []).map(renderNode) };
+}
+
 function makeReact() {
   let state = false;
   let rerender = null;
@@ -87,10 +98,16 @@ if (plugin) {
     slots: { register: (def, comp) => regs.push({ def, comp }) }
   };
   plugin.apply(ctxMock);
-  check("registers sidebar.footer.action", regs.length === 1 && regs[0].def.name === "sidebar.footer.action");
+  const names = regs.map((r) => r.def.name);
+  check("registers sidebar.footer.action", names.indexOf("sidebar.footer.action") >= 0);
+  check("registers header action", names.indexOf("conversation.session.header.actions") >= 0);
+  check("registers turnTail card", names.indexOf("conversation.chat.turnTail") >= 0);
+  check("locale injected", plugin.inject.indexOf("locale") >= 0);
+  check("slots registered with locale ns", regs.every((r) => r.def.locale === "forge"));
 
-  const comp = regs[0].comp;
-  const render = () => comp({ wide: true });
+  const sidebarReg = regs.find((r) => r.def.name === "sidebar.footer.action");
+  const comp = sidebarReg.comp;
+  const render = () => renderNode(comp({ wide: true, t: tFn }));
   m.setRerender(() => { tree = render(); });
   let tree = render();
   const findButtons = (n, acc) => {
@@ -136,9 +153,9 @@ if (plugin) {
     (n.children || []).forEach((c) => spansWithText(c, text, acc));
     return acc;
   };
-  const collapsedTree = regs[0].comp({ wide: false });
+  const collapsedTree = renderNode(regs[0].comp({ wide: false, t: tFn }));
   check("collapsed has no label span", spansWithText(collapsedTree, "插件仪表盘", []).length === 0);
-  const wideTree = regs[0].comp({ wide: true });
+  const wideTree = renderNode(regs[0].comp({ wide: true, t: tFn }));
   check("wide has label span", spansWithText(wideTree, "插件仪表盘", []).length === 1);
 }
 

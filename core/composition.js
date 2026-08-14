@@ -197,11 +197,20 @@ export function collectEcosystem(opts = {}) {
     }
   }
   if (!nmRoot) nmRoot = home ? path.join(home, "profiles", profile || "web", "node_modules") : null;
+  // secondary root: the profile's own node_modules holds user link: packages
+  const profileNm = home ? path.join(home, "profiles", profile || "web", "node_modules") : null;
+  const roots = [];
+  if (nmRoot) roots.push(nmRoot);
+  if (profileNm && profileNm !== nmRoot && fs.existsSync(profileNm)) roots.push(profileNm);
 
   for (const row of rows) {
     const p = packageOf(row.name);
     if (!p || packages[p]) continue;
-    const dir = nmRoot && resolvePkgDir(nmRoot, p);
+    let dir = null;
+    for (const r of roots) {
+      const probe = path.join(r, ...p.split("/"), "package.json");
+      if (fs.existsSync(probe)) { dir = resolvePkgDir(r, p); break; }
+    }
     const manifest = dir ? readJson(path.join(dir, "package.json")) : null;
     if (manifest) {
       packages[p] = {

@@ -11,7 +11,7 @@
 "use strict";
 import z from "@deepseek-ai/schemastery";
 import { defineTool } from "@deepseek-ai/dsh-tools";
-import { analyzeTool, conflictsTool, visualizeTool, simulateTool } from "./tools.js";
+import { analyzeTool, conflictsTool, visualizeTool, simulateTool, auditTool, diffTool, historyTool, archiveTool, presetTool, verifyTool, suggestTool, upgradeTool, statsTool } from "./tools.js";
 
 export const name = "dsh-forge";
 export const inject = ["tools"];
@@ -23,15 +23,40 @@ export const Config = z.object({
   datasetPath: z.string().required(false)
 });
 
+const ALL_TOOLS = [analyzeTool, conflictsTool, visualizeTool, simulateTool, auditTool, diffTool, historyTool, archiveTool, presetTool, verifyTool, suggestTool, upgradeTool, statsTool];
+
+// Runtime service probe: which services the live host plane actually provides.
+// Static analysis can only infer providers from source; this is ground truth.
+const PROBE_SERVICES = [
+  "sessions", "settings", "credentials", "jobs", "tools", "sandbox", "llm",
+  "fs", "web", "subagents", "workflows", "goals", "spill", "sessionQuery",
+  "sessionProjections", "typert", "approval", "attachments", "loader",
+  "agentPresets", "messageFeedback", "workspaces"
+];
+function probeRuntime(ctx) {
+  const found = [];
+  const missing = [];
+  for (const name of PROBE_SERVICES) {
+    try {
+      const v = ctx.get ? ctx.get(name) : undefined;
+      if (v !== undefined && v !== null) found.push(name);
+      else missing.push(name);
+    } catch {
+      missing.push(name);
+    }
+  }
+  return { found, missing };
+}
+
 export function apply(ctx, config = {}) {
   const cfg = {
     profile: config.profile || "web",
     root: config.root,
     compositionSources: config.compositionSources,
-    datasetPath: config.datasetPath
+    datasetPath: config.datasetPath,
+    runtimeProbe: probeRuntime(ctx)
   };
-  ctx.tools.register(defineTool(analyzeTool(cfg)));
-  ctx.tools.register(defineTool(conflictsTool(cfg)));
-  ctx.tools.register(defineTool(visualizeTool(cfg)));
-  ctx.tools.register(defineTool(simulateTool(cfg)));
+  for (const factory of ALL_TOOLS) {
+    ctx.tools.register(defineTool(factory(cfg)));
+  }
 }

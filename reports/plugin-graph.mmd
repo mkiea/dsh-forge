@@ -273,6 +273,10 @@ dsh-tool-subagent 0.1.0-rc.6"]:::disabled
 dsh-tool-subagent 0.1.0-rc.6"]:::disabled
   end
   subgraph profile-patch["profile-patch"]
+    forge["forge
+dsh-forge 0.1.0"]:::low
+    forge-ui["forge-ui
+dsh-forge-ui 0.1.0"]:::low
   end
   hmr -->|^1.1.3| @deepseek-ai/cordis-plugin-timer:::peer
   session -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
@@ -813,6 +817,7 @@ dsh-tool-subagent 0.1.0-rc.6"]:::disabled
   agent-presets -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
   agent-presets -->|^0.1.0-rc.6| @deepseek-ai/dsh-session:::peer
   agent-presets -->|^0.1.0-rc.6| @deepseek-ai/dsh-system-prompt:::peer
+  forge -->|^0.1.0-rc.6| @deepseek-ai/dsh-tools:::peer
   tool-subagent-codex -->|^0.1.0-rc.6| @deepseek-ai/dsh-agent:::peer
   tool-subagent-codex -->|^0.1.0-rc.6| @deepseek-ai/dsh-llm:::peer
   tool-subagent-codex -->|^0.1.0-rc.6| @deepseek-ai/dsh-subagent:::peer

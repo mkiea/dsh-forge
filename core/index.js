@@ -11,6 +11,15 @@ import { checkConflicts, scanToolNames, scanServices } from "./conflicts.js";
 import { simulateCombination, applyOps } from "./simulate.js";
 import { html, mermaid, asciiTree } from "./visualize.js";
 import { dashboard, buildEmbedData } from "./dashboard.js";
+import { auditConfiguration } from "./audit.js";
+import { diffCombinations } from "./diff.js";
+import { archiveSnapshot, listHistory, loadHistory } from "./history.js";
+import { comparePresets, readPreset } from "./presets.js";
+import { verifyRows } from "./verify.js";
+import { suggestPatch } from "./suggest.js";
+import { checkUpgrades } from "./upgrade.js";
+import { historyStats } from "./stats.js";
+
 import { knownPatterns, scanDeprecations, KNOWN_LIBS, CLIENT_PLANE_SERVICES, runtimeVerified } from "./knowledge.js";
 import { satisfies, compareVersions, parseVersion, maxSatisfying } from "./semver.js";
 
@@ -19,6 +28,15 @@ export { buildGraph, assess, baselineVersion, riskScore };
 export { checkConflicts, scanToolNames, scanServices };
 export { simulateCombination, applyOps };
 export { html, mermaid, asciiTree, dashboard, buildEmbedData };
+export { auditConfiguration };
+export { diffCombinations };
+export { archiveSnapshot, listHistory, loadHistory };
+export { comparePresets, readPreset };
+export { verifyRows };
+export { suggestPatch };
+export { checkUpgrades };
+export { historyStats };
+
 export { knownPatterns, scanDeprecations, KNOWN_LIBS, CLIENT_PLANE_SERVICES, runtimeVerified };
 export { satisfies, compareVersions, parseVersion, maxSatisfying };
 
