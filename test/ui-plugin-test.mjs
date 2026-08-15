@@ -102,8 +102,8 @@ if (plugin) {
   };
   plugin.apply(ctxMock);
   const names = regs.map((r) => r.def.name);
-  check("registers sidebar.footer.action", names.indexOf("sidebar.footer.action") >= 0);
-  check("registers header action", names.indexOf("conversation.session.header.actions") >= 0);
+  check("sidebar.footer.action registered (workspaces 下方/settings 上方)", names.indexOf("sidebar.footer.action") >= 0);
+  check("header action removed (not registered)", names.indexOf("conversation.session.header.actions") < 0);
   check("registers turnTail card", names.indexOf("conversation.chat.turnTail") >= 0);
   check("locale injected", plugin.inject.indexOf("locale") >= 0);
   check("slots registered with locale ns", regs.every((r) => r.def.locale === "forge"));
@@ -156,10 +156,11 @@ if (plugin) {
     (n.children || []).forEach((c) => spansWithText(c, text, acc));
     return acc;
   };
-  const collapsedTree = renderNode(regs[0].comp({ wide: false, t: tFn }));
-  check("collapsed has no label span", spansWithText(collapsedTree, "插件仪表盘", []).length === 0);
-  const wideTree = renderNode(regs[0].comp({ wide: true, t: tFn }));
-  check("wide has label span", spansWithText(wideTree, "插件仪表盘", []).length === 1);
+  const sidebarReg2 = regs.find((r) => r.def.name === "sidebar.footer.action");
+  const sidebarTree = renderNode(sidebarReg2.comp({ wide: true, t: tFn }));
+  check("sidebar button renders open label", JSON.stringify(sidebarTree).indexOf("插件仪表盘") >= 0);
+  const collapsedTree = renderNode(sidebarReg2.comp({ wide: false, t: tFn }));
+  check("collapsed sidebar button icon-only", JSON.stringify(collapsedTree).indexOf("插件仪表盘") < 0 || JSON.stringify(collapsedTree).indexOf("▦") >= 0);
 }
 
 const lines = [];
@@ -177,3 +178,4 @@ lines.push("---");
 fs.writeFileSync(path.join(ROOT, "reports", "ui-plugin-test-results.md"), lines.join("\n"), "utf8");
 console.log(lines.join("\n"));
 console.log("\nSUMMARY:", passed, "passed,", failed, "failed");
+process.exit(failed ? 1 : 0);

@@ -3,9 +3,10 @@
 "use strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as os from "node:os";
 import { createRequire } from "node:module";
 
-import { parseCompositionText, mergeRows, discoverSources, collectEcosystem, evalJsExpr, packageOf, rangeOk, resolveInstalled } from "./composition.js";
+import { parseCompositionText, mergeRows, discoverSources, collectEcosystem, evalJsExpr, packageOf, rangeOk, resolveInstalled, defaultHome } from "./composition.js";
 import { buildGraph, assess, baselineVersion, riskScore } from "./analyze.js";
 import { checkConflicts, scanToolNames, scanServices } from "./conflicts.js";
 import { simulateCombination, applyOps } from "./simulate.js";
@@ -21,11 +22,12 @@ import { checkUpgrades } from "./upgrade.js";
 import { historyStats } from "./stats.js";
 import { scanLeaks } from "./leaks.js";
 import { createCalibration, staticCalibration } from "./calibration.js";
+import { buildFeedback, normalizeFeedback, preflight, renderFeedback, SEVERITY_ORDER } from "./errors.js";
 
 import { knownPatterns, scanDeprecations, KNOWN_LIBS, CLIENT_PLANE_SERVICES, runtimeVerified } from "./knowledge.js";
 import { satisfies, compareVersions, parseVersion, maxSatisfying } from "./semver.js";
 
-export { parseCompositionText, mergeRows, discoverSources, collectEcosystem, evalJsExpr, packageOf, rangeOk, resolveInstalled };
+export { parseCompositionText, mergeRows, discoverSources, collectEcosystem, evalJsExpr, packageOf, rangeOk, resolveInstalled, defaultHome };
 export { buildGraph, assess, baselineVersion, riskScore };
 export { checkConflicts, scanToolNames, scanServices };
 export { simulateCombination, applyOps };
@@ -39,6 +41,7 @@ export { suggestPatch };
 export { checkUpgrades };
 export { historyStats };
 export { scanLeaks, createCalibration, staticCalibration };
+export { buildFeedback, normalizeFeedback, preflight, renderFeedback, SEVERITY_ORDER };
 
 export { knownPatterns, scanDeprecations, KNOWN_LIBS, CLIENT_PLANE_SERVICES, runtimeVerified };
 export { satisfies, compareVersions, parseVersion, maxSatisfying };
@@ -108,7 +111,8 @@ export function runAnalysis(opts = {}) {
   const deprecations = scanDeprecations(eco.packages);
   const verified = runtimeVerified(eco);
   const leaks = scanLeaks(eco.packages);
-  return { ecosystem: eco, graph, conflicts, assessment, patterns, deprecations, verified, leaks };
+  const feedback = buildFeedback({ conflicts, leaks, assessment, patterns, verified });
+  return { ecosystem: eco, graph, conflicts, assessment, patterns, deprecations, verified, leaks, feedback };
 }
 
 // Default node_modules root discovery for live runs.
@@ -117,7 +121,7 @@ export function runAnalysis(opts = {}) {
 // only the user's link: packages, so we probe several bases.
 export function resolveNmRoot(profile) {
   const candidates = [];
-  const home = process.env.DSH_HOME || "";
+  const home = process.env.DSH_HOME || path.join(os.homedir(), ".dsh");
   const profileName = profile || "web";
   const profileDir = path.join(home, "profiles", profileName);
   if (process.env.DSH_FORGE_ROOT) candidates.push(process.env.DSH_FORGE_ROOT);

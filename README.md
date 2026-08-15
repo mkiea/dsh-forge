@@ -1,8 +1,14 @@
 # dsh-forge
 
-> 版本：0.1.0 (v0.1.0-20260814-620b84f) · harnessVersion: 0.1.0-rc.6
+> [English](./README.en.md) | 中文
+
+> 版本：0.1.1 (v0.1.1-20260815-5b6766f) · harnessVersion: 0.1.0-rc.6
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
+
+> **v0.1.1 更新**：统一错误反馈体系（FORGE-001~014 错误码 + fatal/error/warning/info 分级 + 仪表盘"错误与反馈"面板 +
+> 启动预检终端诊断）；作用域感知冲突判定（per-agent 变体合法）；运行期事件校准（tool/call·tool/result·turn/end 行为基线）；
+> 泄漏扫描 apply 路径切片；仪表盘入口移至 sidebar 会话框下方/设置上方（会话头按钮已移除）。
 
 ## 工具（13 个，全部只读；simulate_combination / archive_snapshot 不碰组合本体）
 
@@ -198,12 +204,19 @@ console.log(JSON.stringify(r.assessment, null, 1));
 - `dsh web` 正常启动于 http://127.0.0.1:3080，浏览器无报错，**13 个工具**注册成功
 - `analyze_dependencies` 真实执行：4 层组合（profile 根 + dsh-base + dsh-web-app + patch），
   138 插件行（含 forge/forge-ui）/ 128 包 / 1226+ 依赖边
-- 自动化测试（119/119 全绿）：
+- 自动化测试（120/120 全绿）：
   - `test/ui-test.mjs` — 仪表盘结构与交互（36 项）
   - `test/ui-plugin-test.mjs` — 客户端插件 VM 执行 + slot 注册 + 模态交互（22 项）
   - `test/semver-consistency.mjs` — 两份 SemVer 实现一致性（30 项）
   - `test/review-fixes.test.mjs` — 作用域三态 / 事件校准 / 泄漏切片（15 项）
   - `test/upgrade-opt.test.mjs` — 升级检查并发/超时/降级/安装命令（16 项）
+
+## 错误反馈体系
+
+- 统一错误码（FORGE-001~014）+ 分级（fatal/error/warning/info）+ 建议 + 来源。
+- 仪表盘"错误与反馈"面板；启动预检致命错误输出到终端 stderr（崩溃场景可诊断）。
+- check_conflicts 输出 `feedback` 字段。
+- 仪表盘入口：sidebar 会话框下方/设置上方（sidebar.footer.action）+ 对话流提示卡片（turnTail）；会话头按钮已移除。
 
 ## 评审整改（R0–R5）
 
@@ -229,5 +242,5 @@ harnessVersion 绑定与知识库版本门控（R2）、泄漏扫描（R3）、�
 - `prompt/` — 专家 persona 提示词（含风险预测）
 - `data/` — 生态快照
 - `reports/` — 生成的分析报告与图谱
-- `test/` — 自包含测试套件（119 项，零本机依赖）
+- `test/` — 自包含测试套件（120 项，零本机依赖）
 - `scripts/` — 构建与挂载脚本

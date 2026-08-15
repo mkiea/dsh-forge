@@ -12,7 +12,7 @@
 import z from "@deepseek-ai/schemastery";
 import { defineTool } from "@deepseek-ai/dsh-tools";
 import { analyzeTool, conflictsTool, visualizeTool, simulateTool, auditTool, diffTool, historyTool, archiveTool, presetTool, verifyTool, suggestTool, upgradeTool, statsTool } from "./tools.js";
-import { createCalibration, staticCalibration } from "../core/index.js";
+import { createCalibration, staticCalibration, preflight, collectEcosystem } from "../core/index.js";
 
 export const name = "dsh-forge";
 export const inject = ["tools"];
@@ -59,6 +59,27 @@ export function apply(ctx, config = {}) {
     runtimeProbe: probeRuntime(ctx),
     calibration
   };
+  // startup preflight: fatal issues go to the terminal that launched the
+  // harness, so a crashing/misconfigured plugin leaves a clear diagnostic
+  // even if the harness itself dies at boot.
+  try {
+    if (!config.datasetPath) {
+      const eco = collectEcosystem({ home: process.env.DSH_HOME, profile: cfg.profile, root: cfg.root });
+      const pf = preflight(eco);
+      for (const f of pf.fatal) {
+        console.error("[dsh-forge] FATAL " + f.code + " " + f.message);
+        if (f.detail) console.error("[dsh-forge]         " + f.detail);
+        if (f.guidance) console.error("[dsh-forge]         " + f.guidance);
+      }
+      for (const f of pf.nonFatal) {
+        console.error("[dsh-forge] WARN  " + f.code + " " + f.message);
+      }
+      cfg.preflight = { fatal: pf.fatal.length, warnings: pf.nonFatal.length };
+    }
+  } catch (e) {
+    console.error("[dsh-forge] FATAL FORGE-001 启动预检失败: " + String(e.message || e).split("\n")[0]);
+    cfg.preflight = { fatal: 1, warnings: 0, error: String(e.message || e).split("\n")[0] };
+  }
   for (const factory of ALL_TOOLS) {
     ctx.tools.register(defineTool(factory(cfg)));
   }

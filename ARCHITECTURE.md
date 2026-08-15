@@ -1,6 +1,6 @@
 # dsh-forge 架构文档
 
-> 版本：0.1.0 · 最后更新：2026-08-14
+> 版本：0.1.1 · 最后更新：2026-08-15
 
 ## 1. 总览
 
@@ -87,12 +87,11 @@ apply(ctx, config)
 | 文件 | 职责 |
 | --- | --- |
 | `ui-plugin/index.js` | cordis 客户端插件入口 |
-| `ui-plugin/lib/client.template.js` | 源模板：3 个 slot 注册 + modal 组件 |
+| `ui-plugin/lib/client.template.js` | 源模板：2 个 slot 注册 + modal 组件 |
 | `ui-plugin/lib/client.js` | 构建产物（`scripts/build-ui.mjs` 打包，内嵌 dashboard.html） |
 
-3 个 UI 入口 slot：
+2 个 UI 入口 slot：
 - `sidebar.footer.action` — sidebar 底部「▦ 插件仪表盘」按钮
-- `conversation.session.header.actions` — 会话头按钮
 - `conversation.chat.turnTail` — 对话流引导卡片
 
 子 slot 注册通过 `ctx.slots.inject(parent, fn)` 等待父 slot 声明后再注册，避免抢跑。
@@ -173,7 +172,7 @@ check_upgrades execute(args)
 | 套件 | 文件 | 项数 | 覆盖 |
 | --- | --- | --- | --- |
 | 仪表盘结构+交互 | `test/ui-test.mjs` | 36 | 搜索/筛选/排序/toggle/增删候选 + health badge + 133 行数据 |
-| 客户端插件 VM 执行 | `test/ui-plugin-test.mjs` | 22 | 3 slot 注册 + locale + 模态开关 + wide/collapsed 渲染 |
+| 客户端插件 VM 执行 | `test/ui-plugin-test.mjs` | 22 | 2 slot 注册 + locale + 模态开关 + wide/collapsed 渲染 |
 | SemVer 一致性 | `test/semver-consistency.mjs` | 30 | core/semver.js vs dashboard.js 内嵌镜像，22 种区间 |
 | 作用域/校准/泄漏 | `test/review-fixes.test.mjs` | 15 | scope 三态 + mock 事件校准 + 泄漏切片 |
 | 升级检查优化 | `test/upgrade-opt.test.mjs` | 16 | 并发池 + 超时 + 镜像降级 + 安装命令 + 独立性 + 阻断预测 |
@@ -188,7 +187,7 @@ check_upgrades execute(args)
 
 | 路径 | 说明 |
 | --- | --- |
-| `.github/workflows/ci.yml` | CI 模板（Node 20+，运行全量测试） |
+| `.github/workflows/ci.yml` | CI 模板（Node 22+，运行自包含测试套件；跳过依赖本机路径/真实 harness 的 smoke13.mjs） |
 | `scripts/build-ui.mjs` | 构建客户端 bundle（内嵌 dashboard.html 到 client.js） |
 | `scripts/mount-ui.mjs` | 挂载脚本（env 化：DSH_HOME / DSH_DEPLOY_NM） |
 | `scripts/mount-ui.ps1` | Windows PowerShell 挂载脚本 |

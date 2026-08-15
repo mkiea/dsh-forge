@@ -1,0 +1,23 @@
+{
+  "format": "dsh-forge-ecosystem@1",
+  "collectedAt": "2026-08-15T12:35:53.840Z",
+  "nmRoot": null,
+  "harnessVersion": null,
+  "toolNames": {
+    "__dynamicRegistrationHint": false
+  },
+  "services": {
+    "provides": {},
+    "consumes": {}
+  },
+  "layers": [
+    {
+      "layer": "profile-root",
+      "rows": []
+    }
+  ],
+  "rows": [],
+  "packages": {},
+  "installed": {},
+  "nested": {}
+}

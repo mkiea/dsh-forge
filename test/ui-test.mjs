@@ -169,3 +169,4 @@ else lines.push("**结论：存在失败用例，需修复。**");
 fs.writeFileSync(path.join(ROOT, "reports", "ui-test-results.md"), lines.join("\n"), "utf8");
 console.log(lines.join("\n"));
 console.log("\nTEST SUMMARY:", passed, "passed,", failed, "failed");
+process.exit(failed ? 1 : 0);

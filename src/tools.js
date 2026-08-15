@@ -11,6 +11,7 @@ import {
   comparePresets, verifyRows, suggestPatch, checkUpgrades, historyStats, scanLeaks
 } from "../core/index.js";
 import { loadTruthEcosystem } from "../core/truth.js";
+import { buildFeedback, renderFeedback } from "../core/errors.js";
 
 function baseOpts(config) {
   return {
@@ -226,6 +227,7 @@ export function conflictsTool(config) {
           leaks: { type: "array", required: true, items: { type: "object", additionalProperties: true } },
           calibration: { type: "object", additionalProperties: true },
           inputScope: { type: "object", additionalProperties: true },
+          feedback: { type: "array", required: true, items: { type: "object", additionalProperties: true } },
           truthSource: { type: "string" },
           disclaimer: { type: "string" }
         }
@@ -237,6 +239,11 @@ export function conflictsTool(config) {
           "按类型: " + Object.entries(s.byType).map(([k, n]) => k + " x" + n).join(", "),
           "按级别: " + Object.entries(s.bySeverity).map(([k, n]) => k + " x" + n).join(", ")
         ];
+        if (v.feedback && v.feedback.length) {
+          lines.push("");
+          lines.push(renderFeedback(v.feedback));
+          lines.push("");
+        }
         for (const c of v.conflicts.filter((c) => c.severity !== "info")) {
           lines.push("- [" + c.severity + "] " + c.message);
           lines.push("  影响: " + c.impact);
@@ -257,6 +264,7 @@ export function conflictsTool(config) {
         serviceProviders: Object.fromEntries(Object.entries(result.services.provides).map(([p, svcs]) => [p, svcs])),
         leaks: leaks.findings,
         inputScope: { rows: eco.rows.length, packages: Object.keys(eco.packages).length, layers: eco.layers.map((l) => l.layer), disabledRows: eco.rows.filter((r) => r.disabled === true).length, truthSource: eco.truthSource || "scan" },
+        feedback: buildFeedback({ conflicts: result, leaks, assessment: null, patterns: [], verified: [] }),
         calibration,
         truthSource: eco.truthSource || "scan",
         disclaimer: "静态扫描为疑似清单（static-suspect），非 harness 实际拒绝的确认；kind=contract 表示 harness 契约确定行为，heuristic 为未校准信号。"

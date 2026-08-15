@@ -128,3 +128,31 @@
   `import.meta` 推导的项目相对路径（ROOT/.tmp-tests），测试结束清理。
 - smoke13.mjs：`require("node:fs")` 改为 ESM `import * as fs`；实测 13 工具全部 OK。
 - 全量回归：36/36 + 22/22 + 30/30 + 15/15。
+
+---
+
+## 统一错误反馈体系（错误提示 / 终端 / 仪表盘）
+
+### 设计
+- `core/errors.js`：`normalizeFeedback` 把任何发现归一为
+  {code, severity, message, detail, guidance, source, recoverable}；
+  `buildFeedback` 从 conflicts/leaks/patterns/verified 聚合；
+  `preflight` 做启动预检（组合解析、包缺失）；`renderFeedback` 终端/渲染文本。
+- 错误码：FORGE-001 预检失败 · 002 组合解析失败 · 003 包缺失 · 005 版本范围不满足 ·
+  006 工具重名 · 007 服务覆盖 · 008 泄漏嫌疑 · 010 版本漂移 · 011/012 其他 contract/heuristic · 013 运行时验证 · 014 校准声明。
+- 分级：fatal（启动/加载失败）> error（功能受损）> warning（冲突但不崩溃）> info。
+
+### 落地
+1. **仪表盘**：新增"错误与反馈"面板（错误优先分组、错误码、详情、建议、来源），
+   嵌入 dashboard.html 并随 client.js 内嵌进弹窗。
+2. **终端（启动崩溃场景）**：src/index.js apply 时运行 preflight，
+   致命问题以 [dsh-forge] FATAL <code> <消息>/<详情>/<建议> 输出到启动 harness 的终端 stderr——
+   即使后续行挂载失败/进程崩溃，终端已有完整诊断；非致命输出 WARN。
+3. **工具输出**：check_conflicts 输出 `feedback` 字段（render 优先展示），
+   并按 severity 排序（fatal→error→warning→info）。
+4. **入口调整**：保留网页侧边栏（sidebar.footer.action）的仪表盘入口；
+   删除会话头入口（conversation.session.header.actions），仅保留对话流提示卡片（turnTail）。
+
+### 测试
+- ui-plugin-test 22/22（含 sidebar 入口正常渲染、header 入口已移除断言）。
+- 全量回归：ui-test 36/36 · ui-plugin-test 22/22 · review-fixes 15/15 · semver 30/30 · smoke13 13/13。

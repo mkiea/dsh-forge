@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.1.1] - 2026-08-15
+
+### 统一错误反馈体系
+
+- core/errors.js：反馈归一化（code/severity/detail/guidance/source/recoverable）+ 聚合 + 启动预检 + 渲染。
+- 仪表盘"错误与反馈"面板（错误优先分组、错误码、建议、来源）。
+- 启动预检输出到终端（[dsh-forge] FATAL/WARN + 完整诊断），覆盖崩溃场景。
+- check_conflicts 输出 feedback 字段（render 优先展示）。
+- 保留网页侧边栏仪表盘入口（sidebar.footer.action）；删除会话头入口（conversation.session.header.actions），仅保留对话流提示卡片（turnTail）。
+- 测试：ui-plugin-test 22/22（更新断言）；全量回归全绿（ui-test 36/36 + ui-plugin-test 22/22 + semver 30/30 + review-fixes 15/15 + upgrade-opt 16/16 + feedback-smoke 40/40 + empty-plugins 24/24 + exploratory-empty 27/27 + exploratory-feedback 563/563 = 773/773；smoke13 13/13 依赖本机 harness，不入 CI）。
+
+### 审计与 CI 工程化
+
+- ci.yml：运行全部自包含测试套件（跳过依赖本机路径/真实 harness 的 smoke13.mjs），测试失败以非零退出码传播（node "$file" || exit 1）；保留语法检查与 core 模块加载检查。
+- 测试退出码补全：ui-test.mjs / ui-plugin-test.mjs 末尾新增 process.exit(failed ? 1 : 0)；ui-plugin-test.mjs 移除重复断言（计数 23 -> 22）。
+- 文档一致性修正：ARCHITECTURE.md / PM-remediation.md / README(.en).md 的 UI slot 描述、入口方向、测试项数全部对齐代码实现。
+- 正式审计报告：reports/audit-v0.1.1.md（文档一致性 / CI 有效性 / 退出码完整性 / 重复断言 四项全 PASS，9 套件 773/773 通过）。
+
 ## [0.1.0] - 2026-08-14
 
 ### 评审整改（R0-R5 验收标准）

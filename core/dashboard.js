@@ -8,6 +8,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { KNOWN_LIBS } from "./knowledge.js";
+import { buildFeedback } from "./errors.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLIENT_PATH = path.join(__dirname, "..", "web", "dashboard-client.js");
@@ -146,6 +147,11 @@ function inferProvider(packages, depName) {
   return null;
 }
 
+// Feedback aggregation for the dashboard panel (reuses core/errors.js).
+function buildFeedbackList(inputs) {
+  try { return buildFeedback(inputs); } catch { return []; }
+}
+
 // Compact, embeddable dataset for the browser recompute.
 export function buildEmbedData(analysis, extra = {}) {
   const { ecosystem: eco, graph, conflicts, assessment, patterns, verified } = analysis;
@@ -230,7 +236,8 @@ export function buildEmbedData(analysis, extra = {}) {
     verified: verified.map((v) => ({ id: v.id, note: v.note, scoreDelta: v.scoreDelta, confidence: v.confidence })),
     rows: rowsData,
     candidates,
-    history: historySeries()
+    history: historySeries(),
+    feedback: buildFeedbackList({ conflicts, leaks: analysis.leaks || { findings: [] }, patterns, verified })
   };
 }
 
@@ -348,7 +355,7 @@ const STYLE = "<style>" +
   ".c-blocking td{background:#fdecea}.c-high td{background:#fdf2e6}.c-medium td{background:#fdf8e3}" +
   ".ev{color:#98a1aa;font-size:10px}" +
   ".notes .note{border:1px solid #e7eaee;border-radius:8px;padding:8px 10px;margin:6px 0;font-size:12px}" +
-  ".note.verified{border-color:#b8e0d5;background:#f2fbf8}" +
+  ".note.verified{border-color:#b8e0d5;background:#f2fbf8}.fb-group{margin:8px 0}.fb-group>b{font-size:12px;color:#555}.fb.fatal{border-color:#d64545;background:#fdecea}.fb.error{border-color:#e67e22;background:#fdf2e6}.fb.warning{border-color:#f1c40f;background:#fdf8e3}" +
   ".sim-ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}" +
   ".sim-result{margin-top:10px;font-size:12px;line-height:1.7}" +
   ".sim-result .chg{color:#1f6feb;font-weight:600}" +
@@ -380,6 +387,25 @@ export function dashboard(analysis, extra = {}) {
   L.push('<div class="kpi health"><div class="kpi-v badge ' + embed.health + '">' + embed.health + '</div><div class="kpi-k">整体健康度</div></div>');
   L.push("</div>");
   L.push('<div class="panels">' + donut(embed.bySeverity) + layerBars(analysis) + "</div>");
+  if (embed.feedback && embed.feedback.length) {
+    const sevLabels = { fatal: "致命", error: "错误", warning: "警告", info: "信息" };
+    const groups = ["fatal", "error", "warning", "info"];
+    let panel = '<section><h2>错误与反馈（' + embed.feedback.length + ' 条，错误优先）</h2><div class="notes">';
+    for (const g of groups) {
+      const items = embed.feedback.filter((f) => f.severity === g);
+      if (!items.length) continue;
+      panel += '<div class="fb-group"><b>' + (sevLabels[g] || g) + "（" + items.length + "）</b>";
+      for (const f of items) {
+        panel += '<div class="note fb fb-' + esc(g) + '"><span class="sev ' + esc(g) + '">' + esc(g) + "</span> <b>" + esc(f.code) + "</b> " + esc(f.message) +
+          (f.detail ? ' <div class="ev">详情: ' + esc(f.detail) + "</div>" : "") +
+          (f.guidance ? ' <div class="ev">建议: ' + esc(f.guidance) + "</div>" : "") +
+          (f.source ? ' <div class="ev">来源: ' + esc(f.source) + "</div>" : "") + "</div>";
+      }
+      panel += "</div>";
+    }
+    panel += "</div></section>";
+    L.push(panel);
+  }
   if (embed.history && embed.history.length) {
     const items = embed.history.map((h) => '<div class="lbar"><span class="lname">' + esc(h.file.slice(0, 19)) + '</span><div class="ltrack"><div class="lfill" style="width:100%"></div></div><span class="ln">' + h.rows + "</span></div>").join("");
     L.push('<div class="panel" style="grid-column:1/-1"><h3>快照历史（最近 ' + embed.history.length + ' 条）</h3>' + items + "</div>");

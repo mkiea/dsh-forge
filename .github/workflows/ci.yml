@@ -12,6 +12,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: node --check src/index.js && node --check src/tools.js
-      - run: node --input-type=module -e "import('./core/index.js').then(m => console.log('core ok', Object.keys(m).length))"
-      - run: node test/semver-consistency.mjs
+
+      - name: Syntax check entry points
+        run: node --check src/index.js && node --check src/tools.js
+
+      - name: Core module load check
+        run: node --input-type=module -e "import('./core/index.js').then(m => console.log('core ok', Object.keys(m).length))"
+
+      - name: Run self-contained test suites
+        run: |
+          for file in test/*.mjs; do
+            case "$file" in
+              *smoke13.mjs)
+                echo "SKIP $file (依赖本机路径 / 真实 harness，CI 不运行)"
+                ;;
+              *)
+                echo "RUN $file"
+                node "$file" || exit 1
+                ;;
+            esac
+          done

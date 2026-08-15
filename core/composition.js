@@ -6,8 +6,15 @@
 "use strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as os from "node:os";
 import { createRequire } from "node:module";
 import { satisfies } from "./semver.js";
+
+// Harness home resolution: $DSH_HOME overrides the default ~/.dsh the
+// harness itself falls back to (dsh-app-boot: "Harness home (~/.dsh)").
+export function defaultHome() {
+  return process.env.DSH_HOME || path.join(os.homedir(), ".dsh");
+}
 
 // Evaluate a !!js expression the way the loader would, but sandboxed to
 // process (platform/env/cwd), a dshHomePath helper, and nothing else.
@@ -19,7 +26,7 @@ export function evalJsExpr(expr, { home, root } = {}) {
       cwd: () => root || process.cwd()
     };
     const fn = new Function("process", "dshHomePath", '"use strict"; return (' + expr + ");");
-    return fn(proc, (p) => path.join(home || process.env.DSH_HOME || "", p));
+    return fn(proc, (p) => path.join(home || defaultHome(), p));
   } catch {
     return undefined;
   }
@@ -106,7 +113,7 @@ function resolvePkgDir(root, name) {
 // order) -> profile cordis.patch.yml. Returns layer descriptors.
 export function discoverSources({ home, profile, root } = {}) {
   const layers = [];
-  const homeDir = home || process.env.DSH_HOME || "";
+  const homeDir = home || defaultHome();
   const profileDir = profile ? path.join(homeDir, "profiles", profile) : null;
   const nmRoot = root || (profileDir ? path.join(profileDir, "node_modules") : null);
   let rootText = "[]";
@@ -218,6 +225,7 @@ export function mergeRows(layers) {
 // installed versions for every referenced dependency.
 export function collectEcosystem(opts = {}) {
   const { home, profile, root, compositionFiles } = opts;
+  const homeDir = home || defaultHome();
   let layers;
   if (Array.isArray(compositionFiles) && compositionFiles.length) {
     layers = compositionFiles.map((f, i) => ({
@@ -226,10 +234,10 @@ export function collectEcosystem(opts = {}) {
       kind: "file"
     }));
   } else {
-    layers = discoverSources({ home, profile, root });
+    layers = discoverSources({ home: homeDir, profile, root });
   }
   const rows = mergeRows(layers);
-  const { packages, order, nmRoot } = collectManifests(rows, { home, profile, root, layers });  // installed versions: top-level + per-consumer nested resolution.
+  const { packages, order, nmRoot } = collectManifests(rows, { home: homeDir, profile, root, layers });  // installed versions: top-level + per-consumer nested resolution.
   // Node semantics: a consumer's own node_modules wins, then walk up.
   const installed = {};
   const nested = {}; // dep -> { consumerPkg -> version }
@@ -268,7 +276,7 @@ export function collectEcosystem(opts = {}) {
 
   // harness version: dsh package version from any resolved root (drift detection)
   let harnessVersion = null;
-  for (const r of [nmRoot, home ? path.join(home, "profiles", profile || "web", "node_modules") : null]) {
+  for (const r of [nmRoot, homeDir ? path.join(homeDir, "profiles", profile || "web", "node_modules") : null]) {
     if (!r) continue;
     try {
       const m = readJson(path.join(r, "@deepseek-ai", "dsh", "package.json"));

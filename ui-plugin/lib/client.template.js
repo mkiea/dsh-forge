@@ -160,34 +160,6 @@ window.__ModuleLoader__.load({
       });
     }
 
-    // 2) conversation header action entry
-    function HeaderEntry(props) {
-      var t = props.t;
-      return react.createElement(WithModal, {
-        t: t,
-        renderTrigger: function (setOpen) {
-          return react.createElement("button", {
-            type: "button",
-            onClick: function () { setOpen(true); },
-            title: t("title"),
-            "aria-label": t("title"),
-            style: {
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-              border: "none",
-              background: "transparent",
-              color: "var(--dsw-alias-label-secondary, #666)",
-              cursor: "pointer",
-              fontSize: 13,
-              padding: "4px 6px",
-              borderRadius: 6
-            }
-          }, "▦ ", t("openShort"));
-        }
-      });
-    }
-
     // 3) turn-tail hint card
     function TurnTailCard(props) {
       var t = props.t;
@@ -237,11 +209,8 @@ window.__ModuleLoader__.load({
           ctx.locale.register(NS, { zh: zh, en: en });
         }, "dsh-forge-ui: dictionaries");
       }
-      ctx.effect(function () {
+      ctx.slots.inject("sidebar.footer.action", function () {
         ctx.slots.register({ name: "sidebar.footer.action", id: "forge-ui", locale: NS }, SidebarEntry);
-      }, "dsh-forge-ui: sidebar entry");
-      ctx.slots.inject("conversation.session.header.actions", function () {
-        ctx.slots.register({ name: "conversation.session.header.actions", id: "forge-ui", locale: NS }, HeaderEntry);
       });
       ctx.slots.inject("conversation.chat.turnTail", function () {
         ctx.slots.register({ name: "conversation.chat.turnTail", id: "forge-ui", locale: NS, select: function () { return true; } }, TurnTailCard);

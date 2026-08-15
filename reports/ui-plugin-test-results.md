@@ -2,7 +2,7 @@
 
 - 被测对象：ui-plugin/lib/client.js（ModuleLoader 客户端 bundle，内嵌 reports/dashboard.html）
 - 方法：vm + mock __ModuleLoader__ / react（createElement/useState/useEffect）真实执行 bundle，驱动开/关交互
-- 时间：2026-08-14T05:36:55.801Z
+- 时间：2026-08-15T13:34:05.566Z
 
 ## 结果：22 通过 / 0 失败
 
@@ -11,8 +11,8 @@ PASS  bundle executes without error
 PASS  ModuleLoader.load called with id dsh-forge-ui
 PASS  factory returns exports
 PASS  exports apply+inject
-PASS  registers sidebar.footer.action
-PASS  registers header action
+PASS  sidebar.footer.action registered (workspaces 下方/settings 上方)
+PASS  header action removed (not registered)
 PASS  registers turnTail card
 PASS  locale injected
 PASS  slots registered with locale ns
@@ -27,6 +27,6 @@ PASS  Escape closes modal
 PASS  reopens
 PASS  close button found
 PASS  close button closes modal
-PASS  collapsed has no label span
-PASS  wide has label span
+PASS  sidebar button renders open label
+PASS  collapsed sidebar button icon-only
 ---
