@@ -130,7 +130,7 @@ export function discoverSources({ home, profile, root } = {}) {
       patchText = fs.readFileSync(path.join(profileDir, "cordis.patch.yml"), "utf8");
     }
   }
-  layers.push({ layer: "profile-root", text: rootText, kind: "root" });
+  layers.push({ layer: "profile-root", text: rootText, kind: "root", path: profileDir ? path.join(profileDir, "cordis.yml") : null });
   for (const b of bundles) {
     let dir = null;
     if (nmRoot) {
@@ -150,10 +150,10 @@ export function discoverSources({ home, profile, root } = {}) {
     if (!dir) continue;
     const p = path.join(dir, "cordis.patch.yml");
     if (fs.existsSync(p)) {
-      layers.push({ layer: b, text: fs.readFileSync(p, "utf8"), kind: "bundle", dir });
+      layers.push({ layer: b, text: fs.readFileSync(p, "utf8"), kind: "bundle", dir, path: p });
     }
   }
-  if (patchText !== null) layers.push({ layer: "profile-patch", text: patchText, kind: "patch" });
+  if (patchText !== null) layers.push({ layer: "profile-patch", text: patchText, kind: "patch", path: profileDir ? path.join(profileDir, "cordis.patch.yml") : null });
   return layers;
 }
 

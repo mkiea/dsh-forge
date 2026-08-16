@@ -234,7 +234,7 @@ Web 为零依赖 `node:http` + 8 模块交互仪表盘（缺 `web/dashboard-clie
 - `dsh web` 正常启动于 http://127.0.0.1:3080，浏览器无报错，**13 个工具**注册成功
 - `analyze_dependencies` 真实执行：4 层组合（profile 根 + dsh-base + dsh-web-app + patch），
   138 插件行（含 forge/forge-ui）/ 128 包 / 1226+ 依赖边
-- 自动化测试（10 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
+- 自动化测试（11 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
   - `test/ui-test.mjs` — 仪表盘 workspace 结构与交互（41 项）
   - `test/ui-plugin-test.mjs` — 客户端插件 VM 执行 + slot 注册 + 模态交互（22 项）
   - `test/semver-consistency.test.mjs` — SemVer 单一实现回归 + 防镜像回归（30 项）
@@ -244,7 +244,8 @@ Web 为零依赖 `node:http` + 8 模块交互仪表盘（缺 `web/dashboard-clie
   - `test/empty-plugins.test.mjs` — 空组合 / 泄漏规则（24 项）
   - `test/exploratory-empty.test.mjs` — 随机子集探索（27 项）
   - `test/exploratory-feedback.test.mjs` — 反馈深度探索（563 项）
-  - `test/mode-decision.test.mjs` — TUI/Web/check 四层决策引擎（18 项）
+  - `test/mode-decision.test.mjs` — TUI/Web/check 四层决策引擎（19 项）
+    - `test/cache-behavior.test.mjs` — runAnalysis 缓存失效/淘汰/快照守护（7 项）
 
 ## 错误反馈体系
 
@@ -278,5 +279,5 @@ harnessVersion 绑定与知识库版本门控（R2）、泄漏扫描（R3）、�
 - `prompt/` — 专家 persona 提示词（含风险预测）
 - `data/` — 生态快照
 - `reports/` — 生成的分析报告与图谱
-- `test/` — 自包含测试套件（10 套件 796 项，零本机依赖）
+- `test/` — 自包含测试套件（11 套件 804 项，零本机依赖）
 - `scripts/` — 生成与构建脚本（generate-dashboard / build-ui / mount-ui）

@@ -201,7 +201,8 @@ check_upgrades execute(args)
 | 空组合 / 泄漏规则 | `test/empty-plugins.test.mjs` | 24 | 空组合边界 + 泄漏规则 |
 | 随机子集探索 | `test/exploratory-empty.test.mjs` | 27 | 随机插件池 + 多轮组合一致性 |
 | 反馈深度探索 | `test/exploratory-feedback.test.mjs` | 563 | 反馈结构合法 / 分级计数 / 排序稳定 / 确定性 |
-| TUI/Web/check 决策 | `test/mode-decision.test.mjs` | 18 | 四层证据决策（命令/环境/场景/复杂度）/ 端口占用降级 / 场景启发 |
+| TUI/Web/check 决策 | `test/mode-decision.test.mjs` | 19 | 四层证据决策（命令/环境/场景/复杂度）/ env 一致性 / 端口占用降级 / 场景启发 |
+| 分析缓存守护 | `test/cache-behavior.test.mjs` | 7 | 同参命中 / clear 失效 / 文件变更 / live profile patch 变更 / 淘汰 / 快照 stamp |
 
 测试策略：
 - **单一实现回归**：semver-consistency 固定断言 core/semver.js 行为，并守护 dashboard.js 不再内嵌镜像副本

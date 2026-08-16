@@ -1,6 +1,17 @@
 # Changelog
 ## [Unreleased]
 
+
+### 0.1.3 补丁（审视整改）
+
+- 版本对齐：ui-plugin/package.json bump 0.1.3；core/dashboard.js 页头版本改为动态读取 package.json（不再硬编码 0.1.2）；doc-consistency 增加 root/ui-plugin/docs/dashboard 版本一致性断言。
+- 缓存补洞：discoverSources 层描述带 `path`；runAnalysis 缓存 key 纳入自动发现的 live 源文件（profile cordis.yml / package.json / cordis.patch.yml / bundle patch）mtime+size，配置改动自动失效；缓存结果标注只读契约。
+- decideUiMode env 一致性：term/ci/desktop/scenario 统一使用 opts.env（默认 process.env），并新增 env-only 桌面检测测试（mode-decision 18 → 19 项）。
+- diff_combinations 支持 history 文件名：datasetA/datasetB 先按 data/history 文件名解析，再按完整路径解析；datasetB 存在时缺失 datasetA 给出明确错误。
+- CLI 边缘修复：web 端口占用/服务错误降级到 check 时尊重 --json；监听端口取 server.address().port（--port 0 不再显示 :0 URL）。
+- render 增强：check_conflicts 展开前 20 条 info 级发现（超量提示查完整 JSON）；snapshot_history 对 rows=0 快照标 [empty]。
+- 文档同步：README/README.en 测试套件 11 套 804 项（含 cache-behavior 7 项、mode-decision 19 项）；doc-consistency 增加套件计数 / cache-behavior 引用 / 总数断言。
+
 ## [0.1.3] - 2026-08-16
 
 ### TUI / Web / check 三态入口

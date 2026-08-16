@@ -23,6 +23,13 @@ function baseOpts(config) {
   };
 }
 
+// Resolve a snapshot reference the way users expect: a bare history file name
+// (data/history/<name>) first, then a full snapshot path.
+function loadSnapshotRef(ref) {
+  try { return loadHistory(ref); } catch { /* not a history filename */ }
+  return loadSnapshot(ref);
+}
+
 const SOURCES_PARAMS = {
   compositionSources: {
     type: "array",
@@ -251,6 +258,13 @@ export function conflictsTool(config) {
           lines.push("  影响: " + c.impact);
           lines.push("  建议: " + c.advice + " (置信度 " + c.confidence + ")");
         }
+          const info = v.conflicts.filter((c) => c.severity === "info");
+          if (info.length) {
+            lines.push("");
+            lines.push("### 信息级发现 (" + info.length + ")");
+            for (const c of info.slice(0, 20)) lines.push("- " + c.type + ": " + c.message);
+            if (info.length > 20) lines.push("- ... 其余 " + (info.length - 20) + " 条请读取完整 JSON 输出");
+          }
         return [{ type: "text", text: lines.join("\n") }];
       }
     },
@@ -429,11 +443,11 @@ export function auditTool(config) {
 export function diffTool(config) {
   return {
     name: "diff_combinations",
-    description: "Compare two plugin combinations (two dataset/snapshot paths, or one snapshot vs the live combination): added/removed/changed rows with config differences. Read-only.",
+    description: "Compare two plugin combinations (two dataset/snapshot paths or data/history file names, or one snapshot vs the live combination): added/removed/changed rows with config differences. Read-only.",
     parameters: {
       ...SOURCES_PARAMS,
-      datasetA: { type: "string", description: "First combination: dataset snapshot path (or omit to use the live combination)." },
-      datasetB: { type: "string", description: "Second combination: dataset snapshot path (required when comparing two snapshots)." }
+      datasetA: { type: "string", description: "First combination: dataset snapshot path or data/history file name (or omit to use the live combination)." },
+      datasetB: { type: "string", description: "Second combination: dataset snapshot path or data/history file name (required when comparing two snapshots)." }
     },
     output: {
       schema: {
@@ -458,11 +472,13 @@ export function diffTool(config) {
       const { eco } = await selectEco(args, config);
       let ecoA, ecoB;
       if (args.datasetB) {
-        ecoA = loadSnapshot(args.datasetA || args.dataset);
-        ecoB = loadSnapshot(args.datasetB);
+        const aRef = args.datasetA || args.dataset;
+          if (!aRef) throw new Error("diff_combinations needs datasetA (or dataset) when datasetB is provided");
+          ecoA = loadSnapshotRef(aRef);
+        ecoB = loadSnapshotRef(args.datasetB);
       } else if (args.datasetA || args.dataset) {
         ecoA = eco;
-        ecoB = loadSnapshot(args.datasetA || args.dataset);
+        ecoB = loadSnapshotRef(args.datasetA || args.dataset);
       } else {
         throw new Error("diff_combinations needs datasetB (two snapshots) or datasetA (live vs snapshot)");
       }
@@ -492,7 +508,7 @@ export function historyTool(config) {
       },
       render(_a, v) {
         const lines = ["## 快照历史: " + v.count + " 个"];
-        for (const s of v.snapshots.slice(0, 15)) lines.push("- " + s.file + "  rows=" + s.rows + (s.health ? "  health=" + s.health : ""));
+        for (const s of v.snapshots.slice(0, 15)) lines.push("- " + s.file + "  rows=" + s.rows + (s.rows === 0 ? "  [empty]" : "") + (s.health ? "  health=" + s.health : ""));
         return [{ type: "text", text: lines.join("\n") }];
       }
     },

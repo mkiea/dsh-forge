@@ -5,6 +5,7 @@
 //   2. clearAnalysisCache() -> fresh instance
 //   3. composition file content change -> fresh instance (mtime+size stamp)
 //   4. touch (mtime-only) change -> fresh instance
+//   4b. live auto-discovered profile patch change -> fresh instance
 //   5. eviction: more than ANALYSIS_CACHE_MAX distinct analyses evicts the
 //      oldest key, so re-running it re-analyzes instead of hitting stale cache
 "use strict";
@@ -85,6 +86,24 @@ test("mtime-only touch invalidates cache", () => {
     const b = analyze(file, dir);
     assert.notStrictEqual(a, b, "mtime change alone must invalidate");
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+// ---- 4b. live auto-discovered profile sources invalidate ---- 
+test("live profile patch change invalidates cache", () => {
+  clearAnalysisCache();
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "dsh-live-cache-"));
+  const profileDir = path.join(home, "profiles", "web");
+  try {
+    fs.mkdirSync(profileDir, { recursive: true });
+    fs.writeFileSync(path.join(profileDir, "cordis.yml"), "[]\n", "utf8");
+    fs.writeFileSync(path.join(profileDir, "package.json"), JSON.stringify({ dsh: { profile: { bundles: [] } } }), "utf8");
+    const patch = path.join(profileDir, "cordis.patch.yml");
+    fs.writeFileSync(patch, "- id: foo\n  name: 'Foo'\n", "utf8");
+    const a = runAnalysis({ home, profile: "web" });
+    fs.writeFileSync(patch, "- id: bar\n  name: 'Bar'\n", "utf8");
+    const b = runAnalysis({ home, profile: "web" });
+    assert.notStrictEqual(a, b, "auto-discovered live patch mtime/size changed -> fresh analysis");
+  } finally { fs.rmSync(home, { recursive: true, force: true }); }
 });
 
 // ---- 5. cap eviction ----

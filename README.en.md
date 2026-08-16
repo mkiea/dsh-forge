@@ -201,7 +201,7 @@ offline-deployable).
 
 - `dsh web` runs at http://127.0.0.1:3080, no browser errors, **13 tools** registered
 - `analyze_dependencies` live: 4 layers (profile root + dsh-base + dsh-web-app + patch), 138 rows (incl. forge/forge-ui) / 128 packages / 1226+ edges
-- Automated tests (10 self-contained suites; smoke13 13/13 depends on the local harness, not in CI):
+- Automated tests (11 self-contained suites; smoke13 13/13 depends on the local harness, not in CI):
   - `test/ui-test.mjs` — dashboard workspace structure & interaction (41)
   - `test/ui-plugin-test.mjs` — client plugin VM execution + slot registration + modal interaction (22)
   - `test/semver-consistency.test.mjs` — single-source SemVer regression + anti-mirror guard (30)
@@ -211,7 +211,8 @@ offline-deployable).
   - `test/empty-plugins.test.mjs` — empty combination / leak rules (24)
   - `test/exploratory-empty.test.mjs` — random subset exploration (27)
   - `test/exploratory-feedback.test.mjs` — feedback deep exploration (563)
-  - `test/mode-decision.test.mjs` — four-layer TUI/Web/check decision engine (18)
+  - `test/mode-decision.test.mjs` — four-layer TUI/Web/check decision engine (19)
+    - `test/cache-behavior.test.mjs` — runAnalysis cache invalidation/eviction/snapshot guard (7)
 
 ## Error feedback
 
@@ -243,5 +244,5 @@ The third-party PM review acceptance criteria are implemented item by item: dump
 - `prompt/` — expert persona prompt (with risk prediction)
 - `data/` — ecosystem snapshots
 - `reports/` — generated reports and graphs
-- `test/` — self-contained test suites (10 suites, 796 items, no machine dependency)
+- `test/` — self-contained test suites (11 suites, 804 items, no machine dependency)
 - `scripts/` — build and mount scripts

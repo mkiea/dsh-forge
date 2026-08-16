@@ -46,6 +46,32 @@ const MODULE_COUNT = "22"; // core/ module count (see ARCHITECTURE.md)
   check("live docs free of stale test names" + (staleRefs.length ? " (" + staleRefs.join("; ") + ")" : ""), staleRefs.length === 0);
 }
 
+// 2b. release version alignment: package.json ↔ ui-plugin/package.json ↔ docs ↔ dashboard
+{
+  const pkg = JSON.parse(read("package.json"));
+  const uiPkg = JSON.parse(read("ui-plugin/package.json"));
+  check("root version equals ui-plugin version", pkg.version === uiPkg.version);
+  const docs = { "README.md": "版本：" + pkg.version, "README.en.md": "Version: " + pkg.version };
+  for (const [doc, needle] of Object.entries(docs)) {
+    check(doc + " declares version " + pkg.version, read(doc).includes(needle));
+  }
+  const dash = read("core/dashboard.js");
+  check("dashboard.js no longer hardcodes a release version", !/dsh-forge v0\.\d+\.\d+/.test(dash));
+}
+
+// 2c. self-contained test suite count and cache-behavior suite are referenced
+{
+  const names = fs.readdirSync(path.join(ROOT, "test")).filter((f) => f.endsWith(".mjs") && !f.startsWith("smoke13"));
+  const n = names.length;
+  check("README.md references " + n + " self-contained suites", read("README.md").includes(n + " 个自包含套件"));
+  check("README.en.md references " + n + " self-contained suites", read("README.en.md").includes(n + " self-contained suites"));
+  check("README.md references cache-behavior suite", read("README.md").includes("test/cache-behavior.test.mjs"));
+  check("README.en.md references cache-behavior suite", read("README.en.md").includes("test/cache-behavior.test.mjs"));
+  const TOTAL_CASES = "804";
+  check("README.md total case count is current (" + TOTAL_CASES + ")", read("README.md").includes(TOTAL_CASES + " 项"));
+  check("README.en.md total case count is current (" + TOTAL_CASES + ")", read("README.en.md").includes(TOTAL_CASES + " items"));
+}
+
 // 3. core module count stays 22 across the three docs
 {
   const docs = { "README.md": MODULE_COUNT, "README.en.md": MODULE_COUNT, "ARCHITECTURE.md": MODULE_COUNT };

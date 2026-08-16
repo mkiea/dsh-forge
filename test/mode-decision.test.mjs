@@ -59,6 +59,10 @@ test("no TTY + no desktop -> check", () => {
   const d = decideUiMode({ tty: false, ci: false, desktop: false });
   assert.strictEqual(d.mode, UI_MODE.CHECK);
 });
+test("env-provided desktop is honored without explicit desktop flag", () => {
+  const d = decideUiMode({ tty: false, ci: false, env: { DISPLAY: ":0" } });
+  assert.strictEqual(d.mode, UI_MODE.WEB);
+});
 
 // desktop heuristics
 test("hasDesktop detects DISPLAY/WAYLAND_DISPLAY/SESSIONNAME", () => {

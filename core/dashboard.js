@@ -14,6 +14,14 @@ import { satisfies } from "./semver.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLIENT_PATH = path.join(__dirname, "..", "web", "dashboard-client.js");
 
+function pkgVersion() {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8")).version || "unknown";
+  } catch {
+    return "unknown"; // package.json unavailable in an unusual bundle -> still render
+  }
+}
+
 function esc(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
@@ -372,7 +380,7 @@ export function dashboard(analysis, extra = {}) {
   L.push(STYLE);
   L.push("</head><body>");
   // fixed header (title + meta), centered inner container
-  L.push("<header class='ws-header'><div class='ws-header-inner'><h1>DeepSeek Harness 插件组合仪表盘</h1><div class='sub'>dsh-forge v0.1.2 · 生成于 " + esc(embed.generatedAt) + " · " + sourceLabel + "· 只读，模拟不落盘</div></div></header>");
+  L.push("<header class='ws-header'><div class='ws-header-inner'><h1>DeepSeek Harness 插件组合仪表盘</h1><div class='sub'>dsh-forge v" + esc(pkgVersion()) + " · 生成于 " + esc(embed.generatedAt) + " · " + sourceLabel + " · 只读，模拟不落盘</div></div></header>");
   L.push('<div class="workspace">');
   // left nav: module tabs
   L.push('<aside class="ws-nav"><div class="ws-brand">▦ 模块</div>');

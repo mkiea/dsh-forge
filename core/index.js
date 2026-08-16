@@ -106,8 +106,11 @@ export function loadSnapshot(file) {
 // opts: { home, profile, root, compositionFiles, datasetPath }
 // In-memory analysis cache. Repeated calls with identical inputs reuse the
 // previous result instead of re-scanning the composition. The signature
-// includes file mtimes so edits invalidate it; call clearAnalysisCache() to
-// force a fresh scan (TUI R-refresh, tests, after config edits).
+// includes file mtimes for explicit compositionFiles/datasets AND the
+// auto-discovered live sources (profile cordis.yml/patch + bundle patches),
+// so edits invalidate it; call clearAnalysisCache() to force a fresh scan
+// (TUI R-refresh, tests, after config edits). Cached results are READ-ONLY:
+// callers must not mutate the returned object/graph/ecosystem.
 const analysisCache = new Map();
 const ANALYSIS_CACHE_MAX = 16;
 
@@ -116,13 +119,30 @@ function fileStamp(p) {
   catch { return "missing"; }
 }
 
+function liveSourceStamps(opts) {
+  if (opts.datasetPath) return [];
+  try {
+    const layers = discoverSources({ home: opts.home, profile: opts.profile, root: opts.root });
+    const files = [];
+    const home = opts.home || defaultHome();
+    if (opts.profile) files.push(path.join(home, "profiles", opts.profile, "package.json"));
+    for (const l of layers) {
+      if (l.path) files.push(l.path);
+    }
+    return files.map((f) => f + "@" + fileStamp(f));
+  } catch {
+    return ["live-sources-unavailable"]; // discovery failed; collectEcosystem will report the real error
+  }
+}
+
 function analysisKey(opts) {
   const files = (opts.compositionFiles || []).slice().sort().map((f) => f + "@" + fileStamp(f));
   const base = {
     profile: opts.profile || null,
     root: opts.root || null,
     home: opts.home || null,
-    compositionFiles: files
+    compositionFiles: files,
+    liveSources: liveSourceStamps(opts)
   };
   if (opts.datasetPath) base.dataset = opts.datasetPath + "@" + fileStamp(opts.datasetPath);
   return JSON.stringify(base);

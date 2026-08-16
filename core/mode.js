@@ -45,16 +45,17 @@ export function scenarioHints(env = process.env) {
 //   desktop      desktop session presence (default: hasDesktop(env))
 //   pluginCount  composed plugin row count (0 = unknown)
 export function decideUiMode(opts = {}) {
+  const env = opts.env || process.env;
   const {
     command = null,
     json = false,
     tty = true,
-    term = process.env.TERM || "xterm",
-    ci = Boolean(process.env.CI),
-    desktop = hasDesktop(process.env),
+    term = env.TERM || "xterm",
+    ci = Boolean(env.CI),
+    desktop = hasDesktop(env),
     pluginCount = 0
   } = opts;
-  const scenario = scenarioHints(opts.env || process.env);
+  const scenario = scenarioHints(env);
 
   const reasons = [];
   let mode;
@@ -78,7 +79,7 @@ export function decideUiMode(opts = {}) {
     const usableTerminal = tty && term.toLowerCase() !== "dumb";
     if (ci) {
       mode = UI_MODE.CHECK;
-      reasons.push("CI environment detected (CI=" + process.env.CI + ")");
+      reasons.push("CI environment detected (CI=" + env.CI + ")");
     } else if (!usableTerminal) {
       if (desktop) {
         mode = UI_MODE.WEB;

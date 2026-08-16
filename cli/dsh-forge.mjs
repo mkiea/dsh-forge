@@ -268,7 +268,7 @@ async function startWeb(analysis, opts) {
       runInteractiveTui(() => loadAnalysis(opts), opts);
       return;
     }
-    console.log(plainSummary(analysis));
+    console.log(opts.json ? jsonSummary(analysis) : plainSummary(analysis));
     return;
   }
   const server = http.createServer((req, res) => {
@@ -283,10 +283,11 @@ async function startWeb(analysis, opts) {
   server.on("error", (e) => {
     console.error("[dsh-forge] web server failed: " + String(e.message || e));
     if (process.stdout.isTTY) runInteractiveTui(() => loadAnalysis(opts), opts);
-    else console.log(plainSummary(analysis));
+    else console.log(opts.json ? jsonSummary(analysis) : plainSummary(analysis));
   });
   server.listen(requested, opts.host, () => {
-    const url = "http://" + opts.host + ":" + requested + "/";
+    const actualPort = server.address().port;
+      const url = "http://" + opts.host + ":" + actualPort + "/";
     console.log("[dsh-forge] web panel listening at " + url);
     if (opts.open && openBrowser(url)) console.log("[dsh-forge] browser opened: " + url);
     console.log("[dsh-forge] press Ctrl+C to stop");
