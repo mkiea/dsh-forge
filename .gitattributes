@@ -1,0 +1,3 @@
+# Keep the shell pre-commit hook on LF line endings.
+# A CRLF checkout would corrupt the `#!/bin/sh` shebang and break hook spawn on Windows.
+.githooks/pre-commit text eol=lf
