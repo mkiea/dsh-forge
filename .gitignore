@@ -2,3 +2,5 @@ node_modules/
 *.log
 .DS_Store
 .tmp-core-*/
+# exploratory, unversioned until finalized (see project convention)
+reports/plugin-graph-live.html

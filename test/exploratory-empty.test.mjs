@@ -1,4 +1,4 @@
-// dsh-forge/test/exploratory-empty.mjs
+// dsh-forge/test/exploratory-empty.test.mjs
 // Exploratory testing around the empty/conflicting-empty plugin fixtures:
 // boundary compositions (empty set, single empty plugin, missing manifest,
 // disabled rows, cross-layer overrides), a mixed stress composition, and

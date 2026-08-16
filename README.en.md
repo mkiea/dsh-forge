@@ -42,7 +42,7 @@ A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency an
 Three layers, see [ARCHITECTURE.md](./ARCHITECTURE.md):
 
 ```
-core/          dependency-free engine (21 modules, Node built-ins only)
+core/          dependency-free engine (22 modules, Node built-ins only)
   ├─ composition.js   composition discovery + YAML parsing + ecosystem collection
   ├─ truth.js         dump-config ground truth (auto/dump-config/scan)
   ├─ analyze.js       dependency graph + risk scoring
@@ -200,13 +200,13 @@ offline-deployable).
 - Automated tests (10 self-contained suites; smoke13 13/13 depends on the local harness, not in CI):
   - `test/ui-test.mjs` — dashboard workspace structure & interaction (41)
   - `test/ui-plugin-test.mjs` — client plugin VM execution + slot registration + modal interaction (22)
-  - `test/semver-consistency.mjs` — dual SemVer implementation consistency (30)
+  - `test/semver-consistency.test.mjs` — single-source SemVer regression + anti-mirror guard (30)
   - `test/review-fixes.test.mjs` — scope states / event calibration / leak slicing (15)
   - `test/upgrade-opt.test.mjs` — upgrade check concurrency/timeout/fallback/install commands (16)
   - `test/feedback-smoke.test.mjs` — error-feedback smoke (40)
   - `test/empty-plugins.test.mjs` — empty combination / leak rules (24)
-  - `test/exploratory-empty.mjs` — random subset exploration (27)
-  - `test/exploratory-feedback.mjs` — feedback deep exploration (563)
+  - `test/exploratory-empty.test.mjs` — random subset exploration (27)
+  - `test/exploratory-feedback.test.mjs` — feedback deep exploration (563)
   - `test/mode-decision.test.mjs` — four-layer TUI/Web/check decision engine (18)
 
 ## Error feedback

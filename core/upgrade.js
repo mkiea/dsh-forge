@@ -31,7 +31,7 @@ async function latestVersion(pkg, registry, timeoutMs, fetchImpl) {
     const j = await res.json();
     return { version: j.version || null };
   } catch {
-    return { error: true };
+    return { error: true }; // registry unreachable/timeout -> surfaced as a network failure
   } finally {
     clearTimeout(timer);
   }

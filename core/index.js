@@ -104,7 +104,37 @@ export function loadSnapshot(file) {
 
 // One-shot analysis pipeline.
 // opts: { home, profile, root, compositionFiles, datasetPath }
+// In-memory analysis cache. Repeated calls with identical inputs reuse the
+// previous result instead of re-scanning the composition. The signature
+// includes file mtimes so edits invalidate it; call clearAnalysisCache() to
+// force a fresh scan (TUI R-refresh, tests, after config edits).
+const analysisCache = new Map();
+const ANALYSIS_CACHE_MAX = 16;
+
+function fileStamp(p) {
+  try { const st = fs.statSync(p); return st.mtimeMs + ":" + st.size; }
+  catch { return "missing"; }
+}
+
+function analysisKey(opts) {
+  const files = (opts.compositionFiles || []).slice().sort().map((f) => f + "@" + fileStamp(f));
+  const base = {
+    profile: opts.profile || null,
+    root: opts.root || null,
+    home: opts.home || null,
+    compositionFiles: files
+  };
+  if (opts.datasetPath) base.dataset = opts.datasetPath + "@" + fileStamp(opts.datasetPath);
+  return JSON.stringify(base);
+}
+
+// Drop all cached analyses (TUI refresh, tests, after config edits).
+export function clearAnalysisCache() { analysisCache.clear(); }
+
 export function runAnalysis(opts = {}) {
+  const key = analysisKey(opts);
+  const hit = analysisCache.get(key);
+  if (hit) return hit;
   const eco = opts.datasetPath ? loadSnapshot(opts.datasetPath) : collectEcosystem(opts);
   const graph = buildGraph(eco);
   const conflicts = checkConflicts(eco, { graph });
@@ -114,7 +144,10 @@ export function runAnalysis(opts = {}) {
   const verified = runtimeVerified(eco);
   const leaks = scanLeaks(eco.packages);
   const feedback = buildFeedback({ conflicts, leaks, assessment, patterns, verified });
-  return { ecosystem: eco, graph, conflicts, assessment, patterns, deprecations, verified, leaks, feedback };
+  const result = { ecosystem: eco, graph, conflicts, assessment, patterns, deprecations, verified, leaks, feedback };
+  if (analysisCache.size >= ANALYSIS_CACHE_MAX) analysisCache.delete(analysisCache.keys().next().value);
+  analysisCache.set(key, result);
+  return result;
 }
 
 // Default node_modules root discovery for live runs.

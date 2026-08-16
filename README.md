@@ -47,7 +47,7 @@ DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、�
 三层分离，详见 [ARCHITECTURE.md](./ARCHITECTURE.md)：
 
 ```
-core/          零依赖分析引擎（21 个模块，Node 内置 API only）
+core/          零依赖分析引擎（22 个模块，Node 内置 API only）
   ├─ composition.js   组合源发现 + YAML 解析 + 生态收集
   ├─ truth.js         dump-config 真相源（auto/dump-config/scan 三态）
   ├─ analyze.js       依赖图构建 + 风险评估
@@ -233,13 +233,13 @@ Web 为零依赖 `node:http` + 8 模块交互仪表盘（缺 `web/dashboard-clie
 - 自动化测试（10 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
   - `test/ui-test.mjs` — 仪表盘 workspace 结构与交互（41 项）
   - `test/ui-plugin-test.mjs` — 客户端插件 VM 执行 + slot 注册 + 模态交互（22 项）
-  - `test/semver-consistency.mjs` — 两份 SemVer 实现一致性（30 项）
+  - `test/semver-consistency.test.mjs` — SemVer 单一实现回归 + 防镜像回归（30 项）
   - `test/review-fixes.test.mjs` — 作用域三态 / 事件校准 / 泄漏切片（15 项）
   - `test/upgrade-opt.test.mjs` — 升级检查并发/超时/降级/安装命令（16 项）
   - `test/feedback-smoke.test.mjs` — 错误反馈冒烟（40 项）
   - `test/empty-plugins.test.mjs` — 空组合 / 泄漏规则（24 项）
-  - `test/exploratory-empty.mjs` — 随机子集探索（27 项）
-  - `test/exploratory-feedback.mjs` — 反馈深度探索（563 项）
+  - `test/exploratory-empty.test.mjs` — 随机子集探索（27 项）
+  - `test/exploratory-feedback.test.mjs` — 反馈深度探索（563 项）
   - `test/mode-decision.test.mjs` — TUI/Web/check 四层决策引擎（18 项）
 
 ## 错误反馈体系

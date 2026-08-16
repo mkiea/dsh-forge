@@ -12,7 +12,7 @@ function readManifest(dir) {
   try {
     return JSON.parse(fs.readFileSync(path.join(dir, "package.json"), "utf8"));
   } catch {
-    return null;
+    return null; // manifest missing/corrupt -> treated as absent
   }
 }
 

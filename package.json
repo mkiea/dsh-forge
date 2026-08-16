@@ -12,6 +12,10 @@
   "bin": {
     "dsh-forge": "cli/dsh-forge.mjs"
   },
+  "scripts": {
+    "doc:check": "node scripts/check-doc-consistency.mjs",
+    "precommit": "node scripts/check-doc-consistency.mjs && node --check cli/dsh-forge.mjs"
+  },
   "license": "MIT",
   "files": [
     "src",

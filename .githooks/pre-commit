@@ -1,0 +1,12 @@
+#!/bin/sh
+# dsh-forge fast pre-commit gate (optional but recommended).
+# Enable once per clone with:  git config core.hooksPath .githooks
+set -e
+echo "[pre-commit] syntax checks"
+node --check src/index.js
+node --check src/tools.js
+node --check cli/dsh-forge.mjs
+node --check core/mode.js
+echo "[pre-commit] doc-consistency guard"
+node scripts/check-doc-consistency.mjs
+echo "[pre-commit] OK"

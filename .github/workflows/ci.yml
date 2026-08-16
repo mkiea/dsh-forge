@@ -19,11 +19,14 @@ jobs:
       - name: Core module load check
         run: node --input-type=module -e "import('./core/index.js').then(m => console.log('core ok', Object.keys(m).length))"
 
+      - name: Doc-consistency guard
+        run: node scripts/check-doc-consistency.mjs
+
       - name: Run self-contained test suites
         run: |
           for file in test/*.mjs; do
             case "$file" in
-              *smoke13.mjs)
+              *smoke13.test.mjs)
                 echo "SKIP $file (依赖本机路径 / 真实 harness，CI 不运行)"
                 ;;
               *)

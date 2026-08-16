@@ -1,4 +1,4 @@
-// dsh-forge/test/exploratory-feedback.mjs
+// dsh-forge/test/exploratory-feedback.test.mjs
 // 深度探索性测试：围绕「统一错误反馈体系」做随机组合压力验证。
 // 随机生成插件池（工具名 / 服务名 / 版本 / 泄漏模式随机组合），
 // 多轮随机组合 -> collectEcosystem -> checkConflicts -> scanLeaks -> buildFeedback，

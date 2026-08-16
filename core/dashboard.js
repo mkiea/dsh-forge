@@ -9,6 +9,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { KNOWN_LIBS } from "./knowledge.js";
 import { buildFeedback } from "./errors.js";
+import { satisfies } from "./semver.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLIENT_PATH = path.join(__dirname, "..", "web", "dashboard-client.js");
@@ -18,111 +19,6 @@ function esc(s) {
 }
 
 const SEV_COLOR = { blocking: "#d64545", high: "#e67e22", medium: "#f1c40f", low: "#27ae60", disabled: "#95a5a6" };
-
-// Browser-mirror semver (satisfaction only), kept in sync with core/semver.js.
-// Partial-version normalization (^1.2 / ~1.2 / 1.x / 1.2.x / 1.2 / >=1.2 ...).
-function normalizeRange(range) {
-  const r = String(range).trim();
-  if (r === "" || r === "*" || r === "x" || r === "X") return r;
-  return r.split("||").map(function (u) {
-    return u.trim().split(/\s+/).map(function (tok) {
-      const m = /^(\^|~|>=|<=|>|<|=)?\s*(\d+)(?:\.(\d+|x|X|\*))?(?:\.(\d+|x|X|\*))?(?:-([0-9A-Za-z.-]+))?$/.exec(tok);
-      if (!m) return tok;
-      const op = m[1] || "=";
-      const major = m[2];
-      const minorRaw = m[3];
-      const patchRaw = m[4];
-      const pre = m[5];
-      const minor = minorRaw === undefined || /^[xX*]$/.test(minorRaw) ? null : Number(minorRaw);
-      const patch = patchRaw === undefined || /^[xX*]$/.test(patchRaw) ? null : Number(patchRaw);
-      const full = function (mi, pa) { return major + "." + mi + "." + pa + (pre ? "-" + pre : ""); };
-      if (op === "^") {
-        if (minor === null) return ">=" + full(0, 0) + " <" + (Number(major) + 1) + ".0.0";
-        if (patch === null) return ">=" + full(minor, 0) + " <" + (Number(major) + 1) + ".0.0";
-        return tok;
-      }
-      if (op === "~") {
-        if (minor === null) return ">=" + full(0, 0) + " <" + (Number(major) + 1) + ".0.0";
-        if (patch === null) return ">=" + full(minor, 0) + " <" + major + "." + (minor + 1) + ".0";
-        return tok;
-      }
-      if (op === "=" && (minor === null || patch === null)) {
-        if (minor === null) return ">=" + full(0, 0) + " <" + (Number(major) + 1) + ".0.0";
-        return ">=" + full(minor, 0) + " <" + major + "." + (minor + 1) + ".0";
-      }
-      if (op === ">=" && (minor === null || patch === null)) {
-        if (minor === null) return ">=" + full(0, 0);
-        return ">=" + full(minor, 0);
-      }
-      if (op === ">" && (minor === null || patch === null)) {
-        if (minor === null) return ">=" + (Number(major) + 1) + ".0.0";
-        return ">=" + major + "." + (minor + 1) + ".0";
-      }
-      if (op === "<" && (minor === null || patch === null)) {
-        if (minor === null) return "<" + (Number(major) + 1) + ".0.0";
-        return "<" + major + "." + minor + ".0";
-      }
-      if (op === "<=" && (minor === null || patch === null)) {
-        if (minor === null) return "<" + (Number(major) + 1) + ".0.0";
-        return "<" + major + "." + (minor + 1) + ".0";
-      }
-      return tok;
-    }).join(" ");
-  }).join("||");
-}
-
-function satisfies(versionRaw, rangeRaw) {
-  const parse = (v) => {
-    const m = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?/.exec(String(v).trim());
-    if (!m) return null;
-    return { major: +m[1], minor: +m[2], patch: +m[3], pre: m[4] ? m[4].split(".") : null };
-  };
-  const cmp = (a, b) => {
-    for (const k of ["major", "minor", "patch"]) if (a[k] !== b[k]) return a[k] < b[k] ? -1 : 1;
-    if (!a.pre && !b.pre) return 0;
-    if (!a.pre) return 1;
-    if (!b.pre) return -1;
-    for (let i = 0; i < Math.max(a.pre.length, b.pre.length); i++) {
-      if (a.pre[i] === undefined) return -1;
-      if (b.pre[i] === undefined) return 1;
-      if (a.pre[i] === b.pre[i]) continue;
-      const na = /^\d+$/.test(a.pre[i]), nb = /^\d+$/.test(b.pre[i]);
-      if (na && nb) return +a.pre[i] < +b.pre[i] ? -1 : 1;
-      if (na) return -1;
-      if (nb) return 1;
-      return a.pre[i] < b.pre[i] ? -1 : 1;
-    }
-    return 0;
-  };
-  const v = parse(versionRaw);
-  if (!v) return null;
-  const range = normalizeRange(String(rangeRaw).trim());
-  if (!range || range === "*") return !v.pre;
-  for (const union of range.split("||").map((s) => s.trim())) {
-    let ok = true;
-    for (const part of union.split(/\s+/)) {
-      const m = /^(\^|~|>=|<=|>|<|=)?\s*([^\s]+)$/.exec(part);
-      if (!m) { ok = false; break; }
-      const c = parse(m[2]);
-      if (!c) { ok = false; break; }
-      const d = cmp(v, c);
-      const same = v.major === c.major && v.minor === c.minor && v.patch === c.patch;
-      const preOk = !v.pre || !!(c.pre || same);
-      const op = m[1] || "=";
-      let r = false;
-      if (op === "=") r = same && (!!v.pre !== !!c.pre ? false : d === 0);
-      else if (op === ">") r = preOk && d > 0;
-      else if (op === "<") r = preOk && d < 0;
-      else if (op === ">=") r = preOk && d >= 0;
-      else if (op === "<=") r = preOk && d <= 0;
-      else if (op === "^") r = preOk && d >= 0 && (c.major > 0 ? v.major < c.major + 1 : c.minor > 0 ? v.minor < c.minor + 1 : v.patch < c.patch + 1);
-      else if (op === "~") r = preOk && d >= 0 && v.major === c.major && v.minor === c.minor && v.patch >= c.patch;
-      if (!r) { ok = false; break; }
-    }
-    if (ok) return true;
-  }
-  return false;
-}
 
 function tokensOf(pkgName) {
   return String(pkgName).replace(/^@[^/]+\//, "").replace(/^dsh-/, "").split("-").filter(Boolean);

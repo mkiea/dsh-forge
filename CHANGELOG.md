@@ -12,8 +12,17 @@
 - TUI 与 Web 双壳复用同一 `core/` 分析引擎，未引入 ink/blessed/Express/ECharts 等第三方依赖。
 - core/dashboard.js 页头数据源标签动态化：离线快照显示快照时间（可复现），实时组合显示 truthSource。
 - 新增 `test/mode-decision.test.mjs`：四层决策 + 端口降级 + 场景启发共 18 项自包含测试。
+### P0 修复
 
+- 文档模块计数统一为 22（README / README.en / ARCHITECTURE），ARCHITECTURE 模块表补列 `core/errors.js`。
+- 消除 SemVer 双实现：core/dashboard.js 移除内嵌 browser-mirror semver（浏览器端本无调用，属死代码），改为 `import { satisfies } from "./semver.js"` 单一事实源；semver-consistency 改为单一实现固定断言（30 用例）+ 防 dashboard 镜像回归。
 
+### P1 修复 / 还债
+
+- 分析缓存：core/index.js `runAnalysis` 新增基于输入参数 + 文件 mtime 的内存缓存（上限 16 条），重复分析相同组合直接命中，显著降低 TUI 下重复调用开销；提供 `clearAnalysisCache()` 强制刷新（TUI `R` 键、测试、配置变更后），缓存键含 dataset 指纹，文件改动自动失效。
+- 代码卫生：清理 8 处无注释的空 catch 块（cli/dsh-forge.mjs ×3、src/index.js、core/simulate.js、core/upgrade.js、core/composition.js、core/verify.js），逐一标注吞错原因；移除 cli/dsh-forge.mjs 冗余变量 `HELP_TEXT = HELP`，直接使用 `HELP`。
+- 测试命名统一：`test/semver-consistency.mjs`、`test/smoke13.mjs`、`test/exploratory-empty.mjs`、`test/exploratory-feedback.mjs` 统一为 `.test.mjs` 后缀；同步 ci.yml 的 smoke13 跳过模式、README / README.en / ARCHITECTURE 文件名引用。
+- 工程加固（审视落地）：新增 `test/cache-behavior.test.mjs` 缓存守护（同参命中 / clear 失效 / 内容变更 / mtime-touch / 上限淘汰 / 快照，6 项）；`src/` 与 `core/` 双入口职责决策说明（ARCHITECTURE §2.2 + src/index.js 头注）；新增 `scripts/check-doc-consistency.mjs` 文档一致性 CI 断言（测试命名 / 模块计数 22 / smoke13 跳过 / Unreleased）并接入 ci.yml；历史审计报告（audit-v0.1.1 / PM-review-v4 / deep-verification / analysis-report / PM-remediation）标注「快照，不代表当前」；新增 `.githooks/pre-commit` 快速门禁（`git config core.hooksPath .githooks` 启用）+ package.json scripts（doc:check / precommit）+ .gitignore 忽略 reports/plugin-graph-live.html。
 
 ## [0.1.2] - 2026-08-16
 
@@ -112,7 +121,7 @@
 ### 架构说明（三层分离，详见 [ARCHITECTURE.md](./ARCHITECTURE.md)）
 
 ```
-core/          零依赖分析引擎（20 个模块，仅 Node 内置 API）
+core/          零依赖分析引擎（22 个模块，仅 Node 内置 API）
   ├─ composition.js   组合源发现 + YAML 解析 + 生态收集
   ├─ truth.js         dump-config 真相源（auto/dump-config/scan 三态）
   ├─ analyze.js       依赖图构建 + 风险评估

@@ -8,6 +8,15 @@
 //
 // All tools are read-only; simulate_combination never touches the real
 // composition.
+//
+// ── Entry-point split (do not blur) ─────────────────────────────────────
+//   src/index.js   harness plugin shell: mounts the tools via defineTool,
+//                  owns runtime probing + startup preflight (harness-facing).
+//   core/index.js  dependency-free analysis engine + facade; the CLI
+//                  (cli/dsh-forge.mjs) and every test suite import core/,
+//                  never src/. Add new analysis capability to core/ and
+//                  re-export it from core/index.js; add a tool here only
+//                  when it must be exposed to the harness as a tool.
 "use strict";
 import z from "@deepseek-ai/schemastery";
 import { defineTool } from "@deepseek-ai/dsh-tools";
@@ -43,7 +52,7 @@ function probeRuntime(ctx) {
       if (v !== undefined && v !== null) found.push(name);
       else missing.push(name);
     } catch {
-      missing.push(name);
+      missing.push(name); // ctx.get threw -> treat the probe service as missing
     }
   }
   return { found, missing };

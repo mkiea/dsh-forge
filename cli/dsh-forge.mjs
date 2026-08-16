@@ -17,7 +17,8 @@ import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
-  runAnalysis, html as renderHtml, dashboard as renderDashboard,
+  runAnalysis, clearAnalysisCache,
+  html as renderHtml, dashboard as renderDashboard,
   UI_MODE, decideUiMode, decideAfterPortProbe,
   hasDesktop, COMPLEXITY_LIGHT, COMPLEXITY_HEAVY
 } from "../core/index.js";
@@ -80,7 +81,6 @@ Mode decision evidence:
 `;
 
 // COMPLEXITY_LIGHT / COMPLEXITY_HEAVY are already imported at the top.
-const HELP_TEXT = HELP;
 
 // ── analysis loader ─────────────────────────────────────────────────────────
 function loadAnalysis(opts) {
@@ -210,6 +210,7 @@ function runInteractiveTui(getAnalysis, opts, initialAnalysis) {
       cleanup();
       await startWeb(analysis, opts);
     } else if (k === "r") {
+      clearAnalysisCache(); // R = explicit refresh: skip the analysis cache
       analysis = loadAnalysis(opts);
       draw();
     }
@@ -243,7 +244,7 @@ function openBrowser(url) {
     spawn(cmd[0], cmd[1], { detached: true, stdio: "ignore", windowsHide: true }).unref();
     return true;
   } catch {
-    return false;
+    return false; // spawn failed -> browser just won't open; web server still serves
   }
 }
 
@@ -254,6 +255,7 @@ async function startWeb(analysis, opts) {
   try {
     page = renderDashboard(analysis);
   } catch {
+    // dashboard render failed -> fall back to the self-contained SVG topology page
     page = renderHtml(analysis.ecosystem, analysis.assessment, analysis.conflicts);
   }
   const requested = opts.port;
@@ -298,13 +300,13 @@ async function startWeb(analysis, opts) {
 async function main() {
   const argv = process.argv.slice(2);
   const opts = parseArgs(argv);
-  if (opts.help) { console.log(HELP_TEXT); return; }
+  if (opts.help) { console.log(HELP); return; }
   if (opts.version) {
     try {
       const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"));
       console.log(pkg.version);
     } catch {
-      console.log("unknown");
+      console.log("unknown"); // package.json unreadable -> fall back to literal 'unknown'
     }
     return;
   }

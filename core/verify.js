@@ -59,7 +59,7 @@ export function verifyRows(eco, opts = {}) {
           }
         }
       } catch {
-        entry.checks.dshClient = "unreadable";
+        entry.checks.dshClient = "unreadable"; // manifest scan failed -> report as unreadable        entry.checks.dshClient = "unreadable";
       }
     } else {
       entry.checks.dshClient = "no-dir";

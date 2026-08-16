@@ -28,7 +28,7 @@ export function evalJsExpr(expr, { home, root } = {}) {
     const fn = new Function("process", "dshHomePath", '"use strict"; return (' + expr + ");");
     return fn(proc, (p) => path.join(home || defaultHome(), p));
   } catch {
-    return undefined;
+    return undefined; // expr not evaluable -> treated as unset (never surfaces user JS errors)    return undefined;
   }
 }
 

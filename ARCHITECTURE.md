@@ -29,7 +29,7 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 │  │            │          │  │  └────────────────────┘  │ │
 │  │   ┌────────▼────────┐ │  └──────────────────────────┘ │
 │  │   │  core/ (引擎)   │ │                               │
-│  │   │  21 个纯逻辑模块 │ │                               │
+│  │   │  22 个纯逻辑模块 │ │                               │
 │  │   └─────────────────┘ │                               │
 │  └───────────────────────┘                               │
 └─────────────────────────────────────────────────────────┘
@@ -62,6 +62,7 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 | `mode.js` | TUI/Web/check 四层证据决策（启动入口/环境/场景/复杂度） | `decideUiMode`, `hasDesktop`, `decideAfterPortProbe` |
 | `suggest.js` | 补丁建议生成 | `suggestPatch` |
 | `knowledge.js` | 知识库 + 已知模式 + 废弃扫描 | `knownPatterns`, `scanDeprecations` |
+| `errors.js` | 统一错误反馈（归一化/聚合/预检/渲染） | `buildFeedback`, `normalizeFeedback`, `preflight`, `renderFeedback` |
 
 `core/index.js` 是门面模块，统一 re-export 全部公共 API，并提供 `runAnalysis()` 一站式管线和 `saveSnapshot()` / `loadSnapshot()` 快照序列化。
 
@@ -82,6 +83,8 @@ apply(ctx, config)
 ```
 
 每个工具的 `execute` 方法通过 `selectEco(args, config)` 获取生态数据，再委托 `core/` 对应模块计算。
+
+> **双入口职责（勿混淆）**：`src/index.js`（cordis 插件壳）只负责把 13 个工具注册进 harness，并持有运行期探测与启动预检；`core/index.js`（零依赖分析引擎门面）是 CLI 与全部测试的唯一事实源。新增分析能力一律进 `core/` 并在 `core/index.js` re-export；只有需要暴露给 harness 作为工具时才在 `src/tools.js` 新增定义。CLI（cli/dsh-forge.mjs）与测试套件 import `core/`，不依赖 `src/`。
 
 ### 2.3 ui-plugin/ — 客户端插件
 
@@ -191,17 +194,17 @@ check_upgrades execute(args)
 | --- | --- | --- | --- |
 | 仪表盘结构+交互 | `test/ui-test.mjs` | 41 | workspace 结构 / 默认页 / 页切换 + 搜索/筛选/排序/toggle/增删候选 + 133 行数据 |
 | 客户端插件 VM 执行 | `test/ui-plugin-test.mjs` | 22 | 2 slot 注册 + locale + 模态开关 + wide/collapsed 渲染 |
-| SemVer 一致性 | `test/semver-consistency.mjs` | 30 | core/semver.js vs dashboard.js 内嵌镜像，22 种区间 |
+| SemVer 回归 | `test/semver-consistency.test.mjs` | 30 | core/semver.js 单一实现 30 用例固定断言 + 防 dashboard 镜像回归 |
 | 作用域/校准/泄漏 | `test/review-fixes.test.mjs` | 15 | scope 三态 + mock 事件校准 + 泄漏切片 |
 | 升级检查优化 | `test/upgrade-opt.test.mjs` | 16 | 并发池 + 超时 + 镜像降级 + 安装命令 + 独立性 + 阻断预测 |
 | 错误反馈冒烟 | `test/feedback-smoke.test.mjs` | 40 | FORGE 错误码 / 分级 / 聚合 / 渲染 |
 | 空组合 / 泄漏规则 | `test/empty-plugins.test.mjs` | 24 | 空组合边界 + 泄漏规则 |
-| 随机子集探索 | `test/exploratory-empty.mjs` | 27 | 随机插件池 + 多轮组合一致性 |
-| 反馈深度探索 | `test/exploratory-feedback.mjs` | 563 | 反馈结构合法 / 分级计数 / 排序稳定 / 确定性 |
+| 随机子集探索 | `test/exploratory-empty.test.mjs` | 27 | 随机插件池 + 多轮组合一致性 |
+| 反馈深度探索 | `test/exploratory-feedback.test.mjs` | 563 | 反馈结构合法 / 分级计数 / 排序稳定 / 确定性 |
 | TUI/Web/check 决策 | `test/mode-decision.test.mjs` | 18 | 四层证据决策（命令/环境/场景/复杂度）/ 端口占用降级 / 场景启发 |
 
 测试策略：
-- **跨实现一致性**：semver-consistency 对比两份独立 SemVer 实现
+- **单一实现回归**：semver-consistency 固定断言 core/semver.js 行为，并守护 dashboard.js 不再内嵌镜像副本
 - **VM 真实执行**：ui-plugin-test 用 `vm.createContext` 执行 client.js bundle
 - **DOM-mock**：ui-test 用 mock React createElement 模拟仪表盘交互
 - **mock fetch**：upgrade-opt.test 用 mock fetch 验证网络逻辑，零真实网络依赖
@@ -210,7 +213,7 @@ check_upgrades execute(args)
 
 | 路径 | 说明 |
 | --- | --- |
-| `.github/workflows/ci.yml` | CI 模板（Node 22+，运行自包含测试套件；跳过依赖本机路径/真实 harness 的 smoke13.mjs） |
+| `.github/workflows/ci.yml` | CI 模板（Node 22+，运行自包含测试套件；跳过依赖本机路径/真实 harness 的 smoke13.test.mjs） |
 | `scripts/generate-dashboard.mjs` | 用当前 dashboard.js 从离线快照重新生成 reports/dashboard.html |
 | `scripts/build-ui.mjs` | 构建客户端 bundle（内嵌 dashboard.html 到 client.js） |
 | `scripts/mount-ui.mjs` | 挂载脚本（自动探测部署 node_modules；env：DSH_HOME / DSH_DEPLOY_NM / DSH_FORGE_ROOT / DSH_PROFILE_PATCH） |

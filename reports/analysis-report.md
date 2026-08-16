@@ -1,5 +1,7 @@
 # DeepSeek Harness 插件组合分析报告
 
+> **快照标注**：本报告是**历史审计快照**，基于当时版本，不代表当前代码状态；现状以 README / ARCHITECTURE / CHANGELOG 与实时测试为准。
+
 > 工具：dsh-forge（analyze_dependencies / check_conflicts / visualize_plugins / simulate_combination）
 > 分析时间：2026-08-13T18:24:52.668Z · 数据源：`data/ecosystem.json` 快照（离线可复现）
 > 分析范围：Web profile（host 平面：profile 根 → `dsh-base` → `dsh-web-app` → `profile-patch`）+ **preset:standard**（本会话真实装载，经工具面反推确认）
