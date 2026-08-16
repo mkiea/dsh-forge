@@ -3,7 +3,7 @@
 - 被测对象：reports/dashboard.html（交互仪表盘）、reports/plugin-graph.html（图谱）、web/dashboard-client.js（客户端脚本）
 - 数据来源：data/ecosystem.json（真实装载：web profile + preset:standard，136 行 / 131 插件）
 - 方法：HTML 结构校验 + Node DOM-mock 全交互路径执行（无浏览器环境）
-- 时间：2026-08-16T07:36:31.901Z
+- 时间：2026-08-16T08:39:01.033Z
 
 ## 结果：41 通过 / 0 失败
 

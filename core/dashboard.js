@@ -468,12 +468,15 @@ export function dashboard(analysis, extra = {}) {
   const json = JSON.stringify(embed).replace(/</g, "\\u003c");
   const client = fs.readFileSync(CLIENT_PATH, "utf8");
   const L = [];
+  const sourceLabel = (analysis.ecosystem && analysis.ecosystem.snapshot)
+    ? "离线快照 " + esc(analysis.ecosystem.collectedAt || "snapshot") + "（可复现）"
+    : "实时组合（truthSource=" + esc((analysis.ecosystem && analysis.ecosystem.truthSource) || "scan") + "）";
 
   L.push('<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>dsh-forge 组件仪表盘</title>');
   L.push(STYLE);
   L.push("</head><body>");
   // fixed header (title + meta), centered inner container
-  L.push("<header class='ws-header'><div class='ws-header-inner'><h1>DeepSeek Harness 插件组合仪表盘</h1><div class='sub'>dsh-forge v0.1.2 · 生成于 " + esc(embed.generatedAt) + " · 数据源 data/ecosystem.json 快照（离线可复现）· 只读，模拟不落盘</div></div></header>");
+  L.push("<header class='ws-header'><div class='ws-header-inner'><h1>DeepSeek Harness 插件组合仪表盘</h1><div class='sub'>dsh-forge v0.1.2 · 生成于 " + esc(embed.generatedAt) + " · " + sourceLabel + "· 只读，模拟不落盘</div></div></header>");
   L.push('<div class="workspace">');
   // left nav: module tabs
   L.push('<aside class="ws-nav"><div class="ws-brand">▦ 模块</div>');

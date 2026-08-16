@@ -42,7 +42,7 @@ A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency an
 Three layers, see [ARCHITECTURE.md](./ARCHITECTURE.md):
 
 ```
-core/          dependency-free engine (20 modules, Node built-ins only)
+core/          dependency-free engine (21 modules, Node built-ins only)
   ├─ composition.js   composition discovery + YAML parsing + ecosystem collection
   ├─ truth.js         dump-config ground truth (auto/dump-config/scan)
   ├─ analyze.js       dependency graph + risk scoring
@@ -171,11 +171,33 @@ console.log(JSON.stringify(r.assessment, null, 1));
 "
 ```
 
+## Standalone CLI: TUI / Web / check (default TUI, web on demand)
+
+The package exposes a `dsh-forge` bin (`cli/dsh-forge.mjs`). The UI shape is decided by `core/mode.js` from four evidence layers — never guessed:
+
+1. **Launch command** (hard signal): `dsh-forge tui` forces TUI; `dsh-forge web|serve` starts the web panel and opens the browser; `dsh-forge check|ci` prints logs / `--json`, no UI.
+2. **Runtime environment**: TUI requires `stdout.isTTY` and `TERM != dumb`; desktop sessions are detected via `DISPLAY` / `WAYLAND_DISPLAY` / `SESSIONNAME`; no TTY but a desktop session selects Web; an occupied port degrades to TUI (interactive) or check (non-interactive).
+3. **User scenario**: CI (`CI` env) and `--json` always select machine-readable check mode.
+4. **Data complexity**: < 10 plugins -> TUI; > 30 plugins -> suggest `dsh-forge web` and allow one-key switch with `W` from the TUI.
+
+```bash
+node cli/dsh-forge.mjs               # auto decision (TUI by default in a real terminal)
+node cli/dsh-forge.mjs tui           # force TUI (W=open web, R=refresh, Q=quit)
+node cli/dsh-forge.mjs web           # force Web (--port 8080, --no-open to skip browser)
+node cli/dsh-forge.mjs check --json  # CI/CD machine output
+```
+
+Both shells share the same `core/` engine: the TUI is a zero-dependency ANSI renderer,
+and the Web shell is `node:http` serving the interactive 8-module dashboard
+(falls back to the self-contained SVG topology page when `web/dashboard-client.js`
+is unavailable; no Express/ECharts dependency, keeping core dependency-free and
+offline-deployable).
+
 ## Verification status
 
 - `dsh web` runs at http://127.0.0.1:3080, no browser errors, **13 tools** registered
 - `analyze_dependencies` live: 4 layers (profile root + dsh-base + dsh-web-app + patch), 138 rows (incl. forge/forge-ui) / 128 packages / 1226+ edges
-- Automated tests (9 suites, 778/778 green; smoke13 13/13 depends on the local harness, not in CI):
+- Automated tests (10 self-contained suites; smoke13 13/13 depends on the local harness, not in CI):
   - `test/ui-test.mjs` — dashboard workspace structure & interaction (41)
   - `test/ui-plugin-test.mjs` — client plugin VM execution + slot registration + modal interaction (22)
   - `test/semver-consistency.mjs` — dual SemVer implementation consistency (30)
@@ -185,6 +207,7 @@ console.log(JSON.stringify(r.assessment, null, 1));
   - `test/empty-plugins.test.mjs` — empty combination / leak rules (24)
   - `test/exploratory-empty.mjs` — random subset exploration (27)
   - `test/exploratory-feedback.mjs` — feedback deep exploration (563)
+    - `test/mode-decision.test.mjs` — four-layer TUI/Web/check decision engine (18)
 
 ## Error feedback
 
@@ -209,11 +232,12 @@ The third-party PM review acceptance criteria are implemented item by item: dump
 ## Layout
 
 - `core/` — dependency-free engine (semver / composition / truth / graph / conflicts / simulation / visualization / knowledge / calibration / leaks / upgrade)
+- `cli/` — standalone TUI/Web/check entry (evidence-based mode decision)
 - `src/` — cordis plugin shell (13 tool schemas + registration)
 - `ui-plugin/` — browser client plugin (sidebar entry + modal dashboard)
 - `web/` — dashboard client script (embedded at generation time)
 - `prompt/` — expert persona prompt (with risk prediction)
 - `data/` — ecosystem snapshots
 - `reports/` — generated reports and graphs
-- `test/` — self-contained test suites (9 suites, 778 items, no machine dependency)
+- `test/` — self-contained test suites (10 suites, 796 items, no machine dependency)
 - `scripts/` — build and mount scripts

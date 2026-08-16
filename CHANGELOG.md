@@ -1,4 +1,19 @@
 # Changelog
+## [Unreleased] — 双栖 UI 决策（默认 TUI，按需 Web）
+
+### TUI / Web / check 三态入口
+
+- 新增 `core/mode.js`：四层证据决策引擎（启动命令 → 运行环境 TTY/TERM/CI/桌面会话 → 用户场景 SSH/编辑器/自动化 → 插件数量复杂度），`decideUiMode` / `hasDesktop` / `scenarioHints` / `decideAfterPortProbe` 全部纯函数、零依赖。
+- 新增 `cli/dsh-forge.mjs` 并注册为 package.json `bin.dsh-forge`：
+  - `dsh-forge` 自动决策（真实终端默认 TUI）；
+  - `dsh-forge tui` 强制 TUI（ANSI 渲染，`W` 一键开 Web、`R` 刷新、`Q` 退出）；
+  - `dsh-forge web|serve` 强制 Web（node:http + 8 模块交互仪表盘，缺 web/dashboard-client.js 时回退自包含 SVG 拓扑页；自动打开浏览器，端口占用自动降级 TUI/check）；
+  - `dsh-forge check|ci [--json]` 纯日志/机器输出，面向 CI/CD 与监控消费。
+- TUI 与 Web 双壳复用同一 `core/` 分析引擎，未引入 ink/blessed/Express/ECharts 等第三方依赖。
+- core/dashboard.js 页头数据源标签动态化：离线快照显示快照时间（可复现），实时组合显示 truthSource。
+- 新增 `test/mode-decision.test.mjs`：四层决策 + 端口降级 + 场景启发共 18 项自包含测试。
+
+
 
 ## [0.1.2] - 2026-08-16
 

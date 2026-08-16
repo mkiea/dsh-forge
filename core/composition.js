@@ -283,7 +283,7 @@ export function collectEcosystem(opts = {}) {
       if (m && m.version) { harnessVersion = m.version; break; }
     } catch { /* skip */ }
   }
-  return { layers, rows, packages, installed, nested, nmRoot, harnessVersion };
+  return { layers, rows, packages, installed, nested, nmRoot, harnessVersion, truthSource: layers.some((l) => l.kind === "dump") ? "dump-config" : "scan" };
 }
 
 // Verify a range against the installed version; null when unknown.

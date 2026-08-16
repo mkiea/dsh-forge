@@ -47,7 +47,7 @@ DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、�
 三层分离，详见 [ARCHITECTURE.md](./ARCHITECTURE.md)：
 
 ```
-core/          零依赖分析引擎（20 个模块，Node 内置 API only）
+core/          零依赖分析引擎（21 个模块，Node 内置 API only）
   ├─ composition.js   组合源发现 + YAML 解析 + 生态收集
   ├─ truth.js         dump-config 真相源（auto/dump-config/scan 三态）
   ├─ analyze.js       依赖图构建 + 风险评估
@@ -204,12 +204,33 @@ console.log(JSON.stringify(r.assessment, null, 1));
 "
 ```
 
+## 独立 CLI：TUI / Web / check 三态（默认 TUI，按需 Web）
+
+`dsh-forge` 提供独立命令行入口（`bin` 指向 `cli/dsh-forge.mjs`），
+UI 形态不靠猜测，由 `core/mode.js` 按四层证据决策：
+
+1. **启动入口**（硬判断）：`dsh-forge tui` 强制 TUI；`dsh-forge web|serve` 启动 Web 并打开浏览器；`dsh-forge check|ci` 纯日志/`--json`，无界面。
+2. **运行环境**（自动检测）：`stdout.isTTY` + `TERM != dumb` 才进 TUI；检测 `DISPLAY`/`WAYLAND_DISPLAY`/`SESSIONNAME` 桌面会话；无 TTY 但有桌面时自动 Web；端口被占用自动降级 TUI/check。
+3. **用户场景**：CI 环境（`CI` 变量）与 `--json` 请求直接走 check，供监控/脚本消费。
+4. **数据复杂度**（自适应兜底）：< 10 插件直接 TUI；> 30 插件提示 “建议 `dsh-forge web` 查看交互拓扑”，TUI 内按 `W` 一键切 Web。
+
+```bash
+node cli/dsh-forge.mjs               # 自动决策（终端内默认 TUI）
+node cli/dsh-forge.mjs tui           # 强制 TUI（W=打开 Web，R=刷新，Q=退出）
+node cli/dsh-forge.mjs web           # 强制 Web（--port 8080，--no-open 不自动开浏览器）
+node cli/dsh-forge.mjs check --json  # CI/CD 机器输出
+```
+
+TUI 与 Web 双壳复用同一套 `core/` 分析引擎；TUI 为零依赖 ANSI 渲染器，
+Web 为零依赖 `node:http` + 8 模块交互仪表盘（缺 `web/dashboard-client.js` 时
+自动回退到自包含 SVG 拓扑页；不引入 Express/ECharts，保持 core 零依赖与可离线部署）。
+
 ## 验证状态
 
 - `dsh web` 正常启动于 http://127.0.0.1:3080，浏览器无报错，**13 个工具**注册成功
 - `analyze_dependencies` 真实执行：4 层组合（profile 根 + dsh-base + dsh-web-app + patch），
   138 插件行（含 forge/forge-ui）/ 128 包 / 1226+ 依赖边
-- 自动化测试（9 套件 778/778 全绿；smoke13 13/13 依赖本机 harness，不入 CI）：
+- 自动化测试（10 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
   - `test/ui-test.mjs` — 仪表盘 workspace 结构与交互（41 项）
   - `test/ui-plugin-test.mjs` — 客户端插件 VM 执行 + slot 注册 + 模态交互（22 项）
   - `test/semver-consistency.mjs` — 两份 SemVer 实现一致性（30 项）
@@ -219,6 +240,7 @@ console.log(JSON.stringify(r.assessment, null, 1));
   - `test/empty-plugins.test.mjs` — 空组合 / 泄漏规则（24 项）
   - `test/exploratory-empty.mjs` — 随机子集探索（27 项）
   - `test/exploratory-feedback.mjs` — 反馈深度探索（563 项）
+    - `test/mode-decision.test.mjs` — TUI/Web/check 四层决策引擎（18 项）
 
 ## 错误反馈体系
 
@@ -244,12 +266,13 @@ harnessVersion 绑定与知识库版本门控（R2）、泄漏扫描（R3）、�
 
 ## 目录
 
-- `core/` — 零依赖分析引擎（semver / composition / truth / 图构建 / 冲突 / 模拟 / 可视化 / 知识库 / 校准 / 泄漏 / 升级）
+- `core/` — 零依赖分析引擎（semver / composition / truth / 图构建 / 冲突 / 模拟 / 可视化 / 知识库 / 校准 / 泄漏 / 升级 / mode 决策）
+- `cli/` — 独立 TUI/Web/check 入口（四层证据决策，默认 TUI 按需 Web）
 - `src/` — cordis 插件壳（13 个工具的 schema 定义 + 注册）
 - `ui-plugin/` — 浏览器端客户端插件（sidebar 入口 + modal 仪表盘）
 - `web/` — 仪表盘客户端脚本（生成时内嵌进 dashboard.html）
 - `prompt/` — 专家 persona 提示词（含风险预测）
 - `data/` — 生态快照
 - `reports/` — 生成的分析报告与图谱
-- `test/` — 自包含测试套件（9 套件 778 项，零本机依赖）
+- `test/` — 自包含测试套件（10 套件 796 项，零本机依赖）
 - `scripts/` — 生成与构建脚本（generate-dashboard / build-ui / mount-ui）

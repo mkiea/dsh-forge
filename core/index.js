@@ -26,6 +26,7 @@ import { buildFeedback, normalizeFeedback, preflight, renderFeedback, SEVERITY_O
 
 import { knownPatterns, scanDeprecations, KNOWN_LIBS, CLIENT_PLANE_SERVICES, runtimeVerified } from "./knowledge.js";
 import { satisfies, compareVersions, parseVersion, maxSatisfying } from "./semver.js";
+import { UI_MODE, hasDesktop, scenarioHints, decideUiMode, decideAfterPortProbe, COMPLEXITY_LIGHT, COMPLEXITY_HEAVY } from "./mode.js";
 
 export { parseCompositionText, mergeRows, discoverSources, collectEcosystem, evalJsExpr, packageOf, rangeOk, resolveInstalled, defaultHome };
 export { buildGraph, assess, baselineVersion, riskScore };
@@ -45,6 +46,7 @@ export { buildFeedback, normalizeFeedback, preflight, renderFeedback, SEVERITY_O
 
 export { knownPatterns, scanDeprecations, KNOWN_LIBS, CLIENT_PLANE_SERVICES, runtimeVerified };
 export { satisfies, compareVersions, parseVersion, maxSatisfying };
+export { UI_MODE, hasDesktop, scenarioHints, decideUiMode, decideAfterPortProbe, COMPLEXITY_LIGHT, COMPLEXITY_HEAVY };
 
 // ── snapshots (offline analysis / reproducible reports) ──────────────────
 export function saveSnapshot(eco, file) {

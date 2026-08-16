@@ -9,10 +9,15 @@
     "./core": "./core/index.js",
     "./package.json": "./package.json"
   },
+  "bin": {
+    "dsh-forge": "cli/dsh-forge.mjs"
+  },
   "license": "MIT",
   "files": [
     "src",
     "core",
+      "cli",
+      "web",
     "prompt",
     "data",
     "README.md"
