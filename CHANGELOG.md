@@ -1,5 +1,7 @@
 # Changelog
-## [Unreleased] — 双栖 UI 决策（默认 TUI，按需 Web）
+## [Unreleased]
+
+## [0.1.3] - 2026-08-16
 
 ### TUI / Web / check 三态入口
 

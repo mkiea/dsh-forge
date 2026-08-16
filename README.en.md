@@ -2,13 +2,17 @@
 
 > [English](./README.en.md) | [中文](./README.md)
 
-> Version: 0.1.2 · harnessVersion: 0.1.0-rc.6
+> Version: 0.1.3 · harnessVersion: 0.1.0-rc.6
 
 A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency analysis, conflict detection, risk assessment (with prediction), visualization and combination simulation.
 
 > **v0.1.1 changes**: unified error feedback (FORGE-001~014 codes, fatal/error/warning/info severities, dashboard "Errors & Feedback" panel, startup-preflight terminal diagnostics); scope-aware collision detection (per-agent variants are legal); runtime event calibration (tool/call · tool/result · turn/end behavior baseline); apply-path leak slicing; the dashboard entry moved to the sidebar below the session list / above Settings (the conversation-header button was removed).
 
 > **v0.1.2 changes**: dashboard rewritten to a workspace layout (fixed header + left 8-module navigation, the right column scrolls independently, fully aligned with client.js); P0 schema consistency (check_conflicts adds kind/evidenceTier; visualize_plugins/snapshot_history no longer return null fields); P1 correctness (riskScore detail fallback chain, archive_snapshot dryRun, scope.js scans lib+src, verify_rows supports profile); P2 deployability (mount-ui auto-detects the deployment node_modules, smoke13 drops hardcoded paths); new scripts/generate-dashboard.mjs.
+>
+> **v0.1.3 changes**: dual-shell UI decision (default TUI / on-demand Web / check JSON for automation, `W` switches to Web; four-layer evidence decision engine);
+> in-memory analysis cache (runAnalysis 16-entry cap + clearAnalysisCache); engineering hardening (cache-behavior guard tests,
+> doc-consistency CI guard, pre-commit fast gate, src/core dual-entry responsibility note, snapshot banners on historical reports).
 
 ## Tools (13, all read-only; simulate_combination / archive_snapshot never touch the composition)
 

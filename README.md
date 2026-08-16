@@ -2,7 +2,7 @@
 
 > [English](./README.en.md) | 中文
 
-> 版本：0.1.2 · harnessVersion: 0.1.0-rc.6
+> 版本：0.1.3 · harnessVersion: 0.1.0-rc.6
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
 
@@ -14,6 +14,10 @@ DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、�
 > P0 schema 一致性（check_conflicts 补 kind/evidenceTier，visualize_plugins/snapshot_history 不再返回 null 字段）；
 > P1 正确性（riskScore detail 回退链、archive_snapshot dryRun、scope.js 扫描 lib+src、verify_rows 支持 profile）；
 > P2 可部署性（mount-ui 自动探测部署目录、smoke13 移除硬编码路径）；新增 scripts/generate-dashboard.mjs。
+>
+> **v0.1.3 更新**：双栖 UI 决策（默认 TUI / 按需 Web / check JSON 给自动化，`W` 一键切 Web，四层证据决策引擎）；
+> 分析内存缓存（runAnalysis 上限 16 条 + clearAnalysisCache 强制刷新）；工程加固（cache-behavior 缓存守护测试、
+> doc-consistency CI 守卫、pre-commit 快速门禁、src/core 双入口职责说明、历史报告快照标注）。
 
 ## 工具（13 个，全部只读；simulate_combination / archive_snapshot 不碰组合本体）
 
