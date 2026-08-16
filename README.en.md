@@ -207,7 +207,7 @@ offline-deployable).
   - `test/empty-plugins.test.mjs` — empty combination / leak rules (24)
   - `test/exploratory-empty.mjs` — random subset exploration (27)
   - `test/exploratory-feedback.mjs` — feedback deep exploration (563)
-    - `test/mode-decision.test.mjs` — four-layer TUI/Web/check decision engine (18)
+  - `test/mode-decision.test.mjs` — four-layer TUI/Web/check decision engine (18)
 
 ## Error feedback
 

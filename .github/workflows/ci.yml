@@ -14,7 +14,7 @@ jobs:
           node-version: 22
 
       - name: Syntax check entry points
-        run: node --check src/index.js && node --check src/tools.js
+        run: node --check src/index.js && node --check src/tools.js && node --check cli/dsh-forge.mjs && node --check core/mode.js
 
       - name: Core module load check
         run: node --input-type=module -e "import('./core/index.js').then(m => console.log('core ok', Object.keys(m).length))"

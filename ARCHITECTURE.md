@@ -198,6 +198,7 @@ check_upgrades execute(args)
 | 空组合 / 泄漏规则 | `test/empty-plugins.test.mjs` | 24 | 空组合边界 + 泄漏规则 |
 | 随机子集探索 | `test/exploratory-empty.mjs` | 27 | 随机插件池 + 多轮组合一致性 |
 | 反馈深度探索 | `test/exploratory-feedback.mjs` | 563 | 反馈结构合法 / 分级计数 / 排序稳定 / 确定性 |
+| TUI/Web/check 决策 | `test/mode-decision.test.mjs` | 18 | 四层证据决策（命令/环境/场景/复杂度）/ 端口占用降级 / 场景启发 |
 
 测试策略：
 - **跨实现一致性**：semver-consistency 对比两份独立 SemVer 实现

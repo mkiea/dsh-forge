@@ -240,7 +240,7 @@ Web 为零依赖 `node:http` + 8 模块交互仪表盘（缺 `web/dashboard-clie
   - `test/empty-plugins.test.mjs` — 空组合 / 泄漏规则（24 项）
   - `test/exploratory-empty.mjs` — 随机子集探索（27 项）
   - `test/exploratory-feedback.mjs` — 反馈深度探索（563 项）
-    - `test/mode-decision.test.mjs` — TUI/Web/check 四层决策引擎（18 项）
+  - `test/mode-decision.test.mjs` — TUI/Web/check 四层决策引擎（18 项）
 
 ## 错误反馈体系
 
