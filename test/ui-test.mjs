@@ -55,7 +55,16 @@ function makeElement(id) {
     textContent: "",
     attrs: {},
     listeners: {},
-    classList: { contains: () => false },
+    classList: (() => {
+      const set = new Set();
+      return {
+        contains: (c) => set.has(c),
+        add: (c) => set.add(c),
+        remove: (c) => set.delete(c),
+        toggle: (c, force) => { if (force === undefined) { set.has(c) ? set.delete(c) : set.add(c); } else { force ? set.add(c) : set.delete(c); } },
+        _set: set
+      };
+    })(),
     children: [],
     setAttribute(k, v) { this.attrs[k] = String(v); },
     getAttribute(k) { return this.attrs[k] || null; },
@@ -71,11 +80,25 @@ const ths = ["id", "pkg", "layer", "disabled", "risk", "severity"].map((k) => {
   th.setAttribute("data-k", k);
   return th;
 });
+const dashHtml = dash;
+const tabCount = (dashHtml.match(/class="ws-tab/g) || []).length;
+const pageIds = [...dashHtml.matchAll(/class="ws-page[^"]*" id="([^"]+)"/g)].map((m) => m[1]);
+const tabs = Array.from({ length: tabCount }, (_, i) => {
+  const t = makeElement("tab" + i);
+  t.setAttribute("data-page", pageIds[i] || "page-" + i);
+  return t;
+});
+const pages = pageIds.map((id, i) => { const p = makeElement(id); p.id = id; if (i === 0) p.classList.add("active"); return p; });
 const doc = {
   _handlers: {},
   getElementById(id) { return elements[id] || makeElement(id); },
   querySelector(sel) { return sel === "#tbl tbody" ? tbody : null; },
-  querySelectorAll(sel) { return sel === "#tbl th" ? ths : []; },
+  querySelectorAll(sel) {
+    if (sel === "#tbl th") return ths;
+    if (sel === ".ws-tab") return tabs;
+    if (sel === ".ws-page") return pages;
+    return [];
+  },
   createElement(tag) { return makeElement(tag); },
   addEventListener(ev, fn) { this._handlers[ev] = fn; }
 };
@@ -91,6 +114,16 @@ const app = windowMock.__DSH_APP__;
 check("client app exposed (__DSH_APP__)", !!app);
 // fire DOMContentLoaded so th click handlers + click delegation register
 if (doc._handlers["DOMContentLoaded"]) doc._handlers["DOMContentLoaded"]();
+check("workspace has module tabs", tabCount === 8, tabCount + " tabs");
+check("default page is feedback", pageIds[0] === "page-feedback", pageIds[0]);
+check("feedback page active by default", pages[0] && pages[0].classList.contains("active"));
+// tab switching: click second tab -> pages toggle
+if (tabs.length > 1 && tabs[1].listeners.click) {
+  tabs[1].listeners.click();
+  check("clicking tab switches page", pages[1].classList.contains("active") && !pages[0].classList.contains("active"));
+  tabs[0].listeners.click();
+  check("back to first tab", pages[0].classList.contains("active"));
+}
 
 if (app) {
   const rowCount = () => {

@@ -186,7 +186,7 @@ export function analyzeTool(config) {
         sharedDeps: graph.shared.map((s) => ({ dep: s.dep, installed: s.installed, ranges: s.ranges.map((r) => ({ range: r.range, count: r.count, satisfied: r.satisfied })) })),
         trees: Object.fromEntries(Object.entries(graph.trees).map(([k, v]) => [k, { transitive: v.length, chain: v }])),
         truthSource: eco.truthSource || "scan",
-        harnessVersion: eco.harnessVersion || null,
+        ...(eco.harnessVersion ? { harnessVersion: eco.harnessVersion } : {}),
         disclaimer: "风险分为未校准启发式（无事故数据校准），不代表故障概率；contract 类冲突（工具/服务重名）由 harness 注册契约直接拒绝，属启动期确定行为。",
         warnings
       };
@@ -213,6 +213,8 @@ export function conflictsTool(config) {
               type: "object", additionalProperties: false,
               properties: {
                 type: { type: "string", required: true },
+                  kind: { type: "string" },
+                  evidenceTier: { type: "string" },
                 severity: { type: "string", required: true },
                 message: { type: "string", required: true },
                 evidence: { type: "string", required: true },
@@ -265,7 +267,7 @@ export function conflictsTool(config) {
         leaks: leaks.findings,
         inputScope: { rows: eco.rows.length, packages: Object.keys(eco.packages).length, layers: eco.layers.map((l) => l.layer), disabledRows: eco.rows.filter((r) => r.disabled === true).length, truthSource: eco.truthSource || "scan" },
         feedback: buildFeedback({ conflicts: result, leaks, assessment: null, patterns: [], verified: [] }),
-        calibration,
+        ...(calibration ? { calibration } : {}),
         truthSource: eco.truthSource || "scan",
         disclaimer: "静态扫描为疑似清单（static-suspect），非 harness 实际拒绝的确认；kind=contract 表示 harness 契约确定行为，heuristic 为未校准信号。"
       };
@@ -319,12 +321,12 @@ export function visualizeTool(config) {
       else if (format === "ascii") content = asciiTree(eco);
       else if (format === "dashboard") content = dashboard(analysisFor(eco, graph, conflicts, assessment));
       else content = html(eco, assessment, conflicts);
-      let writtenTo = null;
+      const out = { format, content };
       if (args.writePath) {
         fs.writeFileSync(args.writePath, content, "utf8");
-        writtenTo = args.writePath;
+        out.writtenTo = args.writePath;
       }
-      return { format, content, writtenTo };
+      return out;
     },
     presentCall: (args) => ({ card: "generic", title: "Visualize plugin ecosystem", kind: "other", rawInput: args })
   };
@@ -496,12 +498,12 @@ export function historyTool(config) {
     },
     async execute(args) {
       const list = listHistory();
-      let loaded = null;
+      const out = { count: list.length, snapshots: list };
       if (args.file) {
         const snap = loadHistory(args.file);
-        loaded = { file: args.file, rows: snap.rows.length, packages: Object.keys(snap.packages).length, collectedAt: snap.collectedAt };
+        out.loaded = { file: args.file, rows: snap.rows.length, packages: Object.keys(snap.packages).length, collectedAt: snap.collectedAt };
       }
-      return { count: list.length, snapshots: list, loaded };
+      return out;
     },
     presentCall: (args) => ({ card: "generic", title: "List snapshot history", kind: "other", rawInput: args })
   };
@@ -513,7 +515,8 @@ export function archiveTool(config) {
     description: "Archive the current combination as a snapshot file under data/history for later diff/trend analysis. Writes only inside the dsh-forge data directory; the composition itself is never modified. Read-only with respect to the composition.",
     parameters: {
       ...SOURCES_PARAMS,
-      label: { type: "string", description: "Optional label for the archive entry." }
+      label: { type: "string", description: "Optional label for the archive entry." },
+        dryRun: { type: "boolean", description: "When true, report the file name and row count without writing anything (for smoke tests)." },
     },
     output: {
       schema: {
@@ -527,7 +530,10 @@ export function archiveTool(config) {
     },
     async execute(args) {
       const { eco } = await selectEco(args, config);
-      const file = archiveSnapshot(eco, { label: args.label || "manual" });
+      if (args.dryRun) {
+          return { file: "(dry-run) not written", rows: eco.rows.length };
+        }
+        const file = archiveSnapshot(eco, { label: args.label || "manual" });
       return { file, rows: eco.rows.length };
     },
     presentCall: (args) => ({ card: "generic", title: "Archive combination snapshot", kind: "other", rawInput: args })
@@ -602,8 +608,8 @@ export function verifyTool(config) {
     },
     async execute(args) {
       const { eco } = await selectEco(args, config);
-      const result = verifyRows(eco);
-      result.runtimeProbe = config.runtimeProbe || null;
+      const result = verifyRows(eco, { profile: config.profile || "web" });
+      if (config.runtimeProbe) result.runtimeProbe = config.runtimeProbe;
       return result;
     },
     presentCall: (args) => ({ card: "generic", title: "Verify composition rows", kind: "other", rawInput: args })

@@ -1,6 +1,6 @@
 # dsh-forge 架构文档
 
-> 版本：0.1.1 · 最后更新：2026-08-15
+> 版本：0.1.2 · 最后更新：2026-08-16
 
 ## 1. 总览
 
@@ -171,11 +171,15 @@ check_upgrades execute(args)
 
 | 套件 | 文件 | 项数 | 覆盖 |
 | --- | --- | --- | --- |
-| 仪表盘结构+交互 | `test/ui-test.mjs` | 36 | 搜索/筛选/排序/toggle/增删候选 + health badge + 133 行数据 |
+| 仪表盘结构+交互 | `test/ui-test.mjs` | 41 | workspace 结构 / 默认页 / 页切换 + 搜索/筛选/排序/toggle/增删候选 + 133 行数据 |
 | 客户端插件 VM 执行 | `test/ui-plugin-test.mjs` | 22 | 2 slot 注册 + locale + 模态开关 + wide/collapsed 渲染 |
 | SemVer 一致性 | `test/semver-consistency.mjs` | 30 | core/semver.js vs dashboard.js 内嵌镜像，22 种区间 |
 | 作用域/校准/泄漏 | `test/review-fixes.test.mjs` | 15 | scope 三态 + mock 事件校准 + 泄漏切片 |
 | 升级检查优化 | `test/upgrade-opt.test.mjs` | 16 | 并发池 + 超时 + 镜像降级 + 安装命令 + 独立性 + 阻断预测 |
+| 错误反馈冒烟 | `test/feedback-smoke.test.mjs` | 40 | FORGE 错误码 / 分级 / 聚合 / 渲染 |
+| 空组合 / 泄漏规则 | `test/empty-plugins.test.mjs` | 24 | 空组合边界 + 泄漏规则 |
+| 随机子集探索 | `test/exploratory-empty.mjs` | 27 | 随机插件池 + 多轮组合一致性 |
+| 反馈深度探索 | `test/exploratory-feedback.mjs` | 563 | 反馈结构合法 / 分级计数 / 排序稳定 / 确定性 |
 
 测试策略：
 - **跨实现一致性**：semver-consistency 对比两份独立 SemVer 实现
@@ -188,8 +192,9 @@ check_upgrades execute(args)
 | 路径 | 说明 |
 | --- | --- |
 | `.github/workflows/ci.yml` | CI 模板（Node 22+，运行自包含测试套件；跳过依赖本机路径/真实 harness 的 smoke13.mjs） |
+| `scripts/generate-dashboard.mjs` | 用当前 dashboard.js 从离线快照重新生成 reports/dashboard.html |
 | `scripts/build-ui.mjs` | 构建客户端 bundle（内嵌 dashboard.html 到 client.js） |
-| `scripts/mount-ui.mjs` | 挂载脚本（env 化：DSH_HOME / DSH_DEPLOY_NM） |
+| `scripts/mount-ui.mjs` | 挂载脚本（自动探测部署 node_modules；env：DSH_HOME / DSH_DEPLOY_NM / DSH_FORGE_ROOT / DSH_PROFILE_PATCH） |
 | `scripts/mount-ui.ps1` | Windows PowerShell 挂载脚本 |
 | `pnpm-workspace.yaml` | pnpm workspace 配置 |
 | `data/ecosystem.json` | 离线生态快照（`dsh-forge-ecosystem@1` 格式） |

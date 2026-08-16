@@ -90,14 +90,14 @@ export function buildFeedback(analysis) {
       }));
     }
   }
-  // verified notes -> info
+  // verified notes -> info (Chinese summary; detail carries the source note)
   for (const v of verified || []) {
     out.push(normalizeFeedback({
       code: "FORGE-013",
       severity: "info",
       type: "verified",
-      message: v.note,
-      detail: "运行时源码验证（scoreDelta " + (v.scoreDelta || 0) + "）",
+      message: "已源码核实：信号（" + (v.id || "unknown") + "）为设计内行为，非风险",
+      detail: (v.note || "") + "（风险分已按验证下调 " + (v.scoreDelta || 0) + " 分）",
       guidance: "",
       source: "runtimeVerified",
       recoverable: true
@@ -108,6 +108,7 @@ export function buildFeedback(analysis) {
     code: "FORGE-014",
     severity: "info",
     type: "calibration",
+    global: true,
     message: "风险分为未校准启发式（无事故数据校准）；contract 类冲突为 harness 契约确定行为。",
     detail: assessment ? "health=" + assessment.health : "",
     guidance: "",

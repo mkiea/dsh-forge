@@ -6,7 +6,8 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { packageOf } from "./composition.js";
 
-export function verifyRows(eco) {
+export function verifyRows(eco, opts = {}) {
+    const profile = opts.profile || "web";
   const { rows, packages, nmRoot } = eco;
   const issues = [];
   const checked = [];
@@ -24,7 +25,7 @@ export function verifyRows(eco) {
       const roots = [];
       if (nmRoot) roots.push(nmRoot);
       const home = process.env.DSH_HOME;
-      if (home) roots.push(path.join(home, "profiles", "web", "node_modules"));
+      if (home) roots.push(path.join(home, "profiles", profile, "node_modules"));
       for (const r of roots) {
         if (fs.existsSync(path.join(r, ...p.split("/"), "package.json"))) { found = r; break; }
       }

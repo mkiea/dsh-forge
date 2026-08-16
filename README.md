@@ -2,13 +2,18 @@
 
 > [English](./README.en.md) | 中文
 
-> 版本：0.1.1 (v0.1.1-20260815-5b6766f) · harnessVersion: 0.1.0-rc.6
+> 版本：0.1.2 · harnessVersion: 0.1.0-rc.6
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
 
 > **v0.1.1 更新**：统一错误反馈体系（FORGE-001~014 错误码 + fatal/error/warning/info 分级 + 仪表盘"错误与反馈"面板 +
 > 启动预检终端诊断）；作用域感知冲突判定（per-agent 变体合法）；运行期事件校准（tool/call·tool/result·turn/end 行为基线）；
 > 泄漏扫描 apply 路径切片；仪表盘入口移至 sidebar 会话框下方/设置上方（会话头按钮已移除）。
+
+> **v0.1.2 更新**：仪表盘重写为 workspace 布局（固定头部 + 左侧 8 模块导航，右侧内容独立滚动，彻底对齐 client.js）；
+> P0 schema 一致性（check_conflicts 补 kind/evidenceTier，visualize_plugins/snapshot_history 不再返回 null 字段）；
+> P1 正确性（riskScore detail 回退链、archive_snapshot dryRun、scope.js 扫描 lib+src、verify_rows 支持 profile）；
+> P2 可部署性（mount-ui 自动探测部署目录、smoke13 移除硬编码路径）；新增 scripts/generate-dashboard.mjs。
 
 ## 工具（13 个，全部只读；simulate_combination / archive_snapshot 不碰组合本体）
 
@@ -17,7 +22,7 @@ DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、�
 | --- | --- |
 | `analyze_dependencies` | 组合依赖树 + 共享依赖摘要 + 范围满足性 |
 | `check_conflicts` | 版本冲突 / 工具重名（**作用域感知**：per-agent 变体合法）/ 服务覆盖 / 缺失提供者 / 行覆盖 / 泄漏扫描 / **运行期行为校准**（事件流基线） |
-| `visualize_plugins` | HTML / Mermaid / ASCII / **dashboard**（交互仪表盘）输出 |
+| `visualize_plugins` | HTML / Mermaid / ASCII / **dashboard**（workspace 交互仪表盘，8 模块）输出 |
 | `simulate_combination` | 假设组合模拟：新增/解除冲突、风险增量、判定 |
 | `audit_configuration` | 逐行配置审计（openAt / telemetry mode / 内存路径 / fetch 等） |
 | `diff_combinations` | 两个快照（或快照 vs 当前）的行增删改 + 风险增量 |
@@ -166,8 +171,8 @@ cd dsh-forge && node --input-type=module -e "import('./src/index.js').then(m => 
 | --- | --- |
 | host 插件代码（`core/`、`src/`） | **必须重启 harness**（模块已在进程中缓存，且 `defineTool` 在 apply 时编译 schema） |
 | client 插件内容（`ui-plugin/lib/client.js`） | symlink 即时同步，但 manifest / 插件集合变更需重启 |
-| 仪表盘内容（`web/`、`reports/dashboard.html`） | `node scripts/build-ui.mjs`（重新内嵌 dashboard.html 到 client.js）→ 重启 |
-| 一键挂载（免手工复制） | `node scripts/mount-ui.mjs`（复制 ui-plugin 到部署 node_modules + 写 patch；支持 `DSH_DEPLOY_NM` / `DSH_PROFILE_PATCH` 环境变量覆盖） |
+| 仪表盘内容（`web/`、`reports/dashboard.html`） | `node scripts/generate-dashboard.mjs`（用当前 dashboard.js 重新生成）→ `node scripts/build-ui.mjs`（内嵌进 client.js）→ 重启 |
+| 一键挂载（免手工复制） | `node scripts/mount-ui.mjs`（自动探测部署 node_modules 并复制 ui-plugin + 写 patch；支持 `DSH_DEPLOY_NM` / `DSH_FORGE_ROOT` / `DSH_PROFILE_PATCH` 环境变量覆盖） |
 
 ### 卸载
 
@@ -204,12 +209,16 @@ console.log(JSON.stringify(r.assessment, null, 1));
 - `dsh web` 正常启动于 http://127.0.0.1:3080，浏览器无报错，**13 个工具**注册成功
 - `analyze_dependencies` 真实执行：4 层组合（profile 根 + dsh-base + dsh-web-app + patch），
   138 插件行（含 forge/forge-ui）/ 128 包 / 1226+ 依赖边
-- 自动化测试（120/120 全绿）：
-  - `test/ui-test.mjs` — 仪表盘结构与交互（36 项）
+- 自动化测试（9 套件 778/778 全绿；smoke13 13/13 依赖本机 harness，不入 CI）：
+  - `test/ui-test.mjs` — 仪表盘 workspace 结构与交互（41 项）
   - `test/ui-plugin-test.mjs` — 客户端插件 VM 执行 + slot 注册 + 模态交互（22 项）
   - `test/semver-consistency.mjs` — 两份 SemVer 实现一致性（30 项）
   - `test/review-fixes.test.mjs` — 作用域三态 / 事件校准 / 泄漏切片（15 项）
   - `test/upgrade-opt.test.mjs` — 升级检查并发/超时/降级/安装命令（16 项）
+  - `test/feedback-smoke.test.mjs` — 错误反馈冒烟（40 项）
+  - `test/empty-plugins.test.mjs` — 空组合 / 泄漏规则（24 项）
+  - `test/exploratory-empty.mjs` — 随机子集探索（27 项）
+  - `test/exploratory-feedback.mjs` — 反馈深度探索（563 项）
 
 ## 错误反馈体系
 
@@ -230,7 +239,7 @@ harnessVersion 绑定与知识库版本门控（R2）、泄漏扫描（R3）、�
 | --- | --- | --- |
 | truthSource 落在 scan 而非 dump-config | npx 安装树路径与 findDshBin 候选不完全匹配 | 输出 `truthSource=scan` + warnings 显式标注 |
 | 静态扫描覆盖率有限 | 仅扫描 `lib/**/*.js`，单文件 >400KB 跳过 | findings 标 `confidence: "low"` + disclaimer |
-| 实时仪表盘（host.call 拉取） | harness 仅存在于 cordis 动态插件沙箱，静态插件不可靠注入 | 静态内嵌 + `node scripts/build-ui.mjs` 重建 |
+| 实时仪表盘（host.call 拉取） | harness 仅存在于 cordis 动态插件沙箱，静态插件不可靠注入 | 静态内嵌 + `node scripts/generate-dashboard.mjs` → `build-ui.mjs` 重建 |
 | 会话事件实时统计 | 静态客户端插件无运行期事件订阅通道 | `history_stats` 快照趋势替代 |
 
 ## 目录
@@ -242,5 +251,5 @@ harnessVersion 绑定与知识库版本门控（R2）、泄漏扫描（R3）、�
 - `prompt/` — 专家 persona 提示词（含风险预测）
 - `data/` — 生态快照
 - `reports/` — 生成的分析报告与图谱
-- `test/` — 自包含测试套件（120 项，零本机依赖）
-- `scripts/` — 构建与挂载脚本
+- `test/` — 自包含测试套件（9 套件 778 项，零本机依赖）
+- `scripts/` — 生成与构建脚本（generate-dashboard / build-ui / mount-ui）

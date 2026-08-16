@@ -207,14 +207,13 @@ export function buildEmbedData(analysis, extra = {}) {
     if (packages[name]) continue;
     if (KNOWN_LIBS.has(name)) continue;
     const m = extra.allManifests && extra.allManifests[name];
-    if (!m) continue;
     candidates.push({
       name, ver,
-      deps: Object.entries({ ...m.dependencies, ...m.peerDependencies }).map(([dep, range]) => {
+      deps: m ? Object.entries({ ...m.dependencies, ...m.peerDependencies }).map(([dep, range]) => {
         const target = packages[dep];
         const v = target ? target.version : installed[dep] || null;
         return { dep, range, peer: dep in m.peerDependencies, kind: target ? "plugin" : "external", ok: v ? satisfies(v, range) : null };
-      })
+      }) : []
     });
   }
 
@@ -329,39 +328,140 @@ function renderGraph(analysis) {
   return '<svg viewBox="0 0 ' + SVG_W + " " + SVG_H + '" style="width:100%;border:1px solid #e3e6ea;border-radius:8px;background:#fff">' + parts.join("") + "</svg>";
 }
 
-const STYLE = "<style>" +
-  "body{font-family:'Segoe UI',system-ui,sans-serif;margin:0;background:#f4f6f8;color:#222}" +
-  ".wrap{max-width:1180px;margin:0 auto;padding:20px 24px 40px}" +
-  "header h1{font-size:22px;margin:0}.sub{color:#7a828b;font-size:12px;margin:4px 0 16px}" +
-  ".kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}" +
-  ".kpi{background:#fff;border:1px solid #e3e6ea;border-radius:10px;padding:10px 12px;text-align:center}" +
-  ".kpi-v{font-size:22px;font-weight:700}.kpi-k{font-size:11px;color:#7a828b;margin-top:2px}" +
-  ".badge{display:inline-block;padding:2px 12px;border-radius:12px;color:#fff;font-weight:700}.badge.A{background:#27ae60}.badge.B{background:#2e86c1}.badge.C{background:#e67e22}.badge.D{background:#d64545}" +
-  ".panels{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}" +
-  ".panel{background:#fff;border:1px solid #e3e6ea;border-radius:10px;padding:12px 14px}" +
-  ".panel h3{font-size:13px;margin:0 0 8px}.legend span{font-size:11px;margin-right:10px}.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}" +
-  ".lbar{display:flex;align-items:center;gap:8px;margin:5px 0}.lname{font-size:11px;width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ltrack{flex:1;background:#eef0f2;border-radius:4px;height:10px}.lfill{background:#2e86c1;border-radius:4px;height:10px}.ln{font-size:11px;color:#7a828b;width:26px;text-align:right}" +
-  "section{background:#fff;border:1px solid #e3e6ea;border-radius:10px;padding:14px 16px;margin-top:14px}" +
-  "section h2{font-size:15px;margin:0 0 10px}" +
-  ".filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}" +
-  "input,select{font-size:12px;padding:5px 8px;border:1px solid #cfd5da;border-radius:6px}" +
-  "#q{min-width:220px}.count{font-size:12px;color:#7a828b;margin-left:auto}" +
-  "table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}" +
-  "th,td{border:1px solid #e7eaee;padding:5px 8px;text-align:left;vertical-align:top}" +
-  "th{background:#f2f4f6;cursor:pointer;user-select:none;white-space:nowrap}" +
-  "tbody tr:hover{background:#f7f9fb}" +
-  ".sev{padding:1px 8px;border-radius:10px;color:#fff;font-size:10px;white-space:nowrap}" +
-  ".sev.blocking{background:#d64545}.sev.high{background:#e67e22}.sev.medium{background:#f1c40f;color:#333}.sev.low{background:#27ae60}.sev.info{background:#95a5a6}.sev.disabled{background:#95a5a6}.sev.verified{background:#16a085}" +
-  ".c-blocking td{background:#fdecea}.c-high td{background:#fdf2e6}.c-medium td{background:#fdf8e3}" +
-  ".ev{color:#98a1aa;font-size:10px}" +
-  ".notes .note{border:1px solid #e7eaee;border-radius:8px;padding:8px 10px;margin:6px 0;font-size:12px}" +
-  ".note.verified{border-color:#b8e0d5;background:#f2fbf8}.fb-group{margin:8px 0}.fb-group>b{font-size:12px;color:#555}.fb.fatal{border-color:#d64545;background:#fdecea}.fb.error{border-color:#e67e22;background:#fdf2e6}.fb.warning{border-color:#f1c40f;background:#fdf8e3}" +
-  ".sim-ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}" +
-  ".sim-result{margin-top:10px;font-size:12px;line-height:1.7}" +
-  ".sim-result .chg{color:#1f6feb;font-weight:600}" +
-  "footer{color:#98a1aa;font-size:11px;margin-top:18px;text-align:center}" +
-  ".toggle{width:14px;height:14px;accent-color:#2e86c1}" +
-  "</style>";
+const STYLE = "<style>" + "html,body{height:100%;margin:0}\nbody{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f6f8;color:#222;display:flex;flex-direction:column;overflow:hidden}\n.wrap{max-width:1180px;margin:0 auto;padding:20px 24px 40px}\nheader h1{font-size:22px;margin:0}.sub{color:#7a828b;font-size:12px;margin:4px 0 16px}\n.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}\n.kpi{background:#fff;border:1px solid #e3e6ea;border-radius:10px;padding:10px 12px;text-align:center}\n.kpi-v{font-size:22px;font-weight:700}.kpi-k{font-size:11px;color:#7a828b;margin-top:2px}\n.badge{display:inline-block;padding:2px 12px;border-radius:12px;color:#fff;font-weight:700}.badge.A{background:#27ae60}.badge.B{background:#2e86c1}.badge.C{background:#e67e22}.badge.D{background:#d64545}\n.panels{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}\n.panel{background:#fff;border:1px solid #e3e6ea;border-radius:10px;padding:12px 14px}\n.panel h3{font-size:13px;margin:0 0 8px}.legend span{font-size:11px;margin-right:10px}.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}\n.lbar{display:flex;align-items:center;gap:8px;margin:5px 0}.lname{font-size:11px;width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ltrack{flex:1;background:#eef0f2;border-radius:4px;height:10px}.lfill{background:#2e86c1;border-radius:4px;height:10px}.ln{font-size:11px;color:#7a828b;width:26px;text-align:right}\nsection{background:#fff;border:1px solid #e3e6ea;border-radius:10px;padding:14px 16px;margin-top:14px}\nsection h2{font-size:15px;margin:0 0 10px}\n.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}\ninput,select{font-size:12px;padding:5px 8px;border:1px solid #cfd5da;border-radius:6px}\n#q{min-width:220px}.count{font-size:12px;color:#7a828b;margin-left:auto}\ntable{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}\nth,td{border:1px solid #e7eaee;padding:5px 8px;text-align:left;vertical-align:top}\nth{background:#f2f4f6;cursor:pointer;user-select:none;white-space:nowrap}\ntbody tr:hover{background:#f7f9fb}\n.sev{padding:1px 8px;border-radius:10px;color:#fff;font-size:10px;white-space:nowrap}\n.sev.blocking{background:#d64545}.sev.high{background:#e67e22}.sev.medium{background:#f1c40f;color:#333}.sev.low{background:#27ae60}.sev.info{background:#95a5a6}.sev.disabled{background:#95a5a6}.sev.verified{background:#16a085}\n.c-blocking td{background:#fdecea}.c-high td{background:#fdf2e6}.c-medium td{background:#fdf8e3}\n.ev{color:#98a1aa;font-size:10px}\n.notes .note{border:1px solid #e7eaee;border-radius:8px;padding:8px 10px;margin:6px 0;font-size:12px}\n.note.verified{border-color:#b8e0d5;background:#f2fbf8}.fb-group{margin:8px 0}.fb-group>b{font-size:12px;color:#555}.fb-toggle{font-size:11px;border:1px solid #cfd5da;border-radius:5px;background:#fff;color:#666;cursor:pointer;margin-left:8px;padding:1px 8px}.fb-disclaimer{margin-top:10px;padding:8px 12px;border-radius:8px;background:#f6f8fa;border:1px dashed #cfd5da;color:#888;font-size:11px}.fb.fatal{border-color:#d64545;background:#fdecea}.fb.error{border-color:#e67e22;background:#fdf2e6}.fb.warning{border-color:#f1c40f;background:#fdf8e3}\n.sim-ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}\n.sim-result{margin-top:10px;font-size:12px;line-height:1.7}\n.sim-result .chg{color:#1f6feb;font-weight:600}\nfooter{color:#98a1aa;font-size:11px;margin-top:18px;text-align:center;flex:0 0 auto;padding:10px 24px 14px;background:#f4f6f8}\n.toggle{width:14px;height:14px;accent-color:#2e86c1}\n.workspace{flex:1 1 auto;min-height:0;display:flex;gap:14px;padding:14px 24px;box-sizing:border-box;overflow:hidden}\n.ws-header{flex:0 0 auto;background:#f4f6f8;border-bottom:1px solid #e3e6ea;box-shadow:0 1px 0 rgba(0,0,0,.02)}\n.ws-header-inner{max-width:1180px;margin:0 auto;padding:14px 24px 12px}\n.ws-header-inner h1{font-size:20px;margin:0}.ws-header-inner .sub{color:#7a828b;font-size:12px;margin:4px 0 0}\n.ws-nav{flex:0 0 170px;background:#fff;border:1px solid #e3e6ea;border-radius:10px;padding:10px;overflow-y:auto;align-self:stretch;max-height:100%}\n.ws-brand{font-size:13px;font-weight:700;color:#555;padding:4px 8px 10px;border-bottom:1px solid #eef0f2;margin-bottom:8px}\n.ws-tab{display:block;width:100%;text-align:left;border:none;background:transparent;padding:8px 10px;border-radius:7px;cursor:pointer;font-size:13px;color:#444;margin:1px 0}\n.ws-tab:hover{background:#f2f4f6}.ws-tab.active{background:#1f6feb;color:#fff;font-weight:600}\n.ws-body{flex:1 1 auto;min-width:0;min-height:0;overflow-y:auto;padding-right:4px}\n.ws-page{display:none}.ws-page.active{display:block}\n.ws-page h2{font-size:15px;margin:0 0 10px}\n" + "</style>";
+
+
+// ── workspace modules ────────────────────────────────────────────────────
+// Each module renders a page: left nav (tabs) + right content area.
+
+function feedbackPage(embed) {
+  const sevLabels = { fatal: "致命", error: "错误", warning: "警告", info: "信息" };
+  const groups = ["fatal", "error", "warning", "info"];
+  const list = (embed.feedback || []).filter((f) => f.code !== "FORGE-014"); // global disclaimer -> footer
+  const disclaimer = (embed.feedback || []).find((f) => f.code === "FORGE-014");
+  const out = [];
+  out.push("<h2>错误与反馈（" + list.length + " 条，错误优先）</h2>");
+  out.push('<div class="notes">');
+  for (const g of groups) {
+    const items = list.filter((f) => f.severity === g);
+    if (!items.length) continue;
+    const collapsible = g === "info";
+    out.push('<div class="fb-group"><b>' + (sevLabels[g] || g) + "（" + items.length + "）</b>" +
+      (collapsible ? ' <button type="button" class="fb-toggle" onclick="window.__DSH_APP__ && window.__DSH_APP__.toggleFbGroup(this)">展开/收起</button>' : ""));
+    out.push('<div class="fb-items"' + (collapsible ? ' style="display:none"' : "") + ">");
+    for (const f of items) {
+      out.push('<div class="note fb fb-' + esc(g) + '"><span class="sev ' + esc(g) + '">' + esc(g) + "</span> <b>" + esc(f.code) + "</b> " + esc(f.message) +
+        (f.detail ? ' <div class="ev">详情: ' + esc(f.detail) + "</div>" : "") +
+        (f.guidance ? ' <div class="ev">建议: ' + esc(f.guidance) + "</div>" : "") +
+        (f.source ? ' <div class="ev">来源: ' + esc(f.source) + "</div>" : "") + "</div>");
+    }
+    out.push("</div></div>");
+  }
+  out.push("</div>");
+  if (disclaimer) {
+    out.push('<div class="fb-disclaimer">' + esc(disclaimer.message) + (disclaimer.detail ? " " + esc(disclaimer.detail) : "") + "</div>");
+  }
+  return out;
+}
+
+function overviewPage(embed, analysis) {
+  const out = [];
+  const kpis = [
+    ["组合行数", embed.pluginCount], ["活动组件", embed.activeCount], ["禁用组件", embed.disabledCount],
+    ["唯一插件包", Object.keys(analysis.ecosystem.packages).length], ["依赖边", embed.edgeCount],
+    ["版本冲突", embed.conflictSummary.byType["version-conflict"] || 0],
+    ["工具重名", embed.conflictSummary.byType["tool-collision"] || 0],
+    ["服务覆盖", embed.conflictSummary.byType["service-collision"] || 0],
+    ["平均风险", embed.avgScore], ["最高风险", embed.maxScore]
+  ];
+  out.push("<h2>概览</h2>");
+  out.push('<div class="kpis">');
+  for (const [k, v] of kpis) out.push('<div class="kpi"><div class="kpi-v">' + esc(v) + '</div><div class="kpi-k">' + esc(k) + "</div></div>");
+  out.push('<div class="kpi health"><div class="kpi-v badge ' + embed.health + '">' + embed.health + '</div><div class="kpi-k">整体健康度</div></div>');
+  out.push("</div>");
+  out.push('<div class="panels">' + donut(embed.bySeverity) + layerBars(analysis) + "</div>");
+  if (embed.history && embed.history.length) {
+    const items = embed.history.map((h) => '<div class="lbar"><span class="lname">' + esc(h.file.slice(0, 19)) + '</span><div class="ltrack"><div class="lfill" style="width:100%"></div></div><span class="ln">' + h.rows + "</span></div>").join("");
+    out.push('<div class="panel" style="grid-column:1/-1"><h3>快照历史（最近 ' + embed.history.length + " 条）</h3>" + items + "</div>");
+  }
+  return out;
+}
+
+function componentsPage(embed) {
+  const out = [];
+  out.push('<h2>组件状态表（' + embed.pluginCount + " 行 · 点击表头排序）</h2>");
+  out.push('<div class="filters"><input id="q" placeholder="搜索 id / 包名 / 版本…" oninput="window.__DSH_APP__ && window.__DSH_APP__.apply()">');
+  out.push('<select id="fLayer" onchange="window.__DSH_APP__ && window.__DSH_APP__.apply()"><option value="">全部层</option></select>');
+  out.push('<select id="fSev" onchange="window.__DSH_APP__ && window.__DSH_APP__.apply()"><option value="">全部风险</option><option>blocking</option><option>high</option><option>medium</option><option>low</option><option>disabled</option></select>');
+  out.push('<select id="fStatus" onchange="window.__DSH_APP__ && window.__DSH_APP__.apply()"><option value="">全部状态</option><option value="active">active</option><option value="disabled">disabled</option></select>');
+  out.push('<span id="rowCount" class="count"></span></div>');
+  out.push('<table id="tbl"><thead><tr>');
+  out.push('<th data-k="id">row id</th><th data-k="pkg">package@version</th><th data-k="layer">层</th><th data-k="disabled">状态</th><th data-k="risk">风险</th><th data-k="severity">级别</th><th>信号 / 已验证事实</th></tr></thead><tbody></tbody></table>');
+  return out;
+}
+
+function graphPage(embed, analysis) {
+  return ["<h2>依赖图谱</h2>", renderGraph(analysis)];
+}
+
+function conflictsPage(embed) {
+  const out = [];
+  out.push('<h2>冲突与发现（' + embed.conflicts.length + " 条）</h2><table class='conf'><thead><tr><th>类型</th><th>级别</th><th>内容</th><th>影响</th><th>建议</th><th>置信度</th></tr></thead><tbody>");
+  for (const c of embed.conflicts) {
+    out.push("<tr class='c-" + esc(c.severity) + "'><td>" + esc(c.type) + "</td><td><span class='sev " + esc(c.severity) + "'>" + esc(c.severity) + "</span></td><td>" + esc(c.message) + "</td><td>" + esc(c.impact) + "</td><td>" + esc(c.advice) + "</td><td>" + esc(c.confidence) + "</td></tr>");
+  }
+  out.push("</tbody></table>");
+  return out;
+}
+
+function sharedPage(embed) {
+  const out = [];
+  out.push('<h2>共享依赖</h2><table class="conf"><thead><tr><th>依赖</th><th>已装版本</th><th>范围（消费方数）</th><th>满足</th></tr></thead><tbody>');
+  for (const s of embed.sharedDeps) {
+    const ranges = s.ranges.map((r) => esc(r.range) + " x" + r.count + (r.satisfied === false ? " <b>✗</b>" : "")).join(" · ");
+    out.push("<tr><td>" + esc(s.dep) + "</td><td>" + esc(s.installed || "?") + "</td><td>" + ranges + "</td><td>" + (s.ranges.every((r) => r.satisfied !== false) ? "✓" : "✗") + "</td></tr>");
+  }
+  out.push("</tbody></table>");
+  return out;
+}
+
+function patternsPage(embed) {
+  const out = [];
+  out.push('<h2>已知模式与运行时验证</h2><div class="notes">');
+  for (const p of embed.patterns) {
+    out.push('<div class="note"><span class="sev ' + esc(p.severity) + '">' + esc(p.severity) + "</span> <b>" + esc(p.id) + "</b> " + esc(p.message) + ' <span class="ev">[' + esc(p.evidence) + " · " + esc(p.confidence) + "]</span></div>");
+  }
+  for (const v of embed.verified) {
+    out.push('<div class="note verified"><span class="sev verified">verified</span> <b>' + esc(v.id) + "</b> " + esc(v.note) + " <span class='ev'>scoreDelta " + esc(v.scoreDelta) + " · " + esc(v.confidence) + "</span></div>");
+  }
+  out.push("</div>");
+  return out;
+}
+
+function simPage(embed) {
+  const out = [];
+  out.push('<h2>假设模拟（不落盘）</h2><div class="sim"><div class="sim-ctl">');
+  out.push('<select id="simAdd"><option value="">— 添加已安装但未组合的包 —</option>');
+  for (const c of embed.candidates) out.push('<option value="' + esc(c.name) + '">' + esc(c.name) + "@" + esc(c.ver) + "</option>");
+  out.push('</select><button onclick="window.__DSH_APP__ && window.__DSH_APP__.addRow()">添加</button>');
+  out.push('<select id="simRemove"><option value="">— 移除组合行 —</option>');
+  for (const r of embed.rows) out.push('<option value="' + esc(r.id) + '">' + esc(r.id) + "</option>");
+  out.push('</select><button onclick="window.__DSH_APP__ && window.__DSH_APP__.removeRow()">移除</button>');
+  out.push('<button onclick="window.__DSH_APP__ && window.__DSH_APP__.reset()">重置</button>');
+  out.push('</div><div id="simResult" class="sim-result"></div></div>');
+  return out;
+}
+
+const MODULES = [
+  { id: "page-feedback", label: "错误与反馈", render: feedbackPage, default: true },
+  { id: "page-overview", label: "概览", render: overviewPage },
+  { id: "page-components", label: "组件状态表", render: componentsPage },
+  { id: "page-graph", label: "依赖图谱", render: graphPage },
+  { id: "page-conflicts", label: "冲突与发现", render: conflictsPage },
+  { id: "page-shared", label: "共享依赖", render: sharedPage },
+  { id: "page-patterns", label: "已知模式与验证", render: patternsPage },
+  { id: "page-sim", label: "假设模拟", render: simPage }
+];
 
 export function dashboard(analysis, extra = {}) {
   const embed = buildEmbedData(analysis, extra);
@@ -371,94 +471,29 @@ export function dashboard(analysis, extra = {}) {
 
   L.push('<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>dsh-forge 组件仪表盘</title>');
   L.push(STYLE);
-  L.push("</head><body><div class='wrap'>");
-  L.push("<header><h1>DeepSeek Harness 插件组合仪表盘</h1><div class='sub'>dsh-forge · 生成于 " + esc(embed.generatedAt) + " · 数据源 data/ecosystem.json 快照（离线可复现）· 勾选行=模拟禁用，模拟不落盘</div></header>");
-
-  const kpis = [
-    ["组合行数", embed.pluginCount], ["活动组件", embed.activeCount], ["禁用组件", embed.disabledCount],
-    ["唯一插件包", Object.keys(analysis.ecosystem.packages).length], ["依赖边", embed.edgeCount],
-    ["版本冲突", embed.conflictSummary.byType["version-conflict"] || 0],
-    ["工具重名", embed.conflictSummary.byType["tool-collision"] || 0],
-    ["服务覆盖", embed.conflictSummary.byType["service-collision"] || 0],
-    ["平均风险", embed.avgScore], ["最高风险", embed.maxScore]
-  ];
-  L.push('<div class="kpis">');
-  for (const [k, v] of kpis) L.push('<div class="kpi"><div class="kpi-v">' + esc(v) + '</div><div class="kpi-k">' + esc(k) + "</div></div>");
-  L.push('<div class="kpi health"><div class="kpi-v badge ' + embed.health + '">' + embed.health + '</div><div class="kpi-k">整体健康度</div></div>');
+  L.push("</head><body>");
+  // fixed header (title + meta), centered inner container
+  L.push("<header class='ws-header'><div class='ws-header-inner'><h1>DeepSeek Harness 插件组合仪表盘</h1><div class='sub'>dsh-forge v0.1.2 · 生成于 " + esc(embed.generatedAt) + " · 数据源 data/ecosystem.json 快照（离线可复现）· 只读，模拟不落盘</div></div></header>");
+  L.push('<div class="workspace">');
+  // left nav: module tabs
+  L.push('<aside class="ws-nav"><div class="ws-brand">▦ 模块</div>');
+  for (const m of MODULES) {
+    L.push('<button type="button" class="ws-tab' + (m.default ? " active" : "") + '" data-page="' + m.id + '">' + m.label + "</button>");
+  }
+  L.push("</aside>");
+  // right content: module pages (only this column scrolls)
+  L.push('<main class="ws-body">');
+  for (const m of MODULES) {
+    L.push('<section class="ws-page' + (m.default ? " active" : "") + '" id="' + m.id + '">');
+    const lines = m.render(embed, analysis);
+    for (const line of lines) L.push(line);
+    L.push("</section>");
+  }
+  L.push("</main>");
   L.push("</div>");
-  L.push('<div class="panels">' + donut(embed.bySeverity) + layerBars(analysis) + "</div>");
-  if (embed.feedback && embed.feedback.length) {
-    const sevLabels = { fatal: "致命", error: "错误", warning: "警告", info: "信息" };
-    const groups = ["fatal", "error", "warning", "info"];
-    let panel = '<section><h2>错误与反馈（' + embed.feedback.length + ' 条，错误优先）</h2><div class="notes">';
-    for (const g of groups) {
-      const items = embed.feedback.filter((f) => f.severity === g);
-      if (!items.length) continue;
-      panel += '<div class="fb-group"><b>' + (sevLabels[g] || g) + "（" + items.length + "）</b>";
-      for (const f of items) {
-        panel += '<div class="note fb fb-' + esc(g) + '"><span class="sev ' + esc(g) + '">' + esc(g) + "</span> <b>" + esc(f.code) + "</b> " + esc(f.message) +
-          (f.detail ? ' <div class="ev">详情: ' + esc(f.detail) + "</div>" : "") +
-          (f.guidance ? ' <div class="ev">建议: ' + esc(f.guidance) + "</div>" : "") +
-          (f.source ? ' <div class="ev">来源: ' + esc(f.source) + "</div>" : "") + "</div>";
-      }
-      panel += "</div>";
-    }
-    panel += "</div></section>";
-    L.push(panel);
-  }
-  if (embed.history && embed.history.length) {
-    const items = embed.history.map((h) => '<div class="lbar"><span class="lname">' + esc(h.file.slice(0, 19)) + '</span><div class="ltrack"><div class="lfill" style="width:100%"></div></div><span class="ln">' + h.rows + "</span></div>").join("");
-    L.push('<div class="panel" style="grid-column:1/-1"><h3>快照历史（最近 ' + embed.history.length + ' 条）</h3>' + items + "</div>");
-  }
-
-  L.push("<section><h2>组件状态表（" + embed.pluginCount + " 行 · 点击表头排序）</h2>");
-  L.push('<div class="filters"><input id="q" placeholder="搜索 id / 包名 / 版本…" oninput="window.__DSH_APP__ && window.__DSH_APP__.apply()">');
-  L.push('<select id="fLayer" onchange="window.__DSH_APP__ && window.__DSH_APP__.apply()"><option value="">全部层</option></select>');
-  L.push('<select id="fSev" onchange="window.__DSH_APP__ && window.__DSH_APP__.apply()"><option value="">全部风险</option><option>blocking</option><option>high</option><option>medium</option><option>low</option><option>disabled</option></select>');
-  L.push('<select id="fStatus" onchange="window.__DSH_APP__ && window.__DSH_APP__.apply()"><option value="">全部状态</option><option value="active">active</option><option value="disabled">disabled</option></select>');
-  L.push('<span id="rowCount" class="count"></span></div>');
-  L.push('<table id="tbl"><thead><tr>');
-  L.push('<th data-k="id">row id</th><th data-k="pkg">package@version</th><th data-k="layer">层</th><th data-k="disabled">状态</th><th data-k="risk">风险</th><th data-k="severity">级别</th><th>信号 / 已验证事实</th></tr></thead><tbody></tbody></table>');
-  L.push("</section>");
-
-  L.push("<section><h2>依赖图谱</h2>" + renderGraph(analysis) + "</section>");
-
-  L.push('<section><h2>冲突与发现（' + embed.conflicts.length + " 条）</h2><table class='conf'><thead><tr><th>类型</th><th>级别</th><th>内容</th><th>影响</th><th>建议</th><th>置信度</th></tr></thead><tbody>");
-  for (const c of embed.conflicts) {
-    L.push("<tr class='c-" + esc(c.severity) + "'><td>" + esc(c.type) + "</td><td><span class='sev " + esc(c.severity) + "'>" + esc(c.severity) + "</span></td><td>" + esc(c.message) + "</td><td>" + esc(c.impact) + "</td><td>" + esc(c.advice) + "</td><td>" + esc(c.confidence) + "</td></tr>");
-  }
-  L.push("</tbody></table></section>");
-
-  L.push('<section><h2>共享依赖</h2><table class="conf"><thead><tr><th>依赖</th><th>已装版本</th><th>范围（消费方数）</th><th>满足</th></tr></thead><tbody>');
-  for (const s of embed.sharedDeps) {
-    const ranges = s.ranges.map((r) => esc(r.range) + " x" + r.count + (r.satisfied === false ? " <b>✗</b>" : "")).join(" · ");
-    L.push("<tr><td>" + esc(s.dep) + "</td><td>" + esc(s.installed || "?") + "</td><td>" + ranges + "</td><td>" + (s.ranges.every((r) => r.satisfied !== false) ? "✓" : "✗") + "</td></tr>");
-  }
-  L.push("</tbody></table></section>");
-
-  L.push('<section><h2>已知模式与运行时验证</h2><div class="notes">');
-  for (const p of embed.patterns) {
-    L.push('<div class="note"><span class="sev ' + esc(p.severity) + '">' + esc(p.severity) + "</span> <b>" + esc(p.id) + "</b> " + esc(p.message) + ' <span class="ev">[' + esc(p.evidence) + " · " + esc(p.confidence) + "]</span></div>");
-  }
-  for (const v of embed.verified) {
-    L.push('<div class="note verified"><span class="sev verified">verified</span> <b>' + esc(v.id) + "</b> " + esc(v.note) + " <span class='ev'>scoreDelta " + esc(v.scoreDelta) + " · " + esc(v.confidence) + "</span></div>");
-  }
-  L.push("</div></section>");
-
-  L.push('<section><h2>假设模拟（不落盘）</h2><div class="sim"><div class="sim-ctl">');
-  L.push('<select id="simAdd"><option value="">— 添加已安装但未组合的包 —</option>');
-  for (const c of embed.candidates) L.push('<option value="' + esc(c.name) + '">' + esc(c.name) + "@" + esc(c.ver) + "</option>");
-  L.push('</select><button onclick="window.__DSH_APP__ && window.__DSH_APP__.addRow()">添加</button>');
-  L.push('<select id="simRemove"><option value="">— 移除组合行 —</option>');
-  for (const r of embed.rows) L.push('<option value="' + esc(r.id) + '">' + esc(r.id) + "</option>");
-  L.push('</select><button onclick="window.__DSH_APP__ && window.__DSH_APP__.removeRow()">移除</button>');
-  L.push('<button onclick="window.__DSH_APP__ && window.__DSH_APP__.reset()">重置</button>');
-  L.push('</div><div id="simResult" class="sim-result"></div></div></section>');
-
   L.push('<footer>生成于 ' + esc(embed.generatedAt) + " · 静态分析 + 运行期源码验证 · 只读工具，不修改任何组合</footer>");
-  L.push("</div>");
-  L.push("<script>window.__DSH__ = " + json + ";<\/script>");
-  L.push("<script>" + client + "<\/script>");
+  L.push("<script>window.__DSH__ = " + json + ";</script>");
+  L.push("<script>" + client + "</script>");
   L.push("</body></html>");
   return L.join("\n");
 }

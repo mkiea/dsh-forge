@@ -187,11 +187,11 @@ export function riskScore(pl, ctx) {
     for (const c of conflicts.conflicts) {
       if (c.type === "tool-collision" && c.packages.includes(pl.package)) {
         score += 20;
-        signals.push({ kind: "tool-collision", weight: 20, detail: c.detail });
+        signals.push({ kind: "tool-collision", weight: 20, detail: c.message || c.evidence || c.type });
       }
       if (c.type === "service-collision" && c.packages.includes(pl.package)) {
         score += 20;
-        signals.push({ kind: "service-collision", weight: 20, detail: c.detail });
+        signals.push({ kind: "service-collision", weight: 20, detail: c.message || c.evidence || c.type });
       }
     }
   }

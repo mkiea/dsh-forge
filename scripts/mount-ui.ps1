@@ -1,9 +1,16 @@
 # dsh-forge/scripts/mount-ui.ps1
 # Mount dsh-forge-ui into the deployment: copy package + patch web profile.
 $ErrorActionPreference = 'Stop'
-$src = 'C:/Users/SolimPurmiss/Desktop/DeepForge/dsh-forge/ui-plugin'
-$dst = if ($env:DSH_DEPLOY_NM) { Join-Path $env:DSH_DEPLOY_NM 'dsh-forge-ui' } else { Join-Path $env:USERPROFILE '.npm_cache/_npx/1e7f6d9597241db0/node_modules/dsh-forge-ui' }
-$patch = if ($env:DSH_HOME) { Join-Path $env:DSH_HOME 'profiles/web/cordis.patch.yml' } else { Join-Path $env:USERPROFILE '.dsh/profiles/web/cordis.patch.yml' }
+$root = Split-Path $PSScriptRoot -Parent
+$src = Join-Path $root 'ui-plugin'
+$home = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $env:USERPROFILE '.dsh' }
+$dst = if ($env:DSH_DEPLOY_NM) { Join-Path $env:DSH_DEPLOY_NM 'dsh-forge-ui' } else { $null }
+if (-not $dst) {
+  $profileNm = Join-Path $home 'profiles/web/node_modules'
+  if (Test-Path (Join-Path $profileNm '@deepseek-ai/dsh-base/package.json')) { $dst = Join-Path $profileNm 'dsh-forge-ui' }
+}
+if (-not $dst) { throw 'Could not locate deployment node_modules. Set DSH_DEPLOY_NM to the node_modules containing @deepseek-ai/dsh-base.' }
+$patch = Join-Path $home 'profiles/web/cordis.patch.yml'
 
 New-Item -ItemType Directory -Force -Path (Join-Path $dst 'lib') | Out-Null
 Copy-Item (Join-Path $src 'package.json') -Destination $dst -Force

@@ -2,11 +2,13 @@
 
 > [English](./README.en.md) | [中文](./README.md)
 
-> Version: 0.1.1 (v0.1.1-20260815-5b6766f) · harnessVersion: 0.1.0-rc.6
+> Version: 0.1.2 · harnessVersion: 0.1.0-rc.6
 
 A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency analysis, conflict detection, risk assessment (with prediction), visualization and combination simulation.
 
 > **v0.1.1 changes**: unified error feedback (FORGE-001~014 codes, fatal/error/warning/info severities, dashboard "Errors & Feedback" panel, startup-preflight terminal diagnostics); scope-aware collision detection (per-agent variants are legal); runtime event calibration (tool/call · tool/result · turn/end behavior baseline); apply-path leak slicing; the dashboard entry moved to the sidebar below the session list / above Settings (the conversation-header button was removed).
+
+> **v0.1.2 changes**: dashboard rewritten to a workspace layout (fixed header + left 8-module navigation, the right column scrolls independently, fully aligned with client.js); P0 schema consistency (check_conflicts adds kind/evidenceTier; visualize_plugins/snapshot_history no longer return null fields); P1 correctness (riskScore detail fallback chain, archive_snapshot dryRun, scope.js scans lib+src, verify_rows supports profile); P2 deployability (mount-ui auto-detects the deployment node_modules, smoke13 drops hardcoded paths); new scripts/generate-dashboard.mjs.
 
 ## Tools (13, all read-only; simulate_combination / archive_snapshot never touch the composition)
 
@@ -15,7 +17,7 @@ A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency an
 | --- | --- |
 | `analyze_dependencies` | Dependency tree + shared-dependency summary + range satisfaction |
 | `check_conflicts` | Version conflicts / tool-name collisions (**scope-aware**: per-agent variants legal) / service collisions / missing providers / row overrides / leak scan / **runtime calibration** (event-stream baseline) |
-| `visualize_plugins` | HTML / Mermaid / ASCII / **dashboard** (interactive) output |
+| `visualize_plugins` | HTML / Mermaid / ASCII / **dashboard** (interactive workspace, 8 modules) output |
 | `simulate_combination` | Hypothetical combination: new/resolved conflicts, risk delta, verdict |
 | `audit_configuration` | Per-row config audit (openAt / telemetry mode / in-memory paths / fetch, etc.) |
 | `diff_combinations` | Row add/remove/change between two snapshots (or snapshot vs live) + risk delta |
@@ -139,8 +141,8 @@ cd dsh-forge && node --input-type=module -e "import('./src/index.js').then(m => 
 | --- | --- |
 | Host plugin code (`core/`, `src/`) | **Must restart the harness** (modules are cached; defineTool compiles schemas at apply) |
 | Client bundle (`ui-plugin/lib/client.js`) | Symlink-synced instantly, but manifest/plugin-set changes need a restart |
-| Dashboard content (`web/`, `reports/dashboard.html`) | `node scripts/build-ui.mjs` re-embeds dashboard.html into client.js -> restart |
-| One-shot mount (no manual copy) | `node scripts/mount-ui.mjs` (copies ui-plugin into the deployment node_modules + writes the patch; supports `DSH_DEPLOY_NM` / `DSH_PROFILE_PATCH` env overrides) |
+| Dashboard content (`web/`, `reports/dashboard.html`) | `node scripts/generate-dashboard.mjs` (regenerate from the snapshot via the current dashboard.js) -> `node scripts/build-ui.mjs` (re-embed into client.js) -> restart |
+| One-shot mount (no manual copy) | `node scripts/mount-ui.mjs` (auto-detects the deployment node_modules + copies ui-plugin + writes the patch; supports `DSH_DEPLOY_NM` / `DSH_FORGE_ROOT` / `DSH_HOME` / `DSH_PROFILE_PATCH` env overrides) |
 
 ### Uninstall
 
@@ -173,12 +175,16 @@ console.log(JSON.stringify(r.assessment, null, 1));
 
 - `dsh web` runs at http://127.0.0.1:3080, no browser errors, **13 tools** registered
 - `analyze_dependencies` live: 4 layers (profile root + dsh-base + dsh-web-app + patch), 138 rows (incl. forge/forge-ui) / 128 packages / 1226+ edges
-- Automated tests (120/120 green):
-  - `test/ui-test.mjs` — dashboard structure & interaction (36)
+- Automated tests (9 suites, 778/778 green; smoke13 13/13 depends on the local harness, not in CI):
+  - `test/ui-test.mjs` — dashboard workspace structure & interaction (41)
   - `test/ui-plugin-test.mjs` — client plugin VM execution + slot registration + modal interaction (22)
   - `test/semver-consistency.mjs` — dual SemVer implementation consistency (30)
   - `test/review-fixes.test.mjs` — scope states / event calibration / leak slicing (15)
   - `test/upgrade-opt.test.mjs` — upgrade check concurrency/timeout/fallback/install commands (16)
+  - `test/feedback-smoke.test.mjs` — error-feedback smoke (40)
+  - `test/empty-plugins.test.mjs` — empty combination / leak rules (24)
+  - `test/exploratory-empty.mjs` — random subset exploration (27)
+  - `test/exploratory-feedback.mjs` — feedback deep exploration (563)
 
 ## Error feedback
 
@@ -209,5 +215,5 @@ The third-party PM review acceptance criteria are implemented item by item: dump
 - `prompt/` — expert persona prompt (with risk prediction)
 - `data/` — ecosystem snapshots
 - `reports/` — generated reports and graphs
-- `test/` — self-contained test suites (120 items, no machine dependency)
+- `test/` — self-contained test suites (9 suites, 778 items, no machine dependency)
 - `scripts/` — build and mount scripts

@@ -8,21 +8,22 @@ import {
 } from "../src/tools.js";
 
 const cfg = { profile: "web" };
-const HISTORY_DIR = path.resolve("../dsh-forge/data/history"); // resolve at runtime
-const SNAP = path.join(HISTORY_DIR, "2026-08-14T03-41-06-014Z-remediated-v1.json");
-const PRESETS = path.resolve(process.env.DSH_HOME || (process.env.USERPROFILE + "/.dsh"), "../AppData/Roaming/TRAE SOLO CN/ModularData/ai-agent/work-mode-projects/6a7e118f38bccda5a8ed9695"); // won't resolve; pass env fallback
-// preset compare: pass agentPresetsDir — the one bundled in product
-const agentPresetsDir = path.dirname(import.meta.url.replace(/^file:\/\/\//, "")).replace(/^\/([A-Za-z]:)/, "$1"); // fallback; we detect it via npx installed packages
+const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")), "..");
+const HISTORY_DIR = path.join(REPO_ROOT, "data", "history");
+const SNAP = process.env.DSH_FORGE_SMOKE_SNAP || path.join(HISTORY_DIR, "2026-08-14T03-41-06-014Z-remediated-v1.json");
 
 // Use find-up approach to locate dsh agent-presets directory
 function findPresetDir() {
-  const cacheHome = process.env.npm_config_cache;
-  const candidates = [
-    process.env.APPDATA + "/npm/node_modules/@deepseek-ai/dsh/config/agent-presets",
-    process.env.APPDATA + "/../Local/npm-cache/_npx/1e7f6d9597241db0/node_modules/@deepseek-ai/dsh/config/agent-presets",
-    process.env.USERPROFILE + "/.npm_cache/_npx/1e7f6d9597241db0/node_modules/@deepseek-ai/dsh/config/agent-presets"
-  ];
-  for (const c of candidates) if (fs.existsSync(c)) return c;
+  const candidates = [];
+  if (process.env.DSH_FORGE_PRESETS) candidates.push(process.env.DSH_FORGE_PRESETS);
+  const dshHome = process.env.DSH_HOME;
+  const userHome = process.env.USERPROFILE;
+  if (dshHome) candidates.push(path.join(dshHome, "profiles", "web", "node_modules", "@deepseek-ai", "dsh", "config", "agent-presets"));
+  if (userHome) {
+    candidates.push(path.join(userHome, ".dsh", "profiles", "web", "node_modules", "@deepseek-ai", "dsh", "config", "agent-presets"));
+    candidates.push(path.join(userHome, "node_modules", "@deepseek-ai", "dsh", "config", "agent-presets"));
+  }
+  for (const c of candidates) { try { if (c && fs.existsSync(c)) return c; } catch { /* skip */ } }
   return null;
 }
 const pd = findPresetDir();
@@ -40,7 +41,7 @@ const tools = [
   ["diff_combinations",     diffTool(cfg),     { dataset: SNAP, datasetB: SNAP }],
   ["preset_compare",        presetTool(cfg),   presetsArgs],
   ["verify_rows",           verifyTool(cfg),   {}],
-  ["archive_snapshot",      archiveTool(cfg),  { note: "smoke-test-no-write", dryRun: true }],
+  ["archive_snapshot",      archiveTool(cfg),  { label: "smoke-test-no-write", dryRun: true }],
   ["snapshot_history",      historyTool(cfg),  {}],
   ["history_stats",         statsTool(cfg),    {}],
   ["suggest_patch",         suggestTool(cfg),  {}],

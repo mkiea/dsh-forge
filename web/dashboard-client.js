@@ -171,7 +171,20 @@
     renderTable();
   }
 
+  function switchTab(id) {
+    var pages = document.querySelectorAll('.ws-page');
+    for (var i = 0; i < pages.length; i++) pages[i].classList.toggle('active', pages[i].id === id);
+    var tabs = document.querySelectorAll('.ws-tab');
+    for (var j = 0; j < tabs.length; j++) tabs[j].classList.toggle('active', tabs[j].getAttribute('data-page') === id);
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
+    var tabs = document.querySelectorAll('.ws-tab');
+    for (var i = 0; i < tabs.length; i++) {
+      (function (el) {
+        el.addEventListener('click', function () { switchTab(el.getAttribute('data-page')); });
+      })(tabs[i]);
+    }
     fillLayers();
     var ths = document.querySelectorAll('#tbl th');
     ths.forEach(function (th) { th.addEventListener('click', function () { sort(th.getAttribute('data-k')); }); });
@@ -182,5 +195,13 @@
     renderTable();
   });
 
-  window.__DSH_APP__ = { apply: apply, addRow: addRow, removeRow: removeRow, reset: reset, toggle: toggle, state: state };
+  function toggleFbGroup(btn) {
+    var items = btn.parentNode ? btn.parentNode.querySelector('.fb-items') : null;
+    if (!items) return;
+    var show = items.style.display === 'none';
+    items.style.display = show ? 'block' : 'none';
+    btn.textContent = show ? '收起' : '展开';
+  }
+
+  window.__DSH_APP__ = { apply: apply, addRow: addRow, removeRow: removeRow, reset: reset, toggle: toggle, toggleFbGroup: toggleFbGroup, state: state };
 })();

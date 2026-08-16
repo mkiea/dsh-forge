@@ -5,10 +5,43 @@
 // Run: node scripts/mount-ui.mjs
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as os from "node:os";
+import { createRequire } from "node:module";
 
 const ROOT = path.dirname(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")));
-const DEPLOY_NM = process.env.DSH_DEPLOY_NM || path.join(process.env.USERPROFILE, ".npm_cache", "_npx", "1e7f6d9597241db0", "node_modules");
-const PROFILE_PATCH = process.env.DSH_PROFILE_PATCH || path.join(process.env.USERPROFILE, ".dsh", "profiles", "web", "cordis.patch.yml");
+
+function findDeployNm() {
+  const home = process.env.DSH_HOME || path.join(os.homedir(), ".dsh");
+  const candidates = [];
+  if (process.env.DSH_FORGE_ROOT) candidates.push(process.env.DSH_FORGE_ROOT);
+  candidates.push(path.join(home, "profiles", "web", "node_modules"));
+  candidates.push(path.join(home, "node_modules"));
+  try {
+    const req = createRequire(new URL(import.meta.url));
+    const p = req.resolve("@deepseek-ai/dsh-base/package.json");
+    const idx = p.indexOf("node_modules");
+    if (idx >= 0) candidates.push(p.slice(0, idx + "node_modules".length));
+  } catch { /* not installed inside a deployment */ }
+  let dir = process.cwd();
+  for (let i = 0; i < 8; i++) {
+    const probe = path.join(dir, "node_modules");
+    if (fs.existsSync(path.join(probe, "@deepseek-ai", "dsh-base", "package.json"))) candidates.push(probe);
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  for (const c of candidates) {
+    if (c && fs.existsSync(path.join(c, "@deepseek-ai", "dsh-base", "package.json"))) return c;
+  }
+  return null;
+}
+const HOME = process.env.DSH_HOME || path.join(os.homedir(), ".dsh");
+const DEPLOY_NM = process.env.DSH_DEPLOY_NM || findDeployNm();
+if (!DEPLOY_NM) {
+  console.error("dsh-forge: could not auto-detect deployment node_modules. Set DSH_DEPLOY_NM to the node_modules containing @deepseek-ai/dsh-base.");
+  process.exit(1);
+}
+const PROFILE_PATCH = process.env.DSH_PROFILE_PATCH || path.join(HOME, "profiles", "web", "cordis.patch.yml");
 const SRC = path.join(ROOT, "ui-plugin");
 const DST = path.join(DEPLOY_NM, "dsh-forge-ui");
 

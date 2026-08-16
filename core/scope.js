@@ -25,14 +25,16 @@ export function scanScopeHints(packages) {
   for (const [p, m] of Object.entries(packages)) {
     if (!m.dir) continue;
     const files = [];
-    (function walk(d) {
+    for (const sub of ["lib", "src"]) {
+      (function walk(d) {
       if (!fs.existsSync(d)) return;
       for (const e of fs.readdirSync(d, { withFileTypes: true })) {
         const q = path.join(d, e.name);
         if (e.isDirectory()) walk(q);
         else if (e.name.endsWith(".js")) files.push(q);
       }
-    })(path.join(m.dir, "lib"));
+    })(path.join(m.dir, sub));
+      }
     let hasScopeMarker = false;
     let regInScopedFile = false;
     let registrationFiles = 0;

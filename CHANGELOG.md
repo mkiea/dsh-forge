@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.1.2] - 2026-08-16
+
+### 仪表盘 workspace 布局（对齐 client.js）
+
+- core/dashboard.js 的 dashboard() 重写为 workspace 结构：固定顶部 .ws-header + 左侧 .ws-nav 8 模块导航（错误与反馈 / 概览 / 组件状态表 / 依赖图谱 / 冲突与发现 / 共享依赖 / 已知模式与验证 / 假设模拟）+ 右侧 .ws-body 独立滚动，彻底对齐 ui-plugin/lib/client.js 嵌入布局。
+- 修复 buildEmbedData 候选生成：allManifests 缺失（离线 / 生产路径）时回退为空依赖数组，恢复 32 个可添加候选（模拟"添加"功能可用）。
+- 新增 scripts/generate-dashboard.mjs：离线快照 data/ecosystem.json → 用当前 dashboard.js 重新生成 reports/dashboard.html（可复现，不依赖 harness）。
+
+### P0 schema 一致性
+
+- check_conflicts 输出 schema 补全 kind / evidenceTier 字段。
+- visualize_plugins 无 writePath 时省略 writtenTo（不再返回 null）；snapshot_history 未加载时省略 loaded；analyze_dependencies 省略空 harnessVersion；check_conflicts 省略空 calibration；verify_rows 省略空 runtimeProbe。
+
+### P1 正确性
+
+- core/analyze.js riskScore 信号 detail 回退链（c.message || c.evidence || c.type），消除对已移除字段的依赖。
+- core/errors.js 已验证条目（FORGE-013）改为中文摘要 + 原始 note 进 detail；FORGE-014 标注 global。
+- archive_snapshot 新增 dryRun 参数（不写盘，仅报告文件名与行数），smoke13 改用 dryRun。
+- core/scope.js 作用域扫描扩展到 lib/ + src/ 双目录；core/verify.js verify_rows 支持 profile 参数。
+
+### P2 可部署性
+
+- scripts/mount-ui.mjs / mount-ui.ps1 移除硬编码 npx 缓存路径，自动探测部署 node_modules（支持 DSH_DEPLOY_NM / DSH_FORGE_ROOT / DSH_HOME / DSH_PROFILE_PATCH 覆盖）。
+- test/smoke13.mjs 移除硬编码路径（HISTORY_DIR / SNAP / PRESETS 环境化）。
+
+### 测试
+
+- 全量回归：ui-test 41 + ui-plugin-test 22 + semver-consistency 30 + review-fixes 15 + upgrade-opt 16 + feedback-smoke 40 + empty-plugins 24 + exploratory-empty 27 + exploratory-feedback 563 = 778/778；smoke13 13/13 依赖本机 harness，不入 CI。
+
 ## [0.1.1] - 2026-08-15
 
 ### 统一错误反馈体系

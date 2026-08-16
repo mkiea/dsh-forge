@@ -26,9 +26,9 @@ export function diffCombinations(ecoA, ecoB) {
     if (!b.has(id)) removed.push({ id, name: ra.name });
   }
   // risk delta when both assessments available
-  let riskDelta = null;
+  const out = { added, removed, changed, summary: { added: added.length, removed: removed.length, changed: changed.length } };
   if (ecoA._assessment && ecoB._assessment) {
-    riskDelta = Math.round((ecoB._assessment.avgScore - ecoA._assessment.avgScore) * 10) / 10;
+    out.riskDelta = Math.round((ecoB._assessment.avgScore - ecoA._assessment.avgScore) * 10) / 10;
   }
-  return { added, removed, changed, riskDelta, summary: { added: added.length, removed: removed.length, changed: changed.length } };
+  return out;
 }
