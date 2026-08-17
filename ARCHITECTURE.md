@@ -71,7 +71,7 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 | 文件 | 职责 |
 | --- | --- |
 | `src/index.js` | cordis 插件入口：`apply(ctx, config)` → 创建 calibration → 遍历 13 个工具工厂 → `defineTool` 注册 |
-| `src/tools/index.js` + `src/tools/*.js` | 13 个工具定义（每工具一文件，共享 `common.js`）：name / description / parameters(JSON Schema) / output.schema / execute / render；`src/tools.js` 仅为历史单片文件，插件壳不再引用 |
+| `src/tools/index.js` + `src/tools/*.js` | 13 个工具定义（每工具一文件，共享 `common.js`）：name / description / parameters(JSON Schema) / output.schema / execute / render |
 
 工具注册流程：
 ```
@@ -204,7 +204,7 @@ check_upgrades execute(args)
 | TUI/Web/check 决策 | `test/mode-decision.test.mjs` | 19 | 四层证据决策（命令/环境/场景/复杂度）/ env 一致性 / 端口占用降级 / 场景启发 |
 | 分析缓存守护 | `test/cache-behavior.test.mjs` | 7 | 同参命中 / clear 失效 / 文件变更 / live profile patch 变更 / 淘汰 / 快照 stamp |
 | 13 工具快照半集成 | `test/tools-snapshot-smoke.test.mjs` | 13 | 快照驱动调用 13 个工具 + output.schema 最小校验（防 schema/output 漂移），CI 可运行 |
-| YAML fail-loud / vm 沙箱 | `test/composition-strict.test.mjs` | 5 | 严格解析接受合法 patch（含 config block scalar）/ 未知行键与顶层条目抛错 / globalThis 逃逸被拒 / dshHomePath 可用 |
+| YAML fail-loud / vm 沙箱 | `test/composition-strict.test.mjs` | 6 | 严格解析接受合法 patch（含 config block scalar）/ 未知行键与顶层条目抛错 / globalThis 逃逸被拒 / dshHomePath 可用 |
 
 测试策略：
 - **单一实现回归**：semver-consistency 固定断言 core/semver.js 行为，并守护 dashboard.js 不再内嵌镜像副本

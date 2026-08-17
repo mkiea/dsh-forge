@@ -1,7 +1,6 @@
 // dsh-forge/src/tools/index.js
 // Aggregator for the per-tool modules. src/index.js imports the 13 tool
-// factories from here; src/tools.js is kept only as the historical monolith
-// and is no longer imported by the plugin shell.
+// factories from here.
 "use strict";
 export { analyzeTool } from "./analyze.js";
 export { conflictsTool } from "./conflicts.js";

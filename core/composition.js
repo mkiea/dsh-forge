@@ -92,6 +92,23 @@ export function parseCompositionText(text, layer) {
   return rows;
 }
 
+// Strip a trailing inline comment ('#' outside quotes) from a scalar value.
+// A '#' starts a comment only at the value start or after whitespace; '#' inside
+// single/double quotes is kept verbatim.
+function stripInlineComment(s) {
+  let inSingle = false, inDouble = false, out = "";
+  for (let n = 0; n < s.length; n++) {
+    const c = s[n];
+    if (c === "'" && !inSingle) inSingle = !inSingle;
+    else if (c === '"' && !inSingle) inDouble = !inDouble;
+    else if (c === "#" && !inSingle && !inDouble && (n === 0 || /\s/.test(s[n - 1]))) {
+      return out.trimEnd();
+    }
+    out += c;
+  }
+  return s;
+}
+
 // Strict parser: the same supported subset as parseCompositionText, but any
 // construct outside that subset fails loudly with a layer + line number
 // instead of being silently ignored (P0 fail-loud requirement).
@@ -128,7 +145,10 @@ export function parseCompositionTextStrict(text, layer, opts = {}) {
       if (li <= indent) break; // dedent -> outside row
       const km = /^\s*(\w[\w-]*):\s*(.*)$/.exec(l);
       if (!km) fail(i + 1, "unsupported indented line: " + t);
-      const key = km[1], rest = km[2].trim();
+      const key = km[1], rawRest = km[2].trim();
+      // Scalars may carry an inline comment ('#' outside quotes); strip it before
+      // validating. Config blocks keep rawRest verbatim below.
+      const rest = stripInlineComment(rawRest);
       if (key === "name") {
         if (!rest) fail(i + 1, "name must not be empty");
         if (/^[|>]/.test(rest) || /(?:^|\s)[&*][A-Za-z_]/.test(rest)) fail(i + 1, "unsupported YAML construct in name: " + t);
@@ -144,7 +164,7 @@ export function parseCompositionTextStrict(text, layer, opts = {}) {
       } else if (key === "config") {
         // config blocks are preserved verbatim (including block scalars and !!js values)
         row.configPresent = true;
-        const cfgLines = [rest];
+        const cfgLines = [rawRest];
         i++;
         while (i < lines.length) {
           const cl = lines[i];

@@ -41,5 +41,21 @@ test("evalJsExpr still supports platform/env and dshHomePath", () => {
   assert.strictEqual(evalJsExpr("dshHomePath('sessions')", { home }), path.join(home, "sessions"));
 });
 
+test("strict parser ignores inline comments outside quotes", () => {
+  const text = `- id: a
+  name: pkg # trailing comment
+  disabled: false # another comment
+  config: |
+    key: value # comment inside block scalar stays
+- id: b
+  name: 'pkg # kept'
+`;
+  const rows = parseCompositionTextStrict(text, "fixture");
+  assert.strictEqual(rows[0].name, "pkg");
+  assert.strictEqual(rows[0].disabled, false);
+  assert.ok(rows[0].configText.includes("key: value # comment inside block scalar stays"));
+  assert.strictEqual(rows[1].name, "pkg # kept");
+});
+
 console.log("\ncomposition-strict: " + pass + " pass / " + fail + " fail");
 process.exit(fail ? 1 : 0);

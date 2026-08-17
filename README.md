@@ -253,7 +253,7 @@ Web 为零依赖 `node:http` + 8 模块交互仪表盘（缺 `web/dashboard-clie
   - `test/mode-decision.test.mjs` — TUI/Web/check 四层决策引擎（19 项）
     - `test/cache-behavior.test.mjs` — runAnalysis 缓存失效/淘汰/快照守护（7 项）
     - `test/tools-snapshot-smoke.test.mjs` — 13 工具快照半集成 + output.schema 校验（13 项）
-    - `test/composition-strict.test.mjs` — YAML fail-loud + vm 沙箱逃逸回归（5 项）
+    - `test/composition-strict.test.mjs` — YAML fail-loud + vm 沙箱逃逸回归（6 项，含引号外 inline comment）
 
 ## 错误反馈体系
 
@@ -287,5 +287,5 @@ harnessVersion 绑定与知识库版本门控（R2）、泄漏扫描（R3）、�
 - `prompt/` — 专家 persona 提示词（含风险预测）
 - `data/` — 生态快照（`ecosystem.json` versioned；`history/` 运行期生成，gitignored）
 - `reports/` — 生成的分析报告与图谱
-- `test/` — 自包含测试套件（13 套件 822 项，零本机依赖）
+- `test/` — 自包含测试套件（13 套件 823 项，零本机依赖）
 - `scripts/` — 生成与构建脚本（generate-dashboard / build-ui / mount-ui）

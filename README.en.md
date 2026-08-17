@@ -220,7 +220,7 @@ offline-deployable).
   - `test/mode-decision.test.mjs` — four-layer TUI/Web/check decision engine (19)
     - `test/cache-behavior.test.mjs` — runAnalysis cache invalidation/eviction/snapshot guard (7)
     - `test/tools-snapshot-smoke.test.mjs` — 13-tool snapshot semi-integration + output.schema validation (13)
-    - `test/composition-strict.test.mjs` — YAML fail-loud + vm sandbox escape regression (5)
+    - `test/composition-strict.test.mjs` — YAML fail-loud + vm sandbox escape regression (6, incl. inline comments)
 
 ## Error feedback
 
@@ -252,5 +252,5 @@ The third-party PM review acceptance criteria are implemented item by item: dump
 - `prompt/` — expert persona prompt (with risk prediction)
 - `data/` — ecosystem snapshots (`ecosystem.json` versioned; `history/` runtime-generated and gitignored)
 - `reports/` — generated reports and graphs
-- `test/` — self-contained test suites (13 suites, 822 items, no machine dependency)
+- `test/` — self-contained test suites (13 suites, 823 items, no machine dependency)
 - `scripts/` — build and mount scripts

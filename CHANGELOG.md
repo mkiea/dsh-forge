@@ -1,11 +1,17 @@
 # Changelog
 ## [Unreleased]
 
+### 审视后续修复（审计 P2）
+
+- P2-1 版本文案：0.1.4 段 "ui-plugin/package.json bump 0.1.3" 补全为 "bump 0.1.3 → 0.1.4"。
+- P2-3 inline comment：strict 解析器对 `name` / `disabled` 标量剥离引号外 `#` 注释（config 块标量保留原样），新增回归用例 composition-strict 5 → 6 项、自包含用例总数 822 → 823。
+- P2-4 代码清理：物理删除历史单片 `src/tools.js`（已被 `src/tools/index.js` + 13 模块取代），同步 ARCHITECTURE / src/tools/index.js 注释。
+
 ## [0.1.4] - 2026-08-17
 
 ### 审视整改补丁（0.1.4）
 
-- 版本对齐：ui-plugin/package.json bump 0.1.3；core/dashboard.js 页头版本改为动态读取 package.json（不再硬编码 0.1.2）；doc-consistency 增加 root/ui-plugin/docs/dashboard 版本一致性断言。
+- 版本对齐：ui-plugin/package.json bump 0.1.3 → 0.1.4；core/dashboard.js 页头版本改为动态读取 package.json（不再硬编码 0.1.2）；doc-consistency 增加 root/ui-plugin/docs/dashboard 版本一致性断言。
 - 缓存补洞：discoverSources 层描述带 `path`；runAnalysis 缓存 key 纳入自动发现的 live 源文件（profile cordis.yml / package.json / cordis.patch.yml / bundle patch）mtime+size，配置改动自动失效；缓存结果标注只读契约。
 - decideUiMode env 一致性：term/ci/desktop/scenario 统一使用 opts.env（默认 process.env），并新增 env-only 桌面检测测试（mode-decision 18 → 19 项）。
 - diff_combinations 支持 history 文件名：datasetA/datasetB 先按 data/history 文件名解析，再按完整路径解析；datasetB 存在时缺失 datasetA 给出明确错误。
