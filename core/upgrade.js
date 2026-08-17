@@ -46,7 +46,7 @@ export async function checkUpgrades(eco, opts = {}) {
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const concurrency = Math.max(1, opts.concurrency ?? DEFAULT_CONCURRENCY);
   const pkgs = opts.packages || Object.keys(eco.packages || {});
-  const todo = pkgs.filter((p) => p.startsWith("@deepseek-ai/")).slice(0, opts.limit || 40);
+  const todo = pkgs.filter((p) => p.startsWith("@deepseek-ai/")).slice(0, opts.limit ?? 40);
   const t0 = Date.now();
 
   // Active registry index only moves forward once failover kicks in.

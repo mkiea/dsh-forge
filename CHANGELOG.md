@@ -1,8 +1,9 @@
 # Changelog
 ## [Unreleased]
 
+## [0.1.4] - 2026-08-17
 
-### 0.1.3 补丁（审视整改）
+### 审视整改补丁（0.1.4）
 
 - 版本对齐：ui-plugin/package.json bump 0.1.3；core/dashboard.js 页头版本改为动态读取 package.json（不再硬编码 0.1.2）；doc-consistency 增加 root/ui-plugin/docs/dashboard 版本一致性断言。
 - 缓存补洞：discoverSources 层描述带 `path`；runAnalysis 缓存 key 纳入自动发现的 live 源文件（profile cordis.yml / package.json / cordis.patch.yml / bundle patch）mtime+size，配置改动自动失效；缓存结果标注只读契约。
@@ -10,7 +11,18 @@
 - diff_combinations 支持 history 文件名：datasetA/datasetB 先按 data/history 文件名解析，再按完整路径解析；datasetB 存在时缺失 datasetA 给出明确错误。
 - CLI 边缘修复：web 端口占用/服务错误降级到 check 时尊重 --json；监听端口取 server.address().port（--port 0 不再显示 :0 URL）。
 - render 增强：check_conflicts 展开前 20 条 info 级发现（超量提示查完整 JSON）；snapshot_history 对 rows=0 快照标 [empty]。
-- 文档同步：README/README.en 测试套件 11 套 804 项（含 cache-behavior 7 项、mode-decision 19 项）；doc-consistency 增加套件计数 / cache-behavior 引用 / 总数断言。
+- 文档同步：README/README.en 测试套件 13 套 822 项（含 cache-behavior 7 项、mode-decision 19 项、tools-snapshot-smoke 13 项、composition-strict 5 项）；doc-consistency 增加套件计数 / cache-behavior 引用 / 总数断言。
+
+### 审视 P0/P1/P2 整改
+
+- P0 沙箱：core/composition.js `evalJsExpr` 由 `new Function` 改为 `node:vm` 隔离上下文（冻结 process 形状对象 + 禁用代码生成），strict 模式下求值失败显式抛错。
+- P0 YAML fail-loud：新增 `parseCompositionTextStrict`（行号 + layer 报错），`collectEcosystem/mergeRows` 默认走严格解析；不支持的顶层条目 / 行键 / disabled 值 / block scalar 不再静默忽略。
+- P1 仓库策略：`data/history/` 加入 .gitignore；npm `files` 由 `data` 收窄为 `data/ecosystem.json`；smoke13 默认快照改为 versioned `data/ecosystem.json`。
+- P1 工具拆分：`src/tools/` 每工具一文件（13 个模块 + common.js + index.js 聚合），`src/index.js` 与 smoke13 改引 `src/tools/index.js`；旧 `src/tools.js` 保留为历史单片文件、不再被引用。
+- P1 快照迁移：`loadSnapshot` 支持格式迁移链（`SNAPSHOT_FORMAT` / `registerSnapshotMigration` / legacy `unversioned`），不兼容格式给出可行动错误与 `migratedFrom` 标注。
+- P2 CI 半集成 smoke：新增 `test/tools-snapshot-smoke.test.mjs`（snapshot 驱动 + output.schema 最小校验器，覆盖 13 工具）；ci.yml 语法检查覆盖 `src/tools/*.js`。
+- P2 文档断言：doc-consistency 增加 ARCHITECTURE 与 CHANGELOG 版本断言。
+- 运行时盲区落地：新增 `reports/runtime-verification-checklist.md`（A 生命周期 / B 事件竞态 / C Capability Seam / D Agent Loop / E 证据规范）；`core/knowledge.js` 导出 `RUNTIME_VERIFICATION_CHECKS` 并对 agent-loop 行输出 D1–D4 运行期验证提示；专家 prompt 增加“静态盲区与运行时验证”章节。
 
 ## [0.1.3] - 2026-08-16
 

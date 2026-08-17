@@ -4,3 +4,5 @@ node_modules/
 .tmp-core-*/
 # exploratory, unversioned until finalized (see project convention)
 reports/plugin-graph-live.html
+# generated runtime history; reproducible from data/ecosystem.json + analysis runs
+data/history/

@@ -55,8 +55,13 @@ const MODULE_COUNT = "22"; // core/ module count (see ARCHITECTURE.md)
   for (const [doc, needle] of Object.entries(docs)) {
     check(doc + " declares version " + pkg.version, read(doc).includes(needle));
   }
+  check("ARCHITECTURE.md declares version " + pkg.version, read("ARCHITECTURE.md").includes("> 版本：" + pkg.version));
+  check("CHANGELOG.md contains [" + pkg.version + "]", read("CHANGELOG.md").includes("## [" + pkg.version + "]"));
   const dash = read("core/dashboard.js");
   check("dashboard.js no longer hardcodes a release version", !/dsh-forge v0\.\d+\.\d+/.test(dash));
+  check(".gitignore ignores data/history/", read(".gitignore").includes("data/history/"));
+  const pkgFiles = JSON.parse(read("package.json")).files || [];
+  check("npm files ship data/ecosystem.json (not the whole data dir)", pkgFiles.includes("data/ecosystem.json") && !pkgFiles.includes("data"));
 }
 
 // 2c. self-contained test suite count and cache-behavior suite are referenced
@@ -67,7 +72,7 @@ const MODULE_COUNT = "22"; // core/ module count (see ARCHITECTURE.md)
   check("README.en.md references " + n + " self-contained suites", read("README.en.md").includes(n + " self-contained suites"));
   check("README.md references cache-behavior suite", read("README.md").includes("test/cache-behavior.test.mjs"));
   check("README.en.md references cache-behavior suite", read("README.en.md").includes("test/cache-behavior.test.mjs"));
-  const TOTAL_CASES = "804";
+  const TOTAL_CASES = "822";
   check("README.md total case count is current (" + TOTAL_CASES + ")", read("README.md").includes(TOTAL_CASES + " 项"));
   check("README.en.md total case count is current (" + TOTAL_CASES + ")", read("README.en.md").includes(TOTAL_CASES + " items"));
 }

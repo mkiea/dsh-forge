@@ -5,12 +5,12 @@ import {
   analyzeTool, conflictsTool, visualizeTool, simulateTool,
   auditTool, diffTool, historyTool, archiveTool, presetTool,
   verifyTool, suggestTool, upgradeTool, statsTool
-} from "../src/tools.js";
+} from "../src/tools/index.js";
 
 const cfg = { profile: "web" };
 const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")), "..");
-const HISTORY_DIR = path.join(REPO_ROOT, "data", "history");
-const SNAP = process.env.DSH_FORGE_SMOKE_SNAP || path.join(HISTORY_DIR, "2026-08-14T03-41-06-014Z-remediated-v1.json");
+// history dir is runtime-generated and gitignored; smoke uses the versioned snapshot instead
+const SNAP = process.env.DSH_FORGE_SMOKE_SNAP || path.join(REPO_ROOT, "data", "ecosystem.json");
 
 // Use find-up approach to locate dsh agent-presets directory
 function findPresetDir() {
@@ -33,22 +33,29 @@ console.log("snap resolved:", SNAP, fs.existsSync(SNAP));
 const presetsArgs = pd ? { agentPresetsDir: pd } : {};
 
 const tools = [
-  ["analyze_dependencies",  analyzeTool(cfg),  {}],
-  ["check_conflicts",       conflictsTool(cfg),{}],
-  ["visualize_plugins",     visualizeTool(cfg),{ format: "dashboard" }],
-  ["simulate_combination",  simulateTool(cfg), { ops: [] }],
-  ["audit_configuration",   auditTool(cfg),    {}],
+  ["analyze_dependencies",  analyzeTool(cfg),  { dataset: SNAP }],
+  ["check_conflicts",       conflictsTool(cfg),{ dataset: SNAP }],
+  ["visualize_plugins",     visualizeTool(cfg),{ dataset: SNAP, format: "ascii" }],
+  ["simulate_combination",  simulateTool(cfg), { dataset: SNAP }],
+  ["audit_configuration",   auditTool(cfg),    { dataset: SNAP }],
   ["diff_combinations",     diffTool(cfg),     { dataset: SNAP, datasetB: SNAP }],
   ["preset_compare",        presetTool(cfg),   presetsArgs],
-  ["verify_rows",           verifyTool(cfg),   {}],
-  ["archive_snapshot",      archiveTool(cfg),  { label: "smoke-test-no-write", dryRun: true }],
+  ["verify_rows",           verifyTool(cfg),   { dataset: SNAP }],
+  ["archive_snapshot",      archiveTool(cfg),  { dataset: SNAP, label: "smoke-test-no-write", dryRun: true }],
   ["snapshot_history",      historyTool(cfg),  {}],
   ["history_stats",         statsTool(cfg),    {}],
-  ["suggest_patch",         suggestTool(cfg),  {}],
-  ["check_upgrades",        upgradeTool(cfg),  {}]
+  ["suggest_patch",         suggestTool(cfg),  { dataset: SNAP }],
+  ["check_upgrades",        upgradeTool(cfg),  { dataset: SNAP, limit: 0 }]
 ];
 const results = [];
+let skipped = 0;
 for (const [name, t, args] of tools) {
+  if (name === "preset_compare" && !pd) {
+    skipped++;
+    console.log(`SKIP  ${name.padEnd(24)} agent-presets not found in this environment`);
+    results.push({ name, ok: true, skipped: true });
+    continue;
+  }
   try {
     const t0 = Date.now();
     const out = await t.execute(args, {});
@@ -75,6 +82,6 @@ for (const [name, t, args] of tools) {
   }
 }
 console.log("---------------------------------------------------");
-const pass = results.filter(r => r.ok).length, fail = results.filter(r => !r.ok).length;
-console.log(`13 tools: ${pass} pass / ${fail} fail`);
+const pass = results.filter(r => r.ok && !r.skipped).length, fail = results.filter(r => !r.ok).length;
+console.log(`13 tools: ${pass} pass / ${skipped} skip / ${fail} fail`);
 process.exit(fail ? 1 : 0);

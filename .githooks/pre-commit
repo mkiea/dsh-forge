@@ -4,7 +4,7 @@
 set -e
 echo "[pre-commit] syntax checks"
 node --check src/index.js
-node --check src/tools.js
+for f in src/tools/*.js; do node --check "$f"; done
 node --check cli/dsh-forge.mjs
 node --check core/mode.js
 echo "[pre-commit] doc-consistency guard"

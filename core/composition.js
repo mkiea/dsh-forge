@@ -8,6 +8,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { createRequire } from "node:module";
+import * as vm from "node:vm";
 import { satisfies } from "./semver.js";
 
 // Harness home resolution: $DSH_HOME overrides the default ~/.dsh the
@@ -18,17 +19,21 @@ export function defaultHome() {
 
 // Evaluate a !!js expression the way the loader would, but sandboxed to
 // process (platform/env/cwd), a dshHomePath helper, and nothing else.
-export function evalJsExpr(expr, { home, root } = {}) {
+export function evalJsExpr(expr, { home, root, strict = false } = {}) {
   try {
-    const proc = {
+    const sandbox = {
+      process: Object.freeze({
       platform: process.platform,
-      env: process.env,
+      env: Object.freeze({ ...process.env }),
       cwd: () => root || process.cwd()
+      }),
+      dshHomePath: (p) => path.join(home || defaultHome(), p)
     };
-    const fn = new Function("process", "dshHomePath", '"use strict"; return (' + expr + ");");
-    return fn(proc, (p) => path.join(home || defaultHome(), p));
+    const context = vm.createContext(sandbox, { codeGeneration: { strings: false, wasm: false } });
+    return vm.runInNewContext("(" + String(expr) + ")", context, { timeout: 100, displayErrors: false });
   } catch {
-    return undefined; // expr not evaluable -> treated as unset (never surfaces user JS errors)    return undefined;
+    if (strict) throw new Error("!!js expression failed: " + String(expr).trim());
+      return undefined; // non-strict legacy behavior: treat as unset instead of surfacing user JS errors
   }
 }
 
@@ -81,6 +86,80 @@ export function parseCompositionText(text, layer) {
         continue;
       }
       row.raw.push(l);
+      i++;
+    }
+  }
+  return rows;
+}
+
+// Strict parser: the same supported subset as parseCompositionText, but any
+// construct outside that subset fails loudly with a layer + line number
+// instead of being silently ignored (P0 fail-loud requirement).
+export function parseCompositionTextStrict(text, layer, opts = {}) {
+  const lines = String(text).split(/\r?\n/);
+  const rows = [];
+  const fail = (lineNo, msg) => {
+    const err = new Error("unsupported YAML syntax in " + layer + " line " + lineNo + ": " + msg);
+    err.code = "FORGE-YAML-STRICT";
+    throw err;
+  };
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#") || trimmed === "---" || trimmed === "...") { i++; continue; }
+    if (/^\[\s*\]\s*$/.test(trimmed)) { i++; continue; } // empty composition root
+    const rowStart = /^\s*-\s*id:\s*(\S+)\s*$/.exec(line);
+    if (!rowStart) {
+      if (!/^\s*-\s*insert:\s*$/.test(trimmed)) fail(i + 1, "unsupported top-level entry: " + trimmed);
+      i++;
+      continue;
+    }
+    const row = { id: rowStart[1], layer, name: null, disabled: null, configPresent: false, configText: null, raw: [] };
+    rows.push(row);
+    const indent = line.length - line.trimStart().length;
+    i++;
+    while (i < lines.length) {
+      const l = lines[i];
+      const t = l.trim();
+      if (!t || t.startsWith("#")) { row.raw.push(l); i++; continue; }
+      if (/^\s*-\s*id:/.test(l)) break; // next row
+      const li = l.length - l.trimStart().length;
+      if (li <= indent) break; // dedent -> outside row
+      const km = /^\s*(\w[\w-]*):\s*(.*)$/.exec(l);
+      if (!km) fail(i + 1, "unsupported indented line: " + t);
+      const key = km[1], rest = km[2].trim();
+      if (key === "name") {
+        if (!rest) fail(i + 1, "name must not be empty");
+        if (/^[|>]/.test(rest) || /(?:^|\s)[&*][A-Za-z_]/.test(rest)) fail(i + 1, "unsupported YAML construct in name: " + t);
+        row.name = rest.replace(/^['"]|['"]$/g, "");
+      } else if (key === "disabled") {
+        if (rest === "true") row.disabled = true;
+        else if (rest === "false") row.disabled = false;
+        else if (rest.startsWith("!!js")) {
+          row.disabled = evalJsExpr(rest.slice(4).trim(), { home: opts.home, root: opts.root, strict: true });
+        } else {
+          fail(i + 1, "unsupported disabled value: " + t);
+        }
+      } else if (key === "config") {
+        // config blocks are preserved verbatim (including block scalars and !!js values)
+        row.configPresent = true;
+        const cfgLines = [rest];
+        i++;
+        while (i < lines.length) {
+          const cl = lines[i];
+          if (/^\s*$/.test(cl)) { cfgLines.push(cl); i++; continue; }
+          if (/^\s*-\s*id:/.test(cl)) break;
+          const cli = cl.length - cl.trimStart().length;
+          if (cli <= indent) break;
+          cfgLines.push(cl);
+          i++;
+        }
+        row.configText = cfgLines.join("\n");
+        continue;
+      } else {
+        fail(i + 1, "unsupported row key: " + key);
+      }
       i++;
     }
   }
@@ -145,7 +224,7 @@ export function discoverSources({ home, profile, root } = {}) {
         const req = createRequire(path.join(profileDir, "resolve-probe.js"));
         const resolved = req.resolve(b + "/package.json");
         dir = path.dirname(resolved);
-      } catch { /* bundle not resolvable from profile dir */ }
+      } catch (e) { /* bundle not resolvable from profile dir */ }
     }
     if (!dir) continue;
     const p = path.join(dir, "cordis.patch.yml");
@@ -195,7 +274,7 @@ export function collectManifests(rows, opts = {}) {
         peerDependencies: manifest.peerDependencies || {},
         deprecated: manifest.deprecated || null,
         dir
-      };
+    };
       order.push(p);
     }
   }
@@ -203,10 +282,10 @@ export function collectManifests(rows, opts = {}) {
 }
 
 // Merge rows across layers: later layers win per row id (last write wins).
-export function mergeRows(layers) {
+export function mergeRows(layers, opts = {}) {
   const byId = new Map();
   for (const layer of layers) {
-    for (const row of parseCompositionText(layer.text, layer.layer)) {
+    for (const row of parseCompositionTextStrict(layer.text, layer.layer, opts)) {
       const prev = byId.get(row.id);
       byId.set(row.id, {
         id: row.id,
@@ -236,7 +315,7 @@ export function collectEcosystem(opts = {}) {
   } else {
     layers = discoverSources({ home: homeDir, profile, root });
   }
-  const rows = mergeRows(layers);
+  const rows = mergeRows(layers, { home: homeDir, root, strict: opts.strict !== false });
   const { packages, order, nmRoot } = collectManifests(rows, { home: homeDir, profile, root, layers });  // installed versions: top-level + per-consumer nested resolution.
   // Node semantics: a consumer's own node_modules wins, then walk up.
   const installed = {};
@@ -281,7 +360,7 @@ export function collectEcosystem(opts = {}) {
     try {
       const m = readJson(path.join(r, "@deepseek-ai", "dsh", "package.json"));
       if (m && m.version) { harnessVersion = m.version; break; }
-    } catch { /* skip */ }
+    } catch (e) { /* skip */ }
   }
   return { layers, rows, packages, installed, nested, nmRoot, harnessVersion, truthSource: layers.some((l) => l.kind === "dump") ? "dump-config" : "scan" };
 }

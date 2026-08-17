@@ -2,7 +2,7 @@
 
 > [English](./README.en.md) | [中文](./README.md)
 
-> Version: 0.1.3 · harnessVersion: 0.1.0-rc.6
+> Version: 0.1.4 · harnessVersion: 0.1.0-rc.6
 
 A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency analysis, conflict detection, risk assessment (with prediction), visualization and combination simulation.
 
@@ -10,9 +10,15 @@ A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency an
 
 > **v0.1.2 changes**: dashboard rewritten to a workspace layout (fixed header + left 8-module navigation, the right column scrolls independently, fully aligned with client.js); P0 schema consistency (check_conflicts adds kind/evidenceTier; visualize_plugins/snapshot_history no longer return null fields); P1 correctness (riskScore detail fallback chain, archive_snapshot dryRun, scope.js scans lib+src, verify_rows supports profile); P2 deployability (mount-ui auto-detects the deployment node_modules, smoke13 drops hardcoded paths); new scripts/generate-dashboard.mjs.
 >
+> **v0.1.4 changes**: P0 sandbox migration (`!!js` -> node:vm isolation + strict fail-loud YAML); P1 repo & snapshots (data/history ignored, npm files narrowed, src/tools one file per tool, snapshot format migration chain); P2 CI semi-integration (13-tool snapshot smoke + doc version asserts); runtime verification blind-spot checklist.
+>
 > **v0.1.3 changes**: dual-shell UI decision (default TUI / on-demand Web / check JSON for automation, `W` switches to Web; four-layer evidence decision engine);
 > in-memory analysis cache (runAnalysis 16-entry cap + clearAnalysisCache); engineering hardening (cache-behavior guard tests,
 > doc-consistency CI guard, pre-commit fast gate, src/core dual-entry responsibility note, snapshot banners on historical reports).
+>
+> **0.1.4 patch**: `!!js` sandbox migrated to `node:vm`; strict fail-loud YAML parsing; `data/history/` gitignored with npm
+> publishing only `data/ecosystem.json`; one file per tool under `src/tools/`; snapshot format migration chain; 13-tool
+> snapshot semi-integration CI smoke; `reports/runtime-verification-checklist.md` + static blind-spot hints.
 
 ## Tools (13, all read-only; simulate_combination / archive_snapshot never touch the composition)
 
@@ -57,7 +63,7 @@ core/          dependency-free engine (22 modules, Node built-ins only)
   ├─ semver.js        SemVer parsing + range satisfaction
   ├─ upgrade.js       npm registry upgrade check (pool + mirror fallback)
   └─ ...              audit / diff / simulate / visualize / dashboard / ...
-src/          cordis plugin shell (13 tool schemas + registration)
+src/          cordis plugin shell (src/tools/ per-tool modules, 13 tool schemas + registration)
 ui-plugin/    browser client plugin (sidebar entry + modal dashboard)
 ```
 
@@ -201,7 +207,7 @@ offline-deployable).
 
 - `dsh web` runs at http://127.0.0.1:3080, no browser errors, **13 tools** registered
 - `analyze_dependencies` live: 4 layers (profile root + dsh-base + dsh-web-app + patch), 138 rows (incl. forge/forge-ui) / 128 packages / 1226+ edges
-- Automated tests (11 self-contained suites; smoke13 13/13 depends on the local harness, not in CI):
+- Automated tests (13 self-contained suites; smoke13 13/13 depends on the local harness, not in CI):
   - `test/ui-test.mjs` — dashboard workspace structure & interaction (41)
   - `test/ui-plugin-test.mjs` — client plugin VM execution + slot registration + modal interaction (22)
   - `test/semver-consistency.test.mjs` — single-source SemVer regression + anti-mirror guard (30)
@@ -213,6 +219,8 @@ offline-deployable).
   - `test/exploratory-feedback.test.mjs` — feedback deep exploration (563)
   - `test/mode-decision.test.mjs` — four-layer TUI/Web/check decision engine (19)
     - `test/cache-behavior.test.mjs` — runAnalysis cache invalidation/eviction/snapshot guard (7)
+    - `test/tools-snapshot-smoke.test.mjs` — 13-tool snapshot semi-integration + output.schema validation (13)
+    - `test/composition-strict.test.mjs` — YAML fail-loud + vm sandbox escape regression (5)
 
 ## Error feedback
 
@@ -238,11 +246,11 @@ The third-party PM review acceptance criteria are implemented item by item: dump
 
 - `core/` — dependency-free engine (semver / composition / truth / graph / conflicts / simulation / visualization / knowledge / calibration / leaks / upgrade)
 - `cli/` — standalone TUI/Web/check entry (evidence-based mode decision)
-- `src/` — cordis plugin shell (13 tool schemas + registration)
+- `src/` — cordis plugin shell (src/tools/ per-tool modules, 13 tool schemas + registration)
 - `ui-plugin/` — browser client plugin (sidebar entry + modal dashboard)
 - `web/` — dashboard client script (embedded at generation time)
 - `prompt/` — expert persona prompt (with risk prediction)
-- `data/` — ecosystem snapshots
+- `data/` — ecosystem snapshots (`ecosystem.json` versioned; `history/` runtime-generated and gitignored)
 - `reports/` — generated reports and graphs
-- `test/` — self-contained test suites (11 suites, 804 items, no machine dependency)
+- `test/` — self-contained test suites (13 suites, 822 items, no machine dependency)
 - `scripts/` — build and mount scripts

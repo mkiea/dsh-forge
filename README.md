@@ -2,7 +2,7 @@
 
 > [English](./README.en.md) | 中文
 
-> 版本：0.1.3 · harnessVersion: 0.1.0-rc.6
+> 版本：0.1.4 · harnessVersion: 0.1.0-rc.6
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
 
@@ -15,9 +15,15 @@ DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、�
 > P1 正确性（riskScore detail 回退链、archive_snapshot dryRun、scope.js 扫描 lib+src、verify_rows 支持 profile）；
 > P2 可部署性（mount-ui 自动探测部署目录、smoke13 移除硬编码路径）；新增 scripts/generate-dashboard.mjs。
 >
+> **v0.1.4 更新**：P0 沙箱迁移（`!!js` 改 node:vm 隔离 + YAML 严格 fail-loud 解析）；P1 仓库与快照（data/history 忽略、npm files 收窄、src/tools 逐工具拆分、快照格式迁移链）；P2 CI 半集成（13 工具 snapshot smoke + 文档版本断言）；新增运行时验证盲区清单。
+>
 > **v0.1.3 更新**：双栖 UI 决策（默认 TUI / 按需 Web / check JSON 给自动化，`W` 一键切 Web，四层证据决策引擎）；
 > 分析内存缓存（runAnalysis 上限 16 条 + clearAnalysisCache 强制刷新）；工程加固（cache-behavior 缓存守护测试、
 > doc-consistency CI 守卫、pre-commit 快速门禁、src/core 双入口职责说明、历史报告快照标注）。
+>
+> **0.1.4 补丁**：`!!js` 沙箱迁移到 `node:vm`；YAML 严格解析 fail-loud；`data/history/` 入 .gitignore 且 npm 仅发布
+> `data/ecosystem.json`；`src/tools/` 每工具一文件；快照格式迁移链；新增 13 工具快照半集成 CI smoke；
+> 新增 `reports/runtime-verification-checklist.md` 与静态盲区提示。
 
 ## 工具（13 个，全部只读；simulate_combination / archive_snapshot 不碰组合本体）
 
@@ -62,7 +68,7 @@ core/          零依赖分析引擎（22 个模块，Node 内置 API only）
   ├─ semver.js        SemVer 解析 + 区间满足性
   ├─ upgrade.js       npm registry 升级检查（并发池 + 镜像降级）
   └─ ...              audit / diff / simulate / visualize / dashboard / ...
-src/          cordis 插件壳（13 个工具的 schema 定义 + 注册）
+src/          cordis 插件壳（src/tools/ 每工具一文件，13 个工具的 schema 定义 + 注册）
 ui-plugin/    浏览器端客户端插件（sidebar 入口 + modal 仪表盘）
 ```
 
@@ -234,7 +240,7 @@ Web 为零依赖 `node:http` + 8 模块交互仪表盘（缺 `web/dashboard-clie
 - `dsh web` 正常启动于 http://127.0.0.1:3080，浏览器无报错，**13 个工具**注册成功
 - `analyze_dependencies` 真实执行：4 层组合（profile 根 + dsh-base + dsh-web-app + patch），
   138 插件行（含 forge/forge-ui）/ 128 包 / 1226+ 依赖边
-- 自动化测试（11 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
+- 自动化测试（13 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
   - `test/ui-test.mjs` — 仪表盘 workspace 结构与交互（41 项）
   - `test/ui-plugin-test.mjs` — 客户端插件 VM 执行 + slot 注册 + 模态交互（22 项）
   - `test/semver-consistency.test.mjs` — SemVer 单一实现回归 + 防镜像回归（30 项）
@@ -246,6 +252,8 @@ Web 为零依赖 `node:http` + 8 模块交互仪表盘（缺 `web/dashboard-clie
   - `test/exploratory-feedback.test.mjs` — 反馈深度探索（563 项）
   - `test/mode-decision.test.mjs` — TUI/Web/check 四层决策引擎（19 项）
     - `test/cache-behavior.test.mjs` — runAnalysis 缓存失效/淘汰/快照守护（7 项）
+    - `test/tools-snapshot-smoke.test.mjs` — 13 工具快照半集成 + output.schema 校验（13 项）
+    - `test/composition-strict.test.mjs` — YAML fail-loud + vm 沙箱逃逸回归（5 项）
 
 ## 错误反馈体系
 
@@ -273,11 +281,11 @@ harnessVersion 绑定与知识库版本门控（R2）、泄漏扫描（R3）、�
 
 - `core/` — 零依赖分析引擎（semver / composition / truth / 图构建 / 冲突 / 模拟 / 可视化 / 知识库 / 校准 / 泄漏 / 升级 / mode 决策）
 - `cli/` — 独立 TUI/Web/check 入口（四层证据决策，默认 TUI 按需 Web）
-- `src/` — cordis 插件壳（13 个工具的 schema 定义 + 注册）
+- `src/` — cordis 插件壳（src/tools/ 每工具一文件，13 个工具的 schema 定义 + 注册）
 - `ui-plugin/` — 浏览器端客户端插件（sidebar 入口 + modal 仪表盘）
 - `web/` — 仪表盘客户端脚本（生成时内嵌进 dashboard.html）
 - `prompt/` — 专家 persona 提示词（含风险预测）
-- `data/` — 生态快照
+- `data/` — 生态快照（`ecosystem.json` versioned；`history/` 运行期生成，gitignored）
 - `reports/` — 生成的分析报告与图谱
-- `test/` — 自包含测试套件（11 套件 804 项，零本机依赖）
+- `test/` — 自包含测试套件（13 套件 822 项，零本机依赖）
 - `scripts/` — 生成与构建脚本（generate-dashboard / build-ui / mount-ui）

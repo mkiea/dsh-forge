@@ -1,6 +1,6 @@
 # dsh-forge 架构文档
 
-> 版本：0.1.3 · 最后更新：2026-08-16
+> 版本：0.1.4 · 最后更新：2026-08-16
 
 ## 1. 总览
 
@@ -71,7 +71,7 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 | 文件 | 职责 |
 | --- | --- |
 | `src/index.js` | cordis 插件入口：`apply(ctx, config)` → 创建 calibration → 遍历 13 个工具工厂 → `defineTool` 注册 |
-| `src/tools.js` | 13 个工具定义：name / description / parameters(JSON Schema) / output.schema / execute / render |
+| `src/tools/index.js` + `src/tools/*.js` | 13 个工具定义（每工具一文件，共享 `common.js`）：name / description / parameters(JSON Schema) / output.schema / execute / render；`src/tools.js` 仅为历史单片文件，插件壳不再引用 |
 
 工具注册流程：
 ```
@@ -84,7 +84,7 @@ apply(ctx, config)
 
 每个工具的 `execute` 方法通过 `selectEco(args, config)` 获取生态数据，再委托 `core/` 对应模块计算。
 
-> **双入口职责（勿混淆）**：`src/index.js`（cordis 插件壳）只负责把 13 个工具注册进 harness，并持有运行期探测与启动预检；`core/index.js`（零依赖分析引擎门面）是 CLI 与全部测试的唯一事实源。新增分析能力一律进 `core/` 并在 `core/index.js` re-export；只有需要暴露给 harness 作为工具时才在 `src/tools.js` 新增定义。CLI（cli/dsh-forge.mjs）与测试套件 import `core/`，不依赖 `src/`。
+> **双入口职责（勿混淆）**：`src/index.js`（cordis 插件壳）只负责把 13 个工具注册进 harness，并持有运行期探测与启动预检；`core/index.js`（零依赖分析引擎门面）是 CLI 与全部测试的唯一事实源。新增分析能力一律进 `core/` 并在 `core/index.js` re-export；只有需要暴露给 harness 作为工具时才在 `src/tools/<tool>.js` 新增定义。CLI（cli/dsh-forge.mjs）与测试套件 import `core/`，不依赖 `src/`。
 
 ### 2.3 ui-plugin/ — 客户端插件
 
@@ -203,6 +203,8 @@ check_upgrades execute(args)
 | 反馈深度探索 | `test/exploratory-feedback.test.mjs` | 563 | 反馈结构合法 / 分级计数 / 排序稳定 / 确定性 |
 | TUI/Web/check 决策 | `test/mode-decision.test.mjs` | 19 | 四层证据决策（命令/环境/场景/复杂度）/ env 一致性 / 端口占用降级 / 场景启发 |
 | 分析缓存守护 | `test/cache-behavior.test.mjs` | 7 | 同参命中 / clear 失效 / 文件变更 / live profile patch 变更 / 淘汰 / 快照 stamp |
+| 13 工具快照半集成 | `test/tools-snapshot-smoke.test.mjs` | 13 | 快照驱动调用 13 个工具 + output.schema 最小校验（防 schema/output 漂移），CI 可运行 |
+| YAML fail-loud / vm 沙箱 | `test/composition-strict.test.mjs` | 5 | 严格解析接受合法 patch（含 config block scalar）/ 未知行键与顶层条目抛错 / globalThis 逃逸被拒 / dshHomePath 可用 |
 
 测试策略：
 - **单一实现回归**：semver-consistency 固定断言 core/semver.js 行为，并守护 dashboard.js 不再内嵌镜像副本
@@ -221,7 +223,8 @@ check_upgrades execute(args)
 | `scripts/mount-ui.ps1` | Windows PowerShell 挂载脚本 |
 | `pnpm-workspace.yaml` | pnpm workspace 配置 |
 | `data/ecosystem.json` | 离线生态快照（`dsh-forge-ecosystem@1` 格式） |
-| `data/history/` | 历史快照存档 |
+| `data/history/` | 历史快照存档（gitignored，运行期生成；`data/ecosystem.json` 为 versioned 基线） |
+| `reports/runtime-verification-checklist.md` | 静态盲区的运行时沙箱验证清单（A 生命周期 / B 事件竞态 / C Seam / D Agent Loop / E 证据规范） |
 
 ## 7. 版本策略
 

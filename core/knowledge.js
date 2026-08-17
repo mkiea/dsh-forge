@@ -40,6 +40,31 @@ export const KNOWN_LIBS = new Set([
   "@deepseek-ai/dsh-client-ui-attachment"
 ]);
 
+// Runtime verification checklist (reports/runtime-verification-checklist.md).
+// Static analysis cannot prove these properties; each entry maps a static
+// blind spot to the sandbox verification that should be recommended instead.
+export const RUNTIME_VERIFICATION_CHECKS = [
+  { id: "A1", area: "lifecycle", check: "apply/dispose idempotence (10 cycles)" },
+  { id: "A2", area: "lifecycle", check: "async tasks abort on dispose (fetch/ws/child_process)" },
+  { id: "A3", area: "lifecycle", check: "ctx.effect/ctx.on/ctx.setInterval reversibility" },
+  { id: "A4", area: "lifecycle", check: "HMR/fiber unload residue" },
+  { id: "A5", area: "lifecycle", check: "mid-apply failure rollback" },
+  { id: "B1", area: "events", check: "event type contract (tool/call, tool/result, turn/end)" },
+  { id: "B2", area: "events", check: "Waterfall/Parallel/Serial order sensitivity" },
+  { id: "B3", area: "events", check: "event handler exception isolation" },
+  { id: "B4", area: "events", check: "event listener leak after dispose" },
+  { id: "B5", area: "events", check: "event storm / re-entrancy bound" },
+  { id: "C1", area: "seam", check: "provider replacement matrix" },
+  { id: "C2", area: "seam", check: "missing provider behavior" },
+  { id: "C3", area: "seam", check: "cross-seam implicit contracts" },
+  { id: "C4", area: "seam", check: "duplicate provider semantics" },
+  { id: "C5", area: "seam", check: "per-seam minimal behavior probe" },
+  { id: "D1", area: "agent-loop", check: "message flow contract" },
+  { id: "D2", area: "agent-loop", check: "step/turn state machine migration" },
+  { id: "D3", area: "agent-loop", check: "error/interruption propagation" },
+  { id: "D4", area: "agent-loop", check: "goal/plan/compaction handshakes" }
+];
+
 // Known-issue patterns observed in this deployment's composition.
 // Encodes the shipped bundle comments (telemetry, sqlite search, pi-ai,
 // hmr, subagent toolName rows, platform-switched rows).
@@ -131,6 +156,15 @@ export function knownPatterns(ctx) {
       severity: "info",
       message: "cordis-plugin-hmr watches the workspace root; on very large trees this adds fs-watch churn alongside sandboxed file operations.",
       evidence: "row hmr config root: ['.']",
+      confidence: "medium"
+    });
+  }
+  if (row("agent-loop")) {
+    notes.push({
+      id: "agent-loop-runtime-blackbox",
+      severity: "info",
+      message: "Agent Loop 本身是可替换插件；静态依赖树无法验证其 turn/step 状态机、错误传播以及与 goal/plan/compaction 的隐式握手。替换或深度定制 loop 前，请执行 reports/runtime-verification-checklist.md 的 D1–D4 运行期检查。",
+      evidence: "composition row agent-loop + Cordis plugin substitution model",
       confidence: "medium"
     });
   }

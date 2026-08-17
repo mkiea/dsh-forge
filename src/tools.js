@@ -1,6 +1,6 @@
 // dsh-forge/src/tools.js
-// The four model-facing tool definitions: analyze_dependencies,
-// check_conflicts, visualize_plugins, simulate_combination.
+// LEGACY MONOLITH (kept for reference only). The plugin shell now imports
+// from src/tools/index.js; each tool lives in its own file under src/tools/.
 "use strict";
 import * as fs from "node:fs";
 import * as path from "node:path";

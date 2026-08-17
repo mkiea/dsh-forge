@@ -6,7 +6,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { createRequire } from "node:module";
 
-import { parseCompositionText, mergeRows, discoverSources, collectEcosystem, evalJsExpr, packageOf, rangeOk, resolveInstalled, defaultHome } from "./composition.js";
+import { parseCompositionText, parseCompositionTextStrict, mergeRows, discoverSources, collectEcosystem, evalJsExpr, packageOf, rangeOk, resolveInstalled, defaultHome } from "./composition.js";
 import { buildGraph, assess, baselineVersion, riskScore } from "./analyze.js";
 import { checkConflicts, scanToolNames, scanServices } from "./conflicts.js";
 import { simulateCombination, applyOps } from "./simulate.js";
@@ -24,11 +24,11 @@ import { scanLeaks } from "./leaks.js";
 import { createCalibration, staticCalibration } from "./calibration.js";
 import { buildFeedback, normalizeFeedback, preflight, renderFeedback, SEVERITY_ORDER } from "./errors.js";
 
-import { knownPatterns, scanDeprecations, KNOWN_LIBS, CLIENT_PLANE_SERVICES, runtimeVerified } from "./knowledge.js";
+import { knownPatterns, scanDeprecations, KNOWN_LIBS, CLIENT_PLANE_SERVICES, runtimeVerified, RUNTIME_VERIFICATION_CHECKS } from "./knowledge.js";
 import { satisfies, compareVersions, parseVersion, maxSatisfying } from "./semver.js";
 import { UI_MODE, hasDesktop, scenarioHints, decideUiMode, decideAfterPortProbe, COMPLEXITY_LIGHT, COMPLEXITY_HEAVY } from "./mode.js";
 
-export { parseCompositionText, mergeRows, discoverSources, collectEcosystem, evalJsExpr, packageOf, rangeOk, resolveInstalled, defaultHome };
+export { parseCompositionText, parseCompositionTextStrict, mergeRows, discoverSources, collectEcosystem, evalJsExpr, packageOf, rangeOk, resolveInstalled, defaultHome };
 export { buildGraph, assess, baselineVersion, riskScore };
 export { checkConflicts, scanToolNames, scanServices };
 export { simulateCombination, applyOps };
@@ -44,7 +44,7 @@ export { historyStats };
 export { scanLeaks, createCalibration, staticCalibration };
 export { buildFeedback, normalizeFeedback, preflight, renderFeedback, SEVERITY_ORDER };
 
-export { knownPatterns, scanDeprecations, KNOWN_LIBS, CLIENT_PLANE_SERVICES, runtimeVerified };
+export { knownPatterns, scanDeprecations, KNOWN_LIBS, CLIENT_PLANE_SERVICES, runtimeVerified, RUNTIME_VERIFICATION_CHECKS };
 export { satisfies, compareVersions, parseVersion, maxSatisfying };
 export { UI_MODE, hasDesktop, scenarioHints, decideUiMode, decideAfterPortProbe, COMPLEXITY_LIGHT, COMPLEXITY_HEAVY };
 
@@ -60,7 +60,7 @@ export function saveSnapshot(eco, file) {
     } catch { /* leave undefined; offline scans will be empty */ }
   }
   const snap = {
-    format: "dsh-forge-ecosystem@1",
+    format: SNAPSHOT_FORMAT,
     collectedAt: new Date().toISOString(),
     nmRoot: eco.nmRoot || null,
     harnessVersion: eco.harnessVersion || null,
@@ -82,10 +82,33 @@ export function saveSnapshot(eco, file) {
   return file;
 }
 
+export const SNAPSHOT_FORMAT = "dsh-forge-ecosystem@1";
+const SNAPSHOT_MIGRATIONS = new Map();
+export function registerSnapshotMigration(from, migrate) {
+  if (typeof migrate !== "function") throw new TypeError("snapshot migration must be a function");
+  SNAPSHOT_MIGRATIONS.set(from, migrate);
+}
+// Legacy snapshots saved before the `format` field existed can still be loaded
+// when their shape is already the @1 shape.
+registerSnapshotMigration("unversioned", (snap) => {
+  if (!Array.isArray(snap.rows) || !Array.isArray(snap.layers) || typeof snap.packages !== "object") {
+    throw new Error("unversioned snapshot does not look like dsh-forge-ecosystem@1");
+  }
+  return { ...snap, format: SNAPSHOT_FORMAT };
+});
+
 export function loadSnapshot(file) {
-  const snap = JSON.parse(fs.readFileSync(file, "utf8"));
-  if (snap.format !== "dsh-forge-ecosystem@1") {
-    throw new Error("unsupported snapshot format: " + snap.format);
+  let snap = JSON.parse(fs.readFileSync(file, "utf8"));
+  let migratedFrom = null;
+  const seen = new Set();
+  while ((snap.format || "unversioned") !== SNAPSHOT_FORMAT) {
+    const from = snap.format || "unversioned";
+      if (seen.has(from)) throw new Error("snapshot migration cycle at format: " + from);
+      seen.add(from);
+      const migrate = SNAPSHOT_MIGRATIONS.get(from);
+      if (!migrate) throw new Error("unsupported snapshot format '" + from + "' in " + file + ". Supported: " + SNAPSHOT_FORMAT + ". Register a migration with registerSnapshotMigration() or regenerate the snapshot.");
+      snap = migrate(snap);
+      migratedFrom = migratedFrom || from;
   }
   return {
     layers: snap.layers,
@@ -98,7 +121,8 @@ export function loadSnapshot(file) {
     nmRoot: snap.nmRoot,
     harnessVersion: snap.harnessVersion || null,
     snapshot: true,
-    collectedAt: snap.collectedAt
+    collectedAt: snap.collectedAt,
+      migratedFrom
   };
 }
 
