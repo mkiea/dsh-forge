@@ -3,9 +3,9 @@
 - 被测对象：reports/dashboard.html（交互仪表盘）、reports/plugin-graph.html（图谱）、web/dashboard-client.js（客户端脚本）
 - 数据来源：data/ecosystem.json（真实装载：web profile + preset:standard，136 行 / 131 插件）
 - 方法：HTML 结构校验 + Node DOM-mock 全交互路径执行（无浏览器环境）
-- 时间：2026-08-18T17:00:52.853Z
+- 时间：2026-08-18T17:09:50.756Z
 
-## 结果：48 通过 / 0 失败
+## 结果：61 通过 / 0 失败
 
 ---
 PASS  dashboard.html exists and non-trivial  [373837B]
@@ -28,6 +28,15 @@ PASS  element id present: tbl
 PASS  element id present: simAdd
 PASS  element id present: simRemove
 PASS  element id present: simResult
+PASS  hybrid nav tabs present
+PASS  hybrid pages present
+PASS  INV invariants table present
+PASS  truthSource embedded  [snapshot]
+PASS  confidenceCap key present  [null]
+PASS  findingsValid key present  [[]]
+PASS  mixedNote sourceLabel present  [离线快照 2026-08-14T03:41:06.010Z（可复现）]
+PASS  conflict finding_id embedded
+PASS  leaks + leakSummary embedded
 PASS  graph has svg
 PASS  graph has health badge
 PASS  client script executes without error
@@ -37,6 +46,10 @@ PASS  default page is feedback  [page-feedback]
 PASS  feedback page active by default
 PASS  clicking tab switches page
 PASS  back to first tab
+PASS  page-inv page activates
+PASS  back to default after page-inv
+PASS  page-leaks page activates
+PASS  back to default after page-leaks
 PASS  initial render populates tbody
 PASS  initial row count = all rows  [[133,133]]
 PASS  sim shows baseline health A

@@ -10,7 +10,7 @@
 - **P1-3 scanLeaks 联动接线**：`core/index.js` 对 conflicts/leaks findings 统一 attachFindingIds + 按真相源 capConfidence，输出 findingsValid 校验结果；泄漏发现已带 confidence/evidence。
 - **P0-3 node:vm 沙箱加固**（`core/composition.js`）：`evalJsExpr` 使用 null 原型隔离全局 + 冻结 process 投影 + 可配置超时（原生），内存限制如实标注非 node:vm 原生能力（尽力近似）。
 - **新增测试套件**：evidence-fusion（18 项）、runtime-calibration（21 项）、truth-source-degradation（12 项）；自包含套件 13 → 16，用例总数 832 → 883。
-- **仪表盘混合架构补全**（`core/dashboard.js`）：新增「混合验证体系」页（INV-1~6 不变量表 + truthSource / confidenceCap / findingsValid / 泄漏计数 KPI）与「副作用泄漏」页（泄漏表含 finding_id / package）；嵌入数据扩充 truthSource / confidenceCap / findingsValid / mixedNote，conflicts 与 leaks 条目携带 finding_id；workspace 模块导航 8 → 10；ui-test 模块标签断言 8 → 10 同步。
+- **仪表盘混合架构补全**（`core/dashboard.js`）：新增「混合验证体系」页（INV-1~6 不变量表 + truthSource / confidenceCap / findingsValid / 泄漏计数 KPI）与「副作用泄漏」页（泄漏表含 finding_id / package）；嵌入数据扩充 truthSource / confidenceCap / findingsValid / mixedNote，conflicts 与 leaks 条目携带 finding_id；workspace 模块导航 8 → 10；该条目经混合架构测试补全——结构（混合页/INV 表/嵌入字段/finding_id/leakSummary）+ 交互（page-inv/page-leaks 切换激活），ui-test 模块标签断言 8 → 10 且新增 13 项混合回归断言，48 → 61。
 - **文档同步**：ARCHITECTURE 纳入 25 个模块（+evidence/evidence-fusion/runtime-calibration）+ 8 章设计不变量 INV-1~6 + 3 个新套件清单；README/README.en 同步套件数与用例数；doc-consistency 模块数 22→25、用例总数 832→883。
 
 ### 审视后续修复（审计 P2）

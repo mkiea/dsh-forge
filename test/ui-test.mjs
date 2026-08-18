@@ -43,6 +43,16 @@ if (data) {
   check("row fields complete", data.rows.every((r) => Array.isArray(r.deps) && typeof r.baseScore === "number" && Array.isArray(r.verified)));
   const ids = ["q", "fLayer", "fSev", "fStatus", "rowCount", "tbl", "simAdd", "simRemove", "simResult"];
   for (const id of ids) check("element id present: " + id, dash.includes('id="' + id + '"'));
+  // v0.1.5 混合架构：结构 + 嵌入字段
+  check("hybrid nav tabs present", dash.includes('data-page="page-inv"') && dash.includes('data-page="page-leaks"'));
+  check("hybrid pages present", dash.includes('id="page-inv"') && dash.includes("混合验证体系") && dash.includes('id="page-leaks"') && dash.includes("副作用泄漏"));
+  check("INV invariants table present", ["INV-1", "INV-2", "INV-3", "INV-4", "INV-5", "INV-6"].every((k) => dash.includes(k)));
+  check("truthSource embedded", typeof data.truthSource === "string", data.truthSource);
+  check("confidenceCap key present", "confidenceCap" in data, String(data.confidenceCap));
+  check("findingsValid key present", "findingsValid" in data, JSON.stringify(data.findingsValid));
+  check("mixedNote sourceLabel present", data.mixedNote && typeof data.mixedNote.sourceLabel === "string", data.mixedNote && data.mixedNote.sourceLabel);
+  check("conflict finding_id embedded", data.conflicts.every((c) => Object.prototype.hasOwnProperty.call(c, "finding_id")));
+  check("leaks + leakSummary embedded", Array.isArray(data.leaks) && data.leakSummary && typeof data.leakSummary.total === "number", data.leakSummary && data.leakSummary.total);
 }
 check("graph has svg", graph.includes("<svg"));
 check("graph has health badge", /badge [ABCD]/.test(graph));
@@ -124,6 +134,19 @@ if (tabs.length > 1 && tabs[1].listeners.click) {
   check("clicking tab switches page", pages[1].classList.contains("active") && !pages[0].classList.contains("active"));
   tabs[0].listeners.click();
   check("back to first tab", pages[0].classList.contains("active"));
+}
+
+// v0.1.5 混合架构页面可交互切换
+for (const target of ["page-inv", "page-leaks"]) {
+  const idx = pageIds.indexOf(target);
+  if (idx >= 0 && tabs[idx] && tabs[idx].listeners.click) {
+    tabs[idx].listeners.click();
+    check(target + " page activates", pages[idx].classList.contains("active") && !pages[0].classList.contains("active"));
+    tabs[0].listeners.click();
+    check("back to default after " + target, pages[0].classList.contains("active"));
+  } else {
+    check(target + " page interactive", false, "tab/page not found or no click");
+  }
 }
 
 if (app) {
