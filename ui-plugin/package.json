@@ -1,6 +1,6 @@
 {
   "name": "dsh-forge-ui",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Sidebar entry + modal dashboard for dsh-forge plugin analysis (browser-only client plugin).",
   "type": "module",
   "main": "lib/index.js",

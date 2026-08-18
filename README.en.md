@@ -2,7 +2,7 @@
 
 > [English](./README.en.md) | [中文](./README.md)
 
-> Version: 0.1.4 · harnessVersion: 0.1.0-rc.6
+> Version: 0.1.5 · harnessVersion: 0.1.0-rc.6
 
 A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency analysis, conflict detection, risk assessment (with prediction), visualization and combination simulation.
 

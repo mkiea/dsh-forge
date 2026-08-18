@@ -1,6 +1,8 @@
 # Changelog
 ## [Unreleased]
 
+## [0.1.5] - 2026-08-19
+
 ### 静态-运行时混合验证体系（v0.1.5 P0+P1）
 
 - **P1-1 运行时校准**（`core/runtime-calibration.js`）：注入式 ctx（不 import），订阅 Cordis 生命周期事件（plugin/apply、plugin/dispose、tool/call、tool/result、turn/end）；A-4 滑动窗口（N=256）+ 事件基数上限（512）+ 超限丢帧计数优先策略；INV-2 仅观测 start() 之后行为不回溯初始化；A-2 每条 finding 生成稳定 finding_id 绑定运行时证据；dispose() 全量 off 保证可逆性；无 ctx 离线降级诚实 not-executed。
