@@ -113,11 +113,11 @@ apply(ctx, config)
 | --- | --- |
 | `dsh-forge` | 自动决策：终端内默认 TUI；无 TTY+桌面会话 → Web；CI/管道 → check |
 | `dsh-forge tui` | 强制 TUI（零依赖 ANSI；`W` 一键开 Web，`R` 刷新，`Q` 退出） |
-| `dsh-forge web` / `serve` | 强制 Web（`node:http` + 8 模块交互仪表盘；缺 client.js 回退自包含 SVG 拓扑；端口占用自动降级） |
+| `dsh-forge web` / `serve` | 强制 Web（`node:http` + 10 模块交互仪表盘；缺 client.js 回退自包含 SVG 拓扑；端口占用自动降级） |
 | `dsh-forge check` / `ci` | 纯日志或 `--json`，无界面，面向脚本消费 |
 
 TUI 壳与 Web 壳不引入第三方依赖：TUI 用 ANSI 渲染，Web 用 `node:http`
-serve `core/dashboard.js` 生成的 8 模块交互仪表盘（缺 `web/dashboard-client.js`
+serve `core/dashboard.js` 生成的 10 模块交互仪表盘（缺 `web/dashboard-client.js`
 时回退 `core/visualize.js` 的自包含 SVG 页面），保持 core 零依赖与离线可部署。
 Web 形态为混合审查：每次请求用当前分析结果新鲜渲染（静态层），live 模式页头提供
 `↻ 刷新` 按钮（`/api/refresh` 清除分析缓存后重新分析并返回新嵌入数据，动态层），

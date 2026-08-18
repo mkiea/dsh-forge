@@ -198,7 +198,7 @@ node cli/dsh-forge.mjs check --json  # CI/CD machine output
 ```
 
 Both shells share the same `core/` engine: the TUI is a zero-dependency ANSI renderer,
-and the Web shell is `node:http` serving the interactive 8-module dashboard
+and the Web shell is `node:http` serving the interactive 10-module dashboard
 (falls back to the self-contained SVG topology page when `web/dashboard-client.js`
 is unavailable; no Express/ECharts dependency, keeping core dependency-free and
 offline-deployable).

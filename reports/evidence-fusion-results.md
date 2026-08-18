@@ -22,7 +22,7 @@ PASS  INV-3 count preserved  [3]
 PASS  INV-3 every input present  [3]
 PASS  A-2 id stable across message variance  [923f21c0==923f21c0]
 PASS  A-2 id differs when scope differs
-PASS  A-3 next_action present on upgrade  [检查 PKG-90a5dd6d3c133]
+PASS  A-3 next_action present on upgrade  [检查 PKG-4b8605adeb038]
 PASS  A-3 reproduce_hint present
 PASS  A-1 default runtimeState not-executed  [not-executed]
 PASS  A-1 not downgraded to clean  [medium]

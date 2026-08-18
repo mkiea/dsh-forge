@@ -32,7 +32,7 @@ DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、�
 | --- | --- |
 | `analyze_dependencies` | 组合依赖树 + 共享依赖摘要 + 范围满足性 |
 | `check_conflicts` | 版本冲突 / 工具重名（**作用域感知**：per-agent 变体合法）/ 服务覆盖 / 缺失提供者 / 行覆盖 / 泄漏扫描 / **运行期行为校准**（事件流基线） |
-| `visualize_plugins` | HTML / Mermaid / ASCII / **dashboard**（workspace 交互仪表盘，8 模块）输出 |
+| `visualize_plugins` | HTML / Mermaid / ASCII / **dashboard**（workspace 交互仪表盘，10 模块）输出 |
 | `simulate_combination` | 假设组合模拟：新增/解除冲突、风险增量、判定 |
 | `audit_configuration` | 逐行配置审计（openAt / telemetry mode / 内存路径 / fetch 等） |
 | `diff_combinations` | 两个快照（或快照 vs 当前）的行增删改 + 风险增量 |
@@ -232,7 +232,7 @@ node cli/dsh-forge.mjs check --json  # CI/CD 机器输出
 ```
 
 TUI 与 Web 双壳复用同一套 `core/` 分析引擎；TUI 为零依赖 ANSI 渲染器，
-Web 为零依赖 `node:http` + 8 模块交互仪表盘（缺 `web/dashboard-client.js` 时
+Web 为零依赖 `node:http` + 10 模块交互仪表盘（缺 `web/dashboard-client.js` 时
 自动回退到自包含 SVG 拓扑页；不引入 Express/ECharts，保持 core 零依赖与可离线部署）。
 Web 形态采用**混合审查**：每次请求用当前分析结果新鲜渲染（静态层），页头提供 `↻ 刷新`
 按钮调用 `GET /api/refresh` 清除分析缓存并重新分析（动态层），无需刷新页面即可让仪表盘如实反映组合变更。
