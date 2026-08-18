@@ -234,6 +234,8 @@ node cli/dsh-forge.mjs check --json  # CI/CD 机器输出
 TUI 与 Web 双壳复用同一套 `core/` 分析引擎；TUI 为零依赖 ANSI 渲染器，
 Web 为零依赖 `node:http` + 8 模块交互仪表盘（缺 `web/dashboard-client.js` 时
 自动回退到自包含 SVG 拓扑页；不引入 Express/ECharts，保持 core 零依赖与可离线部署）。
+Web 形态采用**混合审查**：每次请求用当前分析结果新鲜渲染（静态层），页头提供 `↻ 刷新`
+按钮调用 `GET /api/refresh` 清除分析缓存并重新分析（动态层），无需刷新页面即可让仪表盘如实反映组合变更。
 
 ## 验证状态
 
@@ -241,7 +243,7 @@ Web 为零依赖 `node:http` + 8 模块交互仪表盘（缺 `web/dashboard-clie
 - `analyze_dependencies` 真实执行：4 层组合（profile 根 + dsh-base + dsh-web-app + patch），
   138 插件行（含 forge/forge-ui）/ 128 包 / 1226+ 依赖边
 - 自动化测试（13 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
-  - `test/ui-test.mjs` — 仪表盘 workspace 结构与交互（41 项）
+  - `test/ui-test.mjs` — 仪表盘 workspace 结构与交互（48 项）
   - `test/ui-plugin-test.mjs` — 客户端插件 VM 执行 + slot 注册 + 模态交互（22 项）
   - `test/semver-consistency.test.mjs` — SemVer 单一实现回归 + 防镜像回归（30 项）
   - `test/review-fixes.test.mjs` — 作用域三态 / 事件校准 / 泄漏切片（15 项）
@@ -253,7 +255,7 @@ Web 为零依赖 `node:http` + 8 模块交互仪表盘（缺 `web/dashboard-clie
   - `test/mode-decision.test.mjs` — TUI/Web/check 四层决策引擎（19 项）
     - `test/cache-behavior.test.mjs` — runAnalysis 缓存失效/淘汰/快照守护（7 项）
     - `test/tools-snapshot-smoke.test.mjs` — 13 工具快照半集成 + output.schema 校验（13 项）
-    - `test/composition-strict.test.mjs` — YAML fail-loud + vm 沙箱逃逸回归（6 项，含引号外 inline comment）
+    - `test/composition-strict.test.mjs` — YAML fail-loud + vm 沙箱逃逸回归（8 项，含 inline comment 与 cordis inject 行键）
 
 ## 错误反馈体系
 
@@ -274,7 +276,7 @@ harnessVersion 绑定与知识库版本门控（R2）、泄漏扫描（R3）、�
 | --- | --- | --- |
 | truthSource 落在 scan 而非 dump-config | npx 安装树路径与 findDshBin 候选不完全匹配 | 输出 `truthSource=scan` + warnings 显式标注 |
 | 静态扫描覆盖率有限 | 仅扫描 `lib/**/*.js`，单文件 >400KB 跳过 | findings 标 `confidence: "low"` + disclaimer |
-| 实时仪表盘（host.call 拉取） | harness 仅存在于 cordis 动态插件沙箱，静态插件不可靠注入 | 静态内嵌 + `node scripts/generate-dashboard.mjs` → `build-ui.mjs` 重建 |
+| 实时仪表盘（host.call 拉取） | harness 仅存在于 cordis 动态插件沙箱，静态插件不可靠注入 | Web 混合审查：静态内嵌 + `/api/refresh` 动态重分析；离线 `generate-dashboard.mjs` → `build-ui.mjs` 重建 |
 | 会话事件实时统计 | 静态客户端插件无运行期事件订阅通道 | `history_stats` 快照趋势替代 |
 
 ## 目录
@@ -287,5 +289,5 @@ harnessVersion 绑定与知识库版本门控（R2）、泄漏扫描（R3）、�
 - `prompt/` — 专家 persona 提示词（含风险预测）
 - `data/` — 生态快照（`ecosystem.json` versioned；`history/` 运行期生成，gitignored）
 - `reports/` — 生成的分析报告与图谱
-- `test/` — 自包含测试套件（13 套件 823 项，零本机依赖）
+- `test/` — 自包含测试套件（13 套件 832 项，零本机依赖）
 - `scripts/` — 生成与构建脚本（generate-dashboard / build-ui / mount-ui）

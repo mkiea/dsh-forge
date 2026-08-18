@@ -3,12 +3,12 @@
 - 被测对象：reports/dashboard.html（交互仪表盘）、reports/plugin-graph.html（图谱）、web/dashboard-client.js（客户端脚本）
 - 数据来源：data/ecosystem.json（真实装载：web profile + preset:standard，136 行 / 131 插件）
 - 方法：HTML 结构校验 + Node DOM-mock 全交互路径执行（无浏览器环境）
-- 时间：2026-08-16T10:03:57.240Z
+- 时间：2026-08-18T03:14:17.748Z
 
-## 结果：41 通过 / 0 失败
+## 结果：48 通过 / 0 失败
 
 ---
-PASS  dashboard.html exists and non-trivial  [367458B]
+PASS  dashboard.html exists and non-trivial  [370516B]
 PASS  graph html exists  [83338B]
 PASS  balanced script tags
 PASS  has closing html/body
@@ -49,6 +49,13 @@ PASS  toggle updates sim result
 PASS  addRow adds candidate  [@deepseek-ai/dsh-attachment]
 PASS  reset clears sim state
 PASS  removeRow updates sim result
+PASS  live dashboard renders refresh button
+PASS  live dashboard renders live badge
+PASS  live dashboard embeds live:true
+PASS  live dashboard metaLine present
+PASS  static dashboard has no refresh button (graceful offline)
+PASS  live client executes without error
+PASS  live client exposes refresh()
 ---
 
 **结论：界面逻辑全部通过。** 建议在浏览器中打开 reports/dashboard.html 做视觉验收。

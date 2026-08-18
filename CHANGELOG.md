@@ -7,6 +7,19 @@
 - P2-3 inline comment：strict 解析器对 `name` / `disabled` 标量剥离引号外 `#` 注释（config 块标量保留原样），新增回归用例 composition-strict 5 → 6 项、自包含用例总数 822 → 823。
 - P2-4 代码清理：物理删除历史单片 `src/tools.js`（已被 `src/tools/index.js` + 13 模块取代），同步 ARCHITECTURE / src/tools/index.js 注释。
 
+### 仪表盘动态化（混合审查，静态 + 动态）
+
+- 仪表盘改为混合架构：Web 形态每次请求用当前分析结果新鲜渲染（静态层），页头新增 `↻ 刷新` 按钮调用 `GET /api/refresh` 清除分析缓存并重新分析（动态层），客户端脚本无刷新更新嵌入数据，如实反馈组合变更。
+- core/dashboard.js 支持 `extra.live` 动态模式：嵌入数据带 `live` 标记与 `sourceLabel`，live 模式渲染页头工具区（实时徽标 + 刷新按钮），静态快照优雅降级隐藏控件。
+- cli/dsh-forge.mjs Web 服务改为每请求新鲜渲染，新增 `/api/refresh` 端点（clearAnalysisCache → 重新 runAnalysis → buildEmbedData live）。
+- web/dashboard-client.js 暴露 `window.__DSH_APP__.refresh()`，绑定刷新按钮，处理加载 / 错误（stale 徽标）状态。
+- ui-test 新增 live 模式回归块（刷新按钮 / live 徽标 / live:true 嵌入 / 静态优雅降级 / 客户端 refresh 暴露），41 → 48 项；自包含用例总数 823 → 830。
+
+### P0 修复：strict 解析器支持 cordis inject 行键
+
+- 严格解析器（parseCompositionTextStrict）误把 cordis bundle 补丁（dsh-web-app 等）合法的结构化行键 `inject`（声明注入的子插件，支持嵌套 `- id:` 列表与内联 `inject: [a, b]` 形式）当作未知行键拒绝，导致启动预检 FATAL FORGE-001。现识别 `inject` 为合法行键，其嵌套 `- id:` 条目按更深缩进自动作为独立插件行解析。
+- 回归用例：composition-strict 新增 inject 嵌套行 / 内联列表 2 项，6 → 8 项；自包含用例总数 830 → 832。
+
 ## [0.1.4] - 2026-08-17
 
 ### 审视整改补丁（0.1.4）

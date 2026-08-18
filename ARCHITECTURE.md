@@ -116,6 +116,9 @@ apply(ctx, config)
 TUI 壳与 Web 壳不引入第三方依赖：TUI 用 ANSI 渲染，Web 用 `node:http`
 serve `core/dashboard.js` 生成的 8 模块交互仪表盘（缺 `web/dashboard-client.js`
 时回退 `core/visualize.js` 的自包含 SVG 页面），保持 core 零依赖与离线可部署。
+Web 形态为混合审查：每次请求用当前分析结果新鲜渲染（静态层），live 模式页头提供
+`↻ 刷新` 按钮（`/api/refresh` 清除分析缓存后重新分析并返回新嵌入数据，动态层），
+静态快照渲染则优雅隐藏该控件。
 
 ## 3. 数据流
 
@@ -192,7 +195,7 @@ check_upgrades execute(args)
 
 | 套件 | 文件 | 项数 | 覆盖 |
 | --- | --- | --- | --- |
-| 仪表盘结构+交互 | `test/ui-test.mjs` | 41 | workspace 结构 / 默认页 / 页切换 + 搜索/筛选/排序/toggle/增删候选 + 133 行数据 |
+| 仪表盘结构+交互 | `test/ui-test.mjs` | 48 | workspace 结构 / 默认页 / 页切换 + 搜索/筛选/排序/toggle/增删候选 + 133 行数据 + live 动态标记回归 |
 | 客户端插件 VM 执行 | `test/ui-plugin-test.mjs` | 22 | 2 slot 注册 + locale + 模态开关 + wide/collapsed 渲染 |
 | SemVer 回归 | `test/semver-consistency.test.mjs` | 30 | core/semver.js 单一实现 30 用例固定断言 + 防 dashboard 镜像回归 |
 | 作用域/校准/泄漏 | `test/review-fixes.test.mjs` | 15 | scope 三态 + mock 事件校准 + 泄漏切片 |
@@ -204,7 +207,7 @@ check_upgrades execute(args)
 | TUI/Web/check 决策 | `test/mode-decision.test.mjs` | 19 | 四层证据决策（命令/环境/场景/复杂度）/ env 一致性 / 端口占用降级 / 场景启发 |
 | 分析缓存守护 | `test/cache-behavior.test.mjs` | 7 | 同参命中 / clear 失效 / 文件变更 / live profile patch 变更 / 淘汰 / 快照 stamp |
 | 13 工具快照半集成 | `test/tools-snapshot-smoke.test.mjs` | 13 | 快照驱动调用 13 个工具 + output.schema 最小校验（防 schema/output 漂移），CI 可运行 |
-| YAML fail-loud / vm 沙箱 | `test/composition-strict.test.mjs` | 6 | 严格解析接受合法 patch（含 config block scalar）/ 未知行键与顶层条目抛错 / globalThis 逃逸被拒 / dshHomePath 可用 |
+| YAML fail-loud / vm 沙箱 | `test/composition-strict.test.mjs` | 8 | 严格解析接受合法 patch（含 config block scalar、cordis inject 行键）/ 未知行键与顶层条目抛错 / globalThis 逃逸被拒 / dshHomePath 可用 |
 
 测试策略：
 - **单一实现回归**：semver-consistency 固定断言 core/semver.js 行为，并守护 dashboard.js 不再内嵌镜像副本

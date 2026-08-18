@@ -203,5 +203,34 @@
     btn.textContent = show ? '收起' : '展开';
   }
 
-  window.__DSH_APP__ = { apply: apply, addRow: addRow, removeRow: removeRow, reset: reset, toggle: toggle, toggleFbGroup: toggleFbGroup, state: state };
+  // Dynamic (live) mode: re-fetch analysis from the server and re-render.
+  // In offline/static snapshots the refresh button does not exist, so this is
+  // a graceful no-op and the page keeps its embedded facts.
+  function refresh() {
+    var btn = document.getElementById('refreshBtn');
+    var badge = document.getElementById('liveBadge');
+    var msg = document.getElementById('refreshMsg');
+    if (btn) { btn.disabled = true; btn.textContent = '刷新中…'; }
+    if (msg) msg.textContent = '';
+    fetch('/api/refresh').then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || !d.ok || !d.data) throw new Error((d && d.error) || 'refresh failed');
+      E = d.data;
+      state = { search: '', layer: '', sev: '', status: '', sort: 'risk', dir: -1, disabled: {}, added: [], removed: [] };
+      var meta = document.getElementById('metaLine');
+      var foot = document.getElementById('footLine');
+      if (meta) meta.textContent = 'dsh-forge v' + (window.__DSH_VERSION__ || '?') + ' · 生成于 ' + E.generatedAt + ' · ' + E.sourceLabel + ' · 只读，模拟不落盘';
+      if (foot) foot.textContent = '生成于 ' + E.generatedAt + ' · ' + E.sourceLabel + ' · 静态分析 + 运行期源码验证 · 只读工具，不修改任何组合';
+      if (badge) badge.classList.remove('stale');
+      fillLayers();
+      renderTable();
+      if (msg) msg.textContent = '已刷新 · ' + E.generatedAt;
+    }).catch(function (err) {
+      if (msg) msg.textContent = '刷新失败：' + err.message;
+      if (badge) badge.classList.add('stale');
+    }).then(function () {
+      if (btn) { btn.disabled = false; btn.textContent = '↻ 刷新'; }
+    });
+  }
+
+  window.__DSH_APP__ = { apply: apply, addRow: addRow, removeRow: removeRow, reset: reset, toggle: toggle, toggleFbGroup: toggleFbGroup, refresh: refresh, state: state };
 })();

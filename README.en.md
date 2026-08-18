@@ -202,13 +202,17 @@ and the Web shell is `node:http` serving the interactive 8-module dashboard
 (falls back to the self-contained SVG topology page when `web/dashboard-client.js`
 is unavailable; no Express/ECharts dependency, keeping core dependency-free and
 offline-deployable).
+The Web form uses **hybrid review**: each request renders the dashboard fresh from
+the current analysis (static layer), and the header `↻ Refresh` button calls
+`GET /api/refresh` to clear the analysis cache and re-analyze (dynamic layer), so
+the dashboard always reflects the real combination without a page reload.
 
 ## Verification status
 
 - `dsh web` runs at http://127.0.0.1:3080, no browser errors, **13 tools** registered
 - `analyze_dependencies` live: 4 layers (profile root + dsh-base + dsh-web-app + patch), 138 rows (incl. forge/forge-ui) / 128 packages / 1226+ edges
 - Automated tests (13 self-contained suites; smoke13 13/13 depends on the local harness, not in CI):
-  - `test/ui-test.mjs` — dashboard workspace structure & interaction (41)
+  - `test/ui-test.mjs` — dashboard workspace structure & interaction (48)
   - `test/ui-plugin-test.mjs` — client plugin VM execution + slot registration + modal interaction (22)
   - `test/semver-consistency.test.mjs` — single-source SemVer regression + anti-mirror guard (30)
   - `test/review-fixes.test.mjs` — scope states / event calibration / leak slicing (15)
@@ -220,7 +224,7 @@ offline-deployable).
   - `test/mode-decision.test.mjs` — four-layer TUI/Web/check decision engine (19)
     - `test/cache-behavior.test.mjs` — runAnalysis cache invalidation/eviction/snapshot guard (7)
     - `test/tools-snapshot-smoke.test.mjs` — 13-tool snapshot semi-integration + output.schema validation (13)
-    - `test/composition-strict.test.mjs` — YAML fail-loud + vm sandbox escape regression (6, incl. inline comments)
+    - `test/composition-strict.test.mjs` — YAML fail-loud + vm sandbox escape regression (8, incl. inline comments & cordis inject key)
 
 ## Error feedback
 
@@ -239,7 +243,7 @@ The third-party PM review acceptance criteria are implemented item by item: dump
 | --- | --- | --- |
 | truthSource falls back to scan | npx install tree paths don't fully match findDshBin candidates | output `truthSource=scan` + explicit warnings |
 | Static scan coverage limited | only `lib/**/*.js`, files >400KB skipped | findings marked `confidence: low` + disclaimer |
-| Live dashboard (host.call) | harness lives only in the dynamic-plugin sandbox; unreliable for static plugins | static embed + `node scripts/build-ui.mjs` rebuild |
+| Live dashboard (host.call) | harness lives only in the dynamic-plugin sandbox; unreliable for static plugins | Web hybrid review: static embed + `/api/refresh` dynamic re-analysis; offline via `generate-dashboard.mjs` -> `build-ui.mjs` rebuild |
 | Live session-event stats | no runtime event channel for static client plugins | `history_stats` snapshot trends instead |
 
 ## Layout
@@ -252,5 +256,5 @@ The third-party PM review acceptance criteria are implemented item by item: dump
 - `prompt/` — expert persona prompt (with risk prediction)
 - `data/` — ecosystem snapshots (`ecosystem.json` versioned; `history/` runtime-generated and gitignored)
 - `reports/` — generated reports and graphs
-- `test/` — self-contained test suites (13 suites, 823 items, no machine dependency)
+- `test/` — self-contained test suites (13 suites, 832 items, no machine dependency)
 - `scripts/` — build and mount scripts

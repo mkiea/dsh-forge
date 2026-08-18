@@ -57,5 +57,41 @@ test("strict parser ignores inline comments outside quotes", () => {
   assert.strictEqual(rows[1].name, "pkg # kept");
 });
 
+
+test("strict parser accepts cordis inject structural key with nested rows", () => {
+  const text = `- insert:
+    - id: app
+      name: '@deepseek-ai/dsh-web-app'
+      inject:
+        - id: server
+          name: '@deepseek-ai/dsh-server'
+        - id: client
+          name: '@deepseek-ai/dsh-client'
+- insert:
+    - id: forge
+      name: dsh-forge
+`;
+  const rows = parseCompositionTextStrict(text, "fixture");
+  assert.strictEqual(rows.length, 4);
+  assert.strictEqual(rows[0].id, "app");
+  assert.strictEqual(rows[0].inject, true);
+  assert.strictEqual(rows[1].id, "server");
+  assert.strictEqual(rows[2].id, "client");
+  assert.strictEqual(rows[3].id, "forge");
+});
+
+test("strict parser accepts inline inject list form", () => {
+  const text = `- insert:
+    - id: app
+      name: pkg
+      inject: [server, client]
+    - id: forge
+      name: dsh-forge
+`;
+  const rows = parseCompositionTextStrict(text, "fixture");
+  assert.strictEqual(rows.length, 2);
+  assert.strictEqual(rows[0].inject, true);
+});
+
 console.log("\ncomposition-strict: " + pass + " pass / " + fail + " fail");
 process.exit(fail ? 1 : 0);

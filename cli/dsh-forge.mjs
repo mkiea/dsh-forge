@@ -17,7 +17,7 @@ import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
-  runAnalysis, clearAnalysisCache,
+  runAnalysis, clearAnalysisCache, buildEmbedData,
   html as renderHtml, dashboard as renderDashboard,
   UI_MODE, decideUiMode, decideAfterPortProbe,
   hasDesktop, COMPLEXITY_LIGHT, COMPLEXITY_HEAVY
@@ -248,16 +248,18 @@ function openBrowser(url) {
   }
 }
 
-async function startWeb(analysis, opts) {
-  // Prefer the interactive 8-module workspace; fall back to the self-contained
-  // SVG topology page when web/dashboard-client.js is not shipped alongside.
-  let page;
-  try {
-    page = renderDashboard(analysis);
-  } catch {
-    // dashboard render failed -> fall back to the self-contained SVG topology page
-    page = renderHtml(analysis.ecosystem, analysis.assessment, analysis.conflicts);
-  }
+async function startWeb(initialAnalysis, opts) {
+  let analysis = initialAnalysis;
+  // Per-request fresh render: the interactive workspace reflects the latest
+  // analysis, falling back to the self-contained SVG topology page when
+  // web/dashboard-client.js is not shipped alongside.
+  const renderPage = () => {
+    try {
+      return renderDashboard(analysis, { live: true });
+    } catch {
+      return renderHtml(analysis.ecosystem, analysis.assessment, analysis.conflicts);
+    }
+  };
   const requested = opts.port;
   const free = await probePort(requested, opts.host);
   if (!free) {
@@ -272,13 +274,29 @@ async function startWeb(analysis, opts) {
     return;
   }
   const server = http.createServer((req, res) => {
-    if (req.url === "/healthz") {
+    const pathname = (req.url || "/").split("?")[0];
+    if (pathname === "/healthz") {
       res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify({ ok: true, rows: analysis.assessment.pluginCount }));
       return;
     }
+    if (pathname === "/api/refresh") {
+      // Dynamic re-analysis: skips the analysis cache, returns fresh embed data
+      // so the client can re-render without a full page reload.
+      clearAnalysisCache();
+      try {
+        analysis = runAnalysis({ profile: opts.profile, datasetPath: opts.dataset });
+        const data = buildEmbedData(analysis, { live: true });
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ ok: true, data }));
+      } catch (e) {
+        res.writeHead(500, { "content-type": "application/json" });
+        res.end(JSON.stringify({ ok: false, error: String(e.message || e).split("\n")[0] }));
+      }
+      return;
+    }
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(page);
+    res.end(renderPage());
   });
   server.on("error", (e) => {
     console.error("[dsh-forge] web server failed: " + String(e.message || e));
@@ -287,7 +305,7 @@ async function startWeb(analysis, opts) {
   });
   server.listen(requested, opts.host, () => {
     const actualPort = server.address().port;
-      const url = "http://" + opts.host + ":" + actualPort + "/";
+    const url = "http://" + opts.host + ":" + actualPort + "/";
     console.log("[dsh-forge] web panel listening at " + url);
     if (opts.open && openBrowser(url)) console.log("[dsh-forge] browser opened: " + url);
     console.log("[dsh-forge] press Ctrl+C to stop");

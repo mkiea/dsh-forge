@@ -177,6 +177,11 @@ export function parseCompositionTextStrict(text, layer, opts = {}) {
         }
         row.configText = cfgLines.join("\n");
         continue;
+      } else if (key === "inject") {
+        // cordis bundle structural key: declares injected sub-plugins. The
+        // nested '- id:' entries sit at a deeper indent and parse as their
+        // own rows via the row-boundary break above.
+        row.inject = true;
       } else {
         fail(i + 1, "unsupported row key: " + key);
       }

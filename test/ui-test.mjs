@@ -6,6 +6,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import vm from "node:vm";
+import { runAnalysis, dashboard } from "../core/index.js";
 
 const ROOT = path.dirname(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")));
 const DASH = path.join(ROOT, "reports", "dashboard.html");
@@ -181,6 +182,24 @@ if (app) {
   app.removeRow();
   check("removeRow updates sim result", elements.simResult.innerHTML.includes("已禁用/移除：tool-web"));
   app.reset();
+}
+
+// ---- C) live-mode dynamic markers (hybrid static + dynamic review) ----
+{
+  const SNAP = path.join(ROOT, "data", "ecosystem.json");
+  const liveHtml = dashboard(runAnalysis({ datasetPath: SNAP }), { live: true });
+  check("live dashboard renders refresh button", liveHtml.includes("id='refreshBtn'"));
+  check("live dashboard renders live badge", liveHtml.includes("live-badge"));
+  check("live dashboard embeds live:true", /"live":\s*true/.test(liveHtml));
+  check("live dashboard metaLine present", liveHtml.includes("id='metaLine'"));
+  check("static dashboard has no refresh button (graceful offline)", !dash.includes("id='refreshBtn'"));
+  const liveWin = { __DSH__: data, __DSH_VERSION__: "0.1.4", __DSH_APP__: null, prompt: windowMock.prompt };
+  const liveCtx = vm.createContext({ window: liveWin, document: doc, console, prompt: windowMock.prompt, Set, Array, Object, JSON, String, Math, Date, Number, RegExp, isNaN, parseInt, parseFloat });
+  let liveErr = null;
+  try { new vm.Script(clientSrc, { filename: "dashboard-client.js" }).runInContext(liveCtx); }
+  catch (e) { liveErr = e; }
+  check("live client executes without error", !liveErr, liveErr ? liveErr.message : "");
+  check("live client exposes refresh()", !!liveWin.__DSH_APP__ && typeof liveWin.__DSH_APP__.refresh === "function");
 }
 
 const lines = [];
