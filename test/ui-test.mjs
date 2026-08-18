@@ -49,7 +49,8 @@ if (data) {
   check("INV invariants table present", ["INV-1", "INV-2", "INV-3", "INV-4", "INV-5", "INV-6"].every((k) => dash.includes(k)));
   check("truthSource embedded", typeof data.truthSource === "string", data.truthSource);
   check("confidenceCap key present", "confidenceCap" in data, String(data.confidenceCap));
-  check("findingsValid key present", "findingsValid" in data, JSON.stringify(data.findingsValid));
+  check("findingsValid is violations array", Array.isArray(data.findingsValid), JSON.stringify(data.findingsValid));
+  check("findingsValid empty (all valid)", Array.isArray(data.findingsValid) && data.findingsValid.length === 0, "violations=" + (Array.isArray(data.findingsValid) ? data.findingsValid.length : "n/a"));
   check("mixedNote sourceLabel present", data.mixedNote && typeof data.mixedNote.sourceLabel === "string", data.mixedNote && data.mixedNote.sourceLabel);
   check("conflict finding_id embedded", data.conflicts.every((c) => Object.prototype.hasOwnProperty.call(c, "finding_id")));
   check("leaks + leakSummary embedded", Array.isArray(data.leaks) && data.leakSummary && typeof data.leakSummary.total === "number", data.leakSummary && data.leakSummary.total);

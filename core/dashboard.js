@@ -266,7 +266,7 @@ function invPage(embed) {
   out.push("<div class='kpis'>");
   out.push("<div class='kpi'><div class='kpi-v'>" + esc(embed.truthSource || "scan") + "</div><div class='kpi-k'>真相源 truthSource</div></div>");
   out.push("<div class='kpi'><div class='kpi-v'>" + esc(embed.confidenceCap || "—") + "</div><div class='kpi-k'>置信度上限 confidenceCap</div></div>");
-  out.push("<div class='kpi'><div class='kpi-v'>" + esc(embed.findingsValid === true ? "✓" : embed.findingsValid === false ? "✗" : "—") + "</div><div class='kpi-k'>findingsValid 校验</div></div>");
+  out.push("<div class='kpi'><div class='kpi-v'>" + esc(Array.isArray(embed.findingsValid) ? (embed.findingsValid.length === 0 ? "✓" : "✗ (" + embed.findingsValid.length + ")") : "—") + "</div><div class='kpi-k'>findingsValid 校验</div></div>");
   out.push("<div class='kpi'><div class='kpi-v'>" + esc(embed.leaks ? embed.leaks.length : 0) + "</div><div class='kpi-k'>泄漏发现</div></div>");
   out.push("</div>");
   out.push("<div class='fb-disclaimer'>" + esc(embed.mixedNote.sourceLabel || "") + "<br>本页展示静态证据 + 置信度元数据；运行时校准在 src 插件壳层订阅 Cordis 生命周期事件后与静态证据融合（INV-1），core 离线一致通关。" + (embed.confidenceCap ? "<br>当前 scan 降级：所有 finding 置信度不高于 <b>medium</b>（INV-4）。" : "") + "</div>");

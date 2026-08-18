@@ -243,7 +243,7 @@ Web 形态采用**混合审查**：每次请求用当前分析结果新鲜渲染
 - `analyze_dependencies` 真实执行：4 层组合（profile 根 + dsh-base + dsh-web-app + patch），
   138 插件行（含 forge/forge-ui）/ 128 包 / 1226+ 依赖边
 - 自动化测试（16 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
-  - `test/ui-test.mjs` — 仪表盘 workspace 结构与交互（61 项，含 v0.1.5 混合架构页/嵌入字段/finding_id 断言）
+  - `test/ui-test.mjs` — 仪表盘 workspace 结构与交互（62 项，含 v0.1.5 混合架构页/嵌入字段/finding_id 语义与渲染断言）
   - `test/ui-plugin-test.mjs` — 客户端插件 VM 执行 + slot 注册 + 模态交互（22 项）
   - `test/semver-consistency.test.mjs` — SemVer 单一实现回归 + 防镜像回归（30 项）
   - `test/review-fixes.test.mjs` — 作用域三态 / 事件校准 / 泄漏切片（15 项）

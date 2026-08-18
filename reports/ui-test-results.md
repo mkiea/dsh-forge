@@ -3,9 +3,9 @@
 - 被测对象：reports/dashboard.html（交互仪表盘）、reports/plugin-graph.html（图谱）、web/dashboard-client.js（客户端脚本）
 - 数据来源：data/ecosystem.json（真实装载：web profile + preset:standard，136 行 / 131 插件）
 - 方法：HTML 结构校验 + Node DOM-mock 全交互路径执行（无浏览器环境）
-- 时间：2026-08-18T17:09:50.756Z
+- 时间：2026-08-18T18:34:19.850Z
 
-## 结果：61 通过 / 0 失败
+## 结果：62 通过 / 0 失败
 
 ---
 PASS  dashboard.html exists and non-trivial  [373837B]
@@ -33,7 +33,8 @@ PASS  hybrid pages present
 PASS  INV invariants table present
 PASS  truthSource embedded  [snapshot]
 PASS  confidenceCap key present  [null]
-PASS  findingsValid key present  [[]]
+PASS  findingsValid is violations array  [[]]
+PASS  findingsValid empty (all valid)  [violations=0]
 PASS  mixedNote sourceLabel present  [离线快照 2026-08-14T03:41:06.010Z（可复现）]
 PASS  conflict finding_id embedded
 PASS  leaks + leakSummary embedded
