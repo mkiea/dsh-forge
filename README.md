@@ -6,6 +6,8 @@
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
 
+> **v0.1.5 更新**：静态-运行时混合验证——运行时校准（`core/runtime-calibration.js` 订阅 Cordis 生命周期事件 + finding_id 绑定 + A-4 滑动窗口）与证据融合引擎（静态 + 运行时未观测三态，非运行时观测绝不清除告警，INV-3）打通「静态初筛 + 运行时校准」闭环；真相源三态降级（dump-config/auto/scan/snapshot，scan 全局置信度 ≤ medium）；node:vm 沙箱加固（null 原型隔离 + 冻结 process + 可配置超时）；仪表盘新增「混合验证体系」（INV-1~6）与「副作用泄漏」页，模块导航 8→10，修复 findingsValid 渲染；自包含套件 13→16，用例总数 832→883。
+>
 > **v0.1.1 更新**：统一错误反馈体系（FORGE-001~014 错误码 + fatal/error/warning/info 分级 + 仪表盘"错误与反馈"面板 +
 > 启动预检终端诊断）；作用域感知冲突判定（per-agent 变体合法）；运行期事件校准（tool/call·tool/result·turn/end 行为基线）；
 > 泄漏扫描 apply 路径切片；仪表盘入口移至 sidebar 会话框下方/设置上方（会话头按钮已移除）。
