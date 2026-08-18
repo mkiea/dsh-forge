@@ -24,7 +24,7 @@ function exists(rel) {
   return fs.existsSync(path.join(ROOT, rel));
 }
 
-const MODULE_COUNT = "22"; // core/ module count (see ARCHITECTURE.md)
+const MODULE_COUNT = "25"; // core/ module count excl. index facade (see ARCHITECTURE.md)
 
 // 1. test files must carry a test suffix (.test.mjs or -test.mjs); bare names
 //    (the historical hazard) are flagged
@@ -72,7 +72,7 @@ const MODULE_COUNT = "22"; // core/ module count (see ARCHITECTURE.md)
   check("README.en.md references " + n + " self-contained suites", read("README.en.md").includes(n + " self-contained suites"));
   check("README.md references cache-behavior suite", read("README.md").includes("test/cache-behavior.test.mjs"));
   check("README.en.md references cache-behavior suite", read("README.en.md").includes("test/cache-behavior.test.mjs"));
-  const TOTAL_CASES = "832";
+  const TOTAL_CASES = "883";
   check("README.md total case count is current (" + TOTAL_CASES + ")", read("README.md").includes(TOTAL_CASES + " 项"));
   check("README.en.md total case count is current (" + TOTAL_CASES + ")", read("README.en.md").includes(TOTAL_CASES + " items"));
 }

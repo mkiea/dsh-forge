@@ -1,6 +1,17 @@
 # Changelog
 ## [Unreleased]
 
+### 静态-运行时混合验证体系（v0.1.5 P0+P1）
+
+- **P1-1 运行时校准**（`core/runtime-calibration.js`）：注入式 ctx（不 import），订阅 Cordis 生命周期事件（plugin/apply、plugin/dispose、tool/call、tool/result、turn/end）；A-4 滑动窗口（N=256）+ 事件基数上限（512）+ 超限丢帧计数优先策略；INV-2 仅观测 start() 之后行为不回溯初始化；A-2 每条 finding 生成稳定 finding_id 绑定运行时证据；dispose() 全量 off 保证可逆性；无 ctx 离线降级诚实 not-executed。
+- **P1-2 证据融合引擎**（`core/evidence-fusion.js`）：A-1 未观测三态（not-executed / executed-clean / executed-residual，禁止 absence-of-evidence 当作 evidence-of-absence）；覆盖 7 行融合矩阵（static-suspect/heuristic × residual/clean/not-executed + contract-source）；A-3 升级或 runtime-confirmed 的 high 告警随附 next_action + reproduce_hint；INV-3 未观测仅降级绝不清除。
+- **A-2 证据元数据**（`core/evidence.js`）：稳定 finding_id（作用域+名称+类别+位置 FNV 哈希，可复现）；INV-4 置信度上限 capConfidence（只降不升，scan 全局 medium）；INV-6 schema 校验 validateFindings 强制 confidence/evidence 无默认值。
+- **P0-1 真相源三态降级**：`core/index.js` runAnalysis 根据 truthSource（dump-config/auto/scan/snapshot）计算有效真相源，scan 全局降级，输出 truthSource + confidenceCap 元数据。
+- **P1-3 scanLeaks 联动接线**：`core/index.js` 对 conflicts/leaks findings 统一 attachFindingIds + 按真相源 capConfidence，输出 findingsValid 校验结果；泄漏发现已带 confidence/evidence。
+- **P0-3 node:vm 沙箱加固**（`core/composition.js`）：`evalJsExpr` 使用 null 原型隔离全局 + 冻结 process 投影 + 可配置超时（原生），内存限制如实标注非 node:vm 原生能力（尽力近似）。
+- **新增测试套件**：evidence-fusion（18 项）、runtime-calibration（21 项）、truth-source-degradation（12 项）；自包含套件 13 → 16，用例总数 832 → 883。
+- **文档同步**：ARCHITECTURE 纳入 25 个模块（+evidence/evidence-fusion/runtime-calibration）+ 8 章设计不变量 INV-1~6 + 3 个新套件清单；README/README.en 同步套件数与用例数；doc-consistency 模块数 22→25、用例总数 832→883。
+
 ### 审视后续修复（审计 P2）
 
 - P2-1 版本文案：0.1.4 段 "ui-plugin/package.json bump 0.1.3" 补全为 "bump 0.1.3 → 0.1.4"。

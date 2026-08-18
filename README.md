@@ -57,7 +57,7 @@ DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、�
 三层分离，详见 [ARCHITECTURE.md](./ARCHITECTURE.md)：
 
 ```
-core/          零依赖分析引擎（22 个模块，Node 内置 API only）
+core/          零依赖分析引擎（25 个模块，Node 内置 API only）
   ├─ composition.js   组合源发现 + YAML 解析 + 生态收集
   ├─ truth.js         dump-config 真相源（auto/dump-config/scan 三态）
   ├─ analyze.js       依赖图构建 + 风险评估
@@ -242,7 +242,7 @@ Web 形态采用**混合审查**：每次请求用当前分析结果新鲜渲染
 - `dsh web` 正常启动于 http://127.0.0.1:3080，浏览器无报错，**13 个工具**注册成功
 - `analyze_dependencies` 真实执行：4 层组合（profile 根 + dsh-base + dsh-web-app + patch），
   138 插件行（含 forge/forge-ui）/ 128 包 / 1226+ 依赖边
-- 自动化测试（13 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
+- 自动化测试（16 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
   - `test/ui-test.mjs` — 仪表盘 workspace 结构与交互（48 项）
   - `test/ui-plugin-test.mjs` — 客户端插件 VM 执行 + slot 注册 + 模态交互（22 项）
   - `test/semver-consistency.test.mjs` — SemVer 单一实现回归 + 防镜像回归（30 项）
@@ -256,6 +256,9 @@ Web 形态采用**混合审查**：每次请求用当前分析结果新鲜渲染
     - `test/cache-behavior.test.mjs` — runAnalysis 缓存失效/淘汰/快照守护（7 项）
     - `test/tools-snapshot-smoke.test.mjs` — 13 工具快照半集成 + output.schema 校验（13 项）
     - `test/composition-strict.test.mjs` — YAML fail-loud + vm 沙箱逃逸回归（8 项，含 inline comment 与 cordis inject 行键）
+  - `test/evidence-fusion.test.mjs` — 证据融合引擎（A-1 三态 + A-2 稳定 id + A-3 可行动 + 7 行矩阵 + INV-3 绝不清除，18 项）
+  - `test/runtime-calibration.test.mjs` — 运行时校准（A-4 滑窗/基数上限 + INV-2 时序边界 + 可逆性，21 项）
+  - `test/truth-source-degradation.test.mjs` — 真相源三态降级（INV-4 置信度上限，12 项）
 
 ## 错误反馈体系
 
@@ -289,5 +292,5 @@ harnessVersion 绑定与知识库版本门控（R2）、泄漏扫描（R3）、�
 - `prompt/` — 专家 persona 提示词（含风险预测）
 - `data/` — 生态快照（`ecosystem.json` versioned；`history/` 运行期生成，gitignored）
 - `reports/` — 生成的分析报告与图谱
-- `test/` — 自包含测试套件（13 套件 832 项，零本机依赖）
+- `test/` — 自包含测试套件（16 套件 883 项，零本机依赖）
 - `scripts/` — 生成与构建脚本（generate-dashboard / build-ui / mount-ui）

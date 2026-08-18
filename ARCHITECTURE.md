@@ -29,7 +29,7 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 │  │            │          │  │  └────────────────────┘  │ │
 │  │   ┌────────▼────────┐ │  └──────────────────────────┘ │
 │  │   │  core/ (引擎)   │ │                               │
-│  │   │  22 个纯逻辑模块 │ │                               │
+│  │   │  25 个纯逻辑模块 │ │                               │
 │  │   └─────────────────┘ │                               │
 │  └───────────────────────┘                               │
 └─────────────────────────────────────────────────────────┘
@@ -63,6 +63,9 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 | `suggest.js` | 补丁建议生成 | `suggestPatch` |
 | `knowledge.js` | 知识库 + 已知模式 + 废弃扫描 | `knownPatterns`, `scanDeprecations` |
 | `errors.js` | 统一错误反馈（归一化/聚合/预检/渲染） | `buildFeedback`, `normalizeFeedback`, `preflight`, `renderFeedback` |
+| `evidence.js` | 证据元数据（INV-6/A-2）：稳定 finding_id + 置信度上限 + schema 校验 | `makeFindingId`, `attachFindingIds`, `capConfidence`, `validateFindings` |
+| `evidence-fusion.js` | 证据融合（A-1 三态 + A-3 可行动 + INV-3 只降不清除） | `fuse` |
+| `runtime-calibration.js` | 运行时校准（A-4 滑窗 + INV-2 时序边界 + A-2 关联键） | `createRuntimeCalibration`, `staticRuntimeCalibration` |
 
 `core/index.js` 是门面模块，统一 re-export 全部公共 API，并提供 `runAnalysis()` 一站式管线和 `saveSnapshot()` / `loadSnapshot()` 快照序列化。
 
@@ -199,6 +202,9 @@ check_upgrades execute(args)
 | 客户端插件 VM 执行 | `test/ui-plugin-test.mjs` | 22 | 2 slot 注册 + locale + 模态开关 + wide/collapsed 渲染 |
 | SemVer 回归 | `test/semver-consistency.test.mjs` | 30 | core/semver.js 单一实现 30 用例固定断言 + 防 dashboard 镜像回归 |
 | 作用域/校准/泄漏 | `test/review-fixes.test.mjs` | 15 | scope 三态 + mock 事件校准 + 泄漏切片 |
+| 证据融合引擎 | `test/evidence-fusion.test.mjs` | 18 | A-1 三态 + A-2 稳定 id + A-3 可行动 + 7 行矩阵 + INV-3 绝不清除 |
+| 运行时校准 | `test/runtime-calibration.test.mjs` | 21 | A-4 滑窗/基数上限/超限丢帧 + INV-2 时序边界 + 可逆性 |
+| 真相源三态降级 | `test/truth-source-degradation.test.mjs` | 12 | INV-4 置信度上限（只降不升）+ scan 全局降级 |
 | 升级检查优化 | `test/upgrade-opt.test.mjs` | 16 | 并发池 + 超时 + 镜像降级 + 安装命令 + 独立性 + 阻断预测 |
 | 错误反馈冒烟 | `test/feedback-smoke.test.mjs` | 40 | FORGE 错误码 / 分级 / 聚合 / 渲染 |
 | 空组合 / 泄漏规则 | `test/empty-plugins.test.mjs` | 24 | 空组合边界 + 泄漏规则 |
@@ -228,6 +234,18 @@ check_upgrades execute(args)
 | `data/ecosystem.json` | 离线生态快照（`dsh-forge-ecosystem@1` 格式） |
 | `data/history/` | 历史快照存档（gitignored，运行期生成；`data/ecosystem.json` 为 versioned 基线） |
 | `reports/runtime-verification-checklist.md` | 静态盲区的运行时沙箱验证清单（A 生命周期 / B 事件竞态 / C Seam / D Agent Loop / E 证据规范） |
+
+
+## 8. 架构设计不变量（Design Invariants）
+
+| 编号 | 不变量 | 违反后果 | 验证方式 |
+|---|---|---|---|
+| INV-1 | core 层保持离线零依赖，运行时观测逻辑只在 src 插件壳层 | core 无法独立运行，离线审计能力丧失 | CI：纯 Node.js 环境运行 core 测试套件 |
+| INV-2 | 运行时校准只观测 dsh-forge 加载之后的事件，不回溯初始化 | 虚假承诺导致漏检，用户信任崩塌 | 文档显式声明 + 测试验证启动时序边界 |
+| INV-3 | 运行时未观测到风险仅降级、绝不清除（且未观测三态化，absence≠evidence-of-absence） | 引入新漏检，违反保守性原则 | 单元测试覆盖全部融合降级 + 三态边界（A-1） |
+| INV-4 | 真相源降级到 scan 后全局降低置信度上限 | 输出虚假高可靠结果，误导自动化决策 | 自动化测试：scan 模式输出校验 |
+| INV-5 | vm 加固仅提升可信配置场景安全性，不用于对抗不可信输入 | 安全边界被突破，代码注入风险 | 安全文档声明 + 威胁模型评审 |
+| INV-6 | 所有静态扫描输出必须携带置信度元数据（confidence/evidence），区分推测来源与事实证据 | 证据不可追溯，无法区分误报与真实风险 | Schema 校验：所有 findings 必须含 confidence 字段 |
 
 ## 7. 版本策略
 

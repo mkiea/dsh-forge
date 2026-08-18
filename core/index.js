@@ -21,6 +21,9 @@ import { suggestPatch } from "./suggest.js";
 import { checkUpgrades } from "./upgrade.js";
 import { historyStats } from "./stats.js";
 import { scanLeaks } from "./leaks.js";
+import { attachFindingIds, capConfidence, validateFindings, makeFindingId } from "./evidence.js";
+import { fuse } from "./evidence-fusion.js";
+import { createRuntimeCalibration, staticRuntimeCalibration } from "./runtime-calibration.js";
 import { createCalibration, staticCalibration } from "./calibration.js";
 import { buildFeedback, normalizeFeedback, preflight, renderFeedback, SEVERITY_ORDER } from "./errors.js";
 
@@ -42,6 +45,9 @@ export { suggestPatch };
 export { checkUpgrades };
 export { historyStats };
 export { scanLeaks, createCalibration, staticCalibration };
+export { attachFindingIds, capConfidence, validateFindings, makeFindingId };
+export { fuse };
+export { createRuntimeCalibration, staticRuntimeCalibration };
 export { buildFeedback, normalizeFeedback, preflight, renderFeedback, SEVERITY_ORDER };
 
 export { knownPatterns, scanDeprecations, KNOWN_LIBS, CLIENT_PLANE_SERVICES, runtimeVerified, RUNTIME_VERIFICATION_CHECKS };
@@ -187,8 +193,17 @@ export function runAnalysis(opts = {}) {
   const deprecations = scanDeprecations(eco.packages);
   const verified = runtimeVerified(eco);
   const leaks = scanLeaks(eco.packages);
+  // A-2 / INV-6: every finding carries a stable finding_id + confidence/evidence.
+  attachFindingIds(conflicts.conflicts);
+  attachFindingIds(leaks.findings);
+  // INV-4 truth-source confidence cap: scan-derived results never exceed medium
+  // (dump-config may reach high; dataset/snapshot loads keep their recorded level).
+  const effectiveTruthSource = eco.truthSource || (opts.datasetPath ? "snapshot" : "scan");
+  const capSource = effectiveTruthSource === "scan";
+  if (capSource) { capConfidence(conflicts.conflicts, "medium"); capConfidence(leaks.findings, "medium"); }
   const feedback = buildFeedback({ conflicts, leaks, assessment, patterns, verified });
-  const result = { ecosystem: eco, graph, conflicts, assessment, patterns, deprecations, verified, leaks, feedback };
+  const findingsValid = validateFindings([...conflicts.conflicts, ...leaks.findings]);
+  const result = { ecosystem: eco, graph, conflicts, assessment, patterns, deprecations, verified, leaks, feedback, truthSource: effectiveTruthSource, confidenceCap: capSource ? "medium" : (effectiveTruthSource === "dump-config" ? "high" : null), findingsValid };
   if (analysisCache.size >= ANALYSIS_CACHE_MAX) analysisCache.delete(analysisCache.keys().next().value);
   analysisCache.set(key, result);
   return result;

@@ -52,7 +52,7 @@ A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency an
 Three layers, see [ARCHITECTURE.md](./ARCHITECTURE.md):
 
 ```
-core/          dependency-free engine (22 modules, Node built-ins only)
+core/          dependency-free engine (25 modules, Node built-ins only)
   ├─ composition.js   composition discovery + YAML parsing + ecosystem collection
   ├─ truth.js         dump-config ground truth (auto/dump-config/scan)
   ├─ analyze.js       dependency graph + risk scoring
@@ -211,7 +211,7 @@ the dashboard always reflects the real combination without a page reload.
 
 - `dsh web` runs at http://127.0.0.1:3080, no browser errors, **13 tools** registered
 - `analyze_dependencies` live: 4 layers (profile root + dsh-base + dsh-web-app + patch), 138 rows (incl. forge/forge-ui) / 128 packages / 1226+ edges
-- Automated tests (13 self-contained suites; smoke13 13/13 depends on the local harness, not in CI):
+- Automated tests (16 self-contained suites; smoke13 13/13 depends on the local harness, not in CI):
   - `test/ui-test.mjs` — dashboard workspace structure & interaction (48)
   - `test/ui-plugin-test.mjs` — client plugin VM execution + slot registration + modal interaction (22)
   - `test/semver-consistency.test.mjs` — single-source SemVer regression + anti-mirror guard (30)
@@ -225,6 +225,9 @@ the dashboard always reflects the real combination without a page reload.
     - `test/cache-behavior.test.mjs` — runAnalysis cache invalidation/eviction/snapshot guard (7)
     - `test/tools-snapshot-smoke.test.mjs` — 13-tool snapshot semi-integration + output.schema validation (13)
     - `test/composition-strict.test.mjs` — YAML fail-loud + vm sandbox escape regression (8, incl. inline comments & cordis inject key)
+  - `test/evidence-fusion.test.mjs` — evidence-fusion engine (A-1 three states + A-2 stable id + A-3 actionable + 7-row matrix + INV-3 never-clear, 18)
+  - `test/runtime-calibration.test.mjs` — runtime calibration (A-4 window/cardinality cap + INV-2 ordering + reversibility, 21)
+  - `test/truth-source-degradation.test.mjs` — truth-source degradation (INV-4 confidence cap, 12)
 
 ## Error feedback
 
@@ -256,5 +259,5 @@ The third-party PM review acceptance criteria are implemented item by item: dump
 - `prompt/` — expert persona prompt (with risk prediction)
 - `data/` — ecosystem snapshots (`ecosystem.json` versioned; `history/` runtime-generated and gitignored)
 - `reports/` — generated reports and graphs
-- `test/` — self-contained test suites (13 suites, 832 items, no machine dependency)
+- `test/` — self-contained test suites (16 suites, 883 items, no machine dependency)
 - `scripts/` — build and mount scripts

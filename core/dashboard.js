@@ -58,7 +58,7 @@ function buildFeedbackList(inputs) {
 
 // Compact, embeddable dataset for the browser recompute.
 export function buildEmbedData(analysis, extra = {}) {
-  const { ecosystem: eco, graph, conflicts, assessment, patterns, verified } = analysis;
+  const { ecosystem: eco, graph, conflicts, assessment, patterns, verified, leaks, truthSource, confidenceCap, findingsValid } = analysis;
   const { packages, installed, nested, rows } = eco;
 
   const rowsData = [];
@@ -139,7 +139,7 @@ export function buildEmbedData(analysis, extra = {}) {
     pluginCount: assessment.pluginCount,
     edgeCount: graph.edges.length,
     fragile: assessment.fragilePath,
-    conflicts: conflicts.conflicts.map((c) => ({ type: c.type, severity: c.severity, message: c.message, evidence: c.evidence, impact: c.impact, advice: c.advice, confidence: c.confidence })),
+    conflicts: conflicts.conflicts.map((c) => ({ type: c.type, severity: c.severity, message: c.message, evidence: c.evidence, impact: c.impact, advice: c.advice, confidence: c.confidence, finding_id: c.finding_id })),
     conflictSummary: conflicts.summary,
     sharedDeps: graph.shared.slice(0, 15).map((s) => ({ dep: s.dep, installed: s.installed, ranges: s.ranges.map((r) => ({ range: r.range, count: r.count, satisfied: r.satisfied })) })),
     patterns: patterns.map((p) => ({ id: p.id, severity: p.severity, message: p.message, evidence: p.evidence, confidence: p.confidence })),
@@ -147,7 +147,13 @@ export function buildEmbedData(analysis, extra = {}) {
     rows: rowsData,
     candidates,
     history: historySeries(),
-    feedback: buildFeedbackList({ conflicts, leaks: analysis.leaks || { findings: [] }, patterns, verified })
+    leaks: (leaks ? leaks.findings : []).map((f) => ({ kind: f.kind, severity: f.severity, message: f.message, evidence: f.evidence, impact: f.impact, advice: f.advice, confidence: f.confidence, finding_id: f.finding_id, package: f.package })),
+    leakSummary: leaks ? leaks.summary : { total: 0, bySeverity: {} },
+    truthSource,
+    confidenceCap,
+    findingsValid,
+    mixedNote: { live, sourceLabel },
+    feedback: buildFeedbackList({ conflicts, leaks: leaks || { findings: [] }, patterns, verified })
   };
 }
 
@@ -245,6 +251,31 @@ const STYLE = "<style>" + "html,body{height:100%;margin:0}\nbody{font-family:'Se
 // ── workspace modules ────────────────────────────────────────────────────
 // Each module renders a page: left nav (tabs) + right content area.
 
+// INV / hybrid verification info page (v0.1.5).
+const INV_ROWS = [
+  ["INV-1", "core 离线零依赖，运行时观测只在 src 插件壳层", "core 套件纯 Node 运行，且 src 独享运行时订阅"],
+  ["INV-2", "运行时校准只观测加载后事件，不回溯初始化", "start() 之后才记录，启动时序边界可测"],
+  ["INV-3", "运行时未观测仅降级、绝不清除（未观测三态化）", "absence≠evidence-of-absence；融合矩阵保证不丢告警"],
+  ["INV-4", "真相源降级到 scan 后全局降低置信度上限", "scan 输出最高 medium，本页顶部展示当前生效上限"],
+  ["INV-5", "vm 加固仅提升可信配置场景安全性", "威胁模型限定，不承诺对抗不可信输入"],
+  ["INV-6", "所有静态扫描输出携带置信度元数据", "schema 校验 findings 必须含 confidence/evidence"]
+];
+function invPage(embed) {
+  const out = [];
+  out.push("<h2>混合验证体系（静态 + 运行时）</h2>");
+  out.push("<div class='kpis'>");
+  out.push("<div class='kpi'><div class='kpi-v'>" + esc(embed.truthSource || "scan") + "</div><div class='kpi-k'>真相源 truthSource</div></div>");
+  out.push("<div class='kpi'><div class='kpi-v'>" + esc(embed.confidenceCap || "—") + "</div><div class='kpi-k'>置信度上限 confidenceCap</div></div>");
+  out.push("<div class='kpi'><div class='kpi-v'>" + esc(embed.findingsValid === true ? "✓" : embed.findingsValid === false ? "✗" : "—") + "</div><div class='kpi-k'>findingsValid 校验</div></div>");
+  out.push("<div class='kpi'><div class='kpi-v'>" + esc(embed.leaks ? embed.leaks.length : 0) + "</div><div class='kpi-k'>泄漏发现</div></div>");
+  out.push("</div>");
+  out.push("<div class='fb-disclaimer'>" + esc(embed.mixedNote.sourceLabel || "") + "<br>本页展示静态证据 + 置信度元数据；运行时校准在 src 插件壳层订阅 Cordis 生命周期事件后与静态证据融合（INV-1），core 离线一致通关。" + (embed.confidenceCap ? "<br>当前 scan 降级：所有 finding 置信度不高于 <b>medium</b>（INV-4）。" : "") + "</div>");
+  out.push("<table class='conf'><thead><tr><th>不变量</th><th>要求</th><th>验证方式</th></tr></thead><tbody>");
+  for (const r of INV_ROWS) out.push("<tr><td><b>" + r[0] + "</b></td><td>" + esc(r[1]) + "</td><td>" + esc(r[2]) + "</td></tr>");
+  out.push("</tbody></table>");
+  return out;
+}
+
 function feedbackPage(embed) {
   const sevLabels = { fatal: "致命", error: "错误", warning: "警告", info: "信息" };
   const groups = ["fatal", "error", "warning", "info"];
@@ -315,6 +346,19 @@ function graphPage(embed, analysis) {
   return ["<h2>依赖图谱</h2>", renderGraph(analysis)];
 }
 
+function leaksPage(embed) {
+  const out = [];
+  const list = embed.leaks || [];
+  out.push("<h2>副作用泄漏发现（" + list.length + " 条 · 带 finding_id）</h2>");
+  if (!list.length) { out.push("<div class='fb-disclaimer'>扫描范围内未发现 apply 路径裸副作用注册泄漏。</div>"); return out; }
+  out.push("<table class='conf'><thead><tr><th>包</th><th>发现</th><th>级别</th><th>证据</th><th>置信度</th><th>finding_id</th></tr></thead><tbody>");
+  for (const f of list) {
+    out.push("<tr class='c-" + esc(f.severity) + "'><td>" + esc(f.package) + "</td><td>" + esc(f.message) + "</td><td><span class='sev " + esc(f.severity) + "'>" + esc(f.severity) + "</span></td><td>" + esc(f.evidence) + "</td><td>" + esc(f.confidence) + "</td><td><span class='ev'>" + esc(f.finding_id) + "</span></td></tr>");
+  }
+  out.push("</tbody></table>");
+  return out;
+}
+
 function conflictsPage(embed) {
   const out = [];
   out.push('<h2>冲突与发现（' + embed.conflicts.length + " 条）</h2><table class='conf'><thead><tr><th>类型</th><th>级别</th><th>内容</th><th>影响</th><th>建议</th><th>置信度</th></tr></thead><tbody>");
@@ -371,6 +415,8 @@ const MODULES = [
   { id: "page-conflicts", label: "冲突与发现", render: conflictsPage },
   { id: "page-shared", label: "共享依赖", render: sharedPage },
   { id: "page-patterns", label: "已知模式与验证", render: patternsPage },
+  { id: "page-inv", label: "混合验证体系", render: invPage },
+  { id: "page-leaks", label: "副作用泄漏", render: leaksPage },
   { id: "page-sim", label: "假设模拟", render: simPage }
 ];
 

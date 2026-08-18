@@ -3,12 +3,12 @@
 - 被测对象：reports/dashboard.html（交互仪表盘）、reports/plugin-graph.html（图谱）、web/dashboard-client.js（客户端脚本）
 - 数据来源：data/ecosystem.json（真实装载：web profile + preset:standard，136 行 / 131 插件）
 - 方法：HTML 结构校验 + Node DOM-mock 全交互路径执行（无浏览器环境）
-- 时间：2026-08-18T03:14:17.748Z
+- 时间：2026-08-18T16:45:41.489Z
 
 ## 结果：48 通过 / 0 失败
 
 ---
-PASS  dashboard.html exists and non-trivial  [370516B]
+PASS  dashboard.html exists and non-trivial  [373837B]
 PASS  graph html exists  [83338B]
 PASS  balanced script tags
 PASS  has closing html/body
@@ -32,7 +32,7 @@ PASS  graph has svg
 PASS  graph has health badge
 PASS  client script executes without error
 PASS  client app exposed (__DSH_APP__)
-PASS  workspace has module tabs  [8 tabs]
+PASS  workspace has module tabs  [10 tabs]
 PASS  default page is feedback  [page-feedback]
 PASS  feedback page active by default
 PASS  clicking tab switches page

@@ -19,18 +19,23 @@ export function defaultHome() {
 
 // Evaluate a !!js expression the way the loader would, but sandboxed to
 // process (platform/env/cwd), a dshHomePath helper, and nothing else.
-export function evalJsExpr(expr, { home, root, strict = false } = {}) {
+export function evalJsExpr(expr, { home, root, strict = false, timeoutMs = 1000 } = {}) {
   try {
-    const sandbox = {
+    // A-7 vm hardening (approximate, honest): null-prototype global (prototype
+    // isolation), frozen process projection, frozen helper surface, and a
+    // configurable run timeout (native). Memory limiting is NOT a node:vm
+    // native capability and is only approximated at shell boundaries; this
+    // hardening targets trusted-config scenarios, never untrusted input.
+    const sandbox = Object.assign(Object.create(null), {
       process: Object.freeze({
-      platform: process.platform,
-      env: Object.freeze({ ...process.env }),
-      cwd: () => root || process.cwd()
+        platform: process.platform,
+        env: Object.freeze({ ...process.env }),
+        cwd: () => root || process.cwd()
       }),
       dshHomePath: (p) => path.join(home || defaultHome(), p)
-    };
+    });
     const context = vm.createContext(sandbox, { codeGeneration: { strings: false, wasm: false } });
-    return vm.runInNewContext("(" + String(expr) + ")", context, { timeout: 100, displayErrors: false });
+    return vm.runInNewContext("(" + String(expr) + ")", context, { timeout: timeoutMs, displayErrors: false });
   } catch {
     if (strict) throw new Error("!!js expression failed: " + String(expr).trim());
       return undefined; // non-strict legacy behavior: treat as unset instead of surfacing user JS errors

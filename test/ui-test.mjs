@@ -115,7 +115,7 @@ const app = windowMock.__DSH_APP__;
 check("client app exposed (__DSH_APP__)", !!app);
 // fire DOMContentLoaded so th click handlers + click delegation register
 if (doc._handlers["DOMContentLoaded"]) doc._handlers["DOMContentLoaded"]();
-check("workspace has module tabs", tabCount === 8, tabCount + " tabs");
+check("workspace has module tabs", tabCount === 10, tabCount + " tabs");
 check("default page is feedback", pageIds[0] === "page-feedback", pageIds[0]);
 check("feedback page active by default", pages[0] && pages[0].classList.contains("active"));
 // tab switching: click second tab -> pages toggle
