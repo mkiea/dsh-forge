@@ -6,7 +6,7 @@
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
 
-> **v0.1.6 更新**：TUI 增强（审计 F1/F2）——R 键刷新失败不再退出进程（保留旧帧，底部内联红字 `refresh failed:...`，对齐仪表盘 /api/refresh 失败保留旧态）；`renderTui` 新增混合验证元数据行（truthSource 大写 + confidenceCap + leaks 计数 + findingsValid ok / N violation(s)）。
+> **v0.1.6 更新**：TUI 增强（审计 F1/F2）——R 键刷新失败不再退出进程（保留旧帧，底部内联红字 `refresh failed:...`，对齐仪表盘 /api/refresh 失败保留旧态）；`renderTui` 新增混合验证元数据行（truthSource 大写 + confidenceCap + leaks 计数 + findingsValid ok / N violation(s)）。**新增「使用引导」默认首页 + 名词解释**：面向小白的三步阅读指南、全站统一的级别颜色、悬停术语即弹白话解释（整体健康度 / truthSource / confidenceCap / findingsValid / 泄漏发现 等关键指标均已挂载），并统一各表面的错误/级别中文标签。各旧模块顶部含「本页说明」引导条，组件表表头可悬停查看列含义。
 >
 > **v0.1.5 更新**：静态-运行时混合验证——运行时校准（`core/runtime-calibration.js` 订阅 Cordis 生命周期事件 + finding_id 绑定 + A-4 滑动窗口）与证据融合引擎（静态 + 运行时未观测三态，非运行时观测绝不清除告警，INV-3）打通「静态初筛 + 运行时校准」闭环；真相源三态降级（dump-config/auto/scan/snapshot，scan 全局置信度 ≤ medium）；node:vm 沙箱加固（null 原型隔离 + 冻结 process + 可配置超时）；仪表盘新增「混合验证体系」（INV-1~6）与「副作用泄漏」页，模块导航 8→10，修复 findingsValid 渲染；自包含套件 13→16，用例总数 832→883。
 >
@@ -247,7 +247,7 @@ Web 形态采用**混合审查**：每次请求用当前分析结果新鲜渲染
 - `analyze_dependencies` 真实执行：4 层组合（profile 根 + dsh-base + dsh-web-app + patch），
   138 插件行（含 forge/forge-ui）/ 128 包 / 1226+ 依赖边
 - 自动化测试（16 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
-  - `test/ui-test.mjs` — 仪表盘 workspace 结构与交互（62 项，含 v0.1.5 混合架构页/嵌入字段/finding_id 语义与渲染断言）
+  - `test/ui-test.mjs` — 仪表盘 workspace 结构与交互（77 项，含 v0.1.5 混合架构页/嵌入字段/finding_id 语义与渲染断言，及 v0.1.6 引导页/名词解释/悬停提示/规范标签 + 旧模块引导条/表头详释）
   - `test/ui-plugin-test.mjs` — 客户端插件 VM 执行 + slot 注册 + 模态交互（22 项）
   - `test/semver-consistency.test.mjs` — SemVer 单一实现回归 + 防镜像回归（30 项）
   - `test/review-fixes.test.mjs` — 作用域三态 / 事件校准 / 泄漏切片（15 项）

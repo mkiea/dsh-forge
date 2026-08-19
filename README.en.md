@@ -6,7 +6,7 @@
 
 A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency analysis, conflict detection, risk assessment (with prediction), visualization and combination simulation.
 
-> **v0.1.6 changes**: TUI enhancement (audit F1/F2) — R-key refresh failure no longer exits the process (keeps the last frame, inline red `refresh failed:...` at the bottom, aligning with the dashboard /api/refresh stale-state behavior); `renderTui` adds a hybrid-validation metadata line (uppercase truthSource + confidenceCap + leaks count + findingsValid ok / N violation(s)).
+> **v0.1.6 changes**: TUI enhancement (audit F1/F2) — R-key refresh failure no longer exits the process (keeps the last frame, inline red `refresh failed:...` at the bottom, aligning with the dashboard /api/refresh stale-state behavior); `renderTui` adds a hybrid-validation metadata line (uppercase truthSource + confidenceCap + leaks count + findingsValid ok / N violation(s)). **Added a "Getting Started" default page + glossary** for beginners: a 3-step reading guide, site-wide severity color legend, and hover-tooltip plain-language explanations for terms (health / truthSource / confidenceCap / findingsValid / leaks KPIs all wired), plus unified error/severity Chinese labels across surfaces. Each legacy module gained a top "About this page" guide banner and hoverable column headers.
 >
 > **v0.1.5 changes**: static+runtime hybrid validation — runtime calibration (`core/runtime-calibration.js` subscribes Cordis lifecycle events, finding_id binding, A-4 sliding window) plus an evidence-fusion engine (static + runtime unobserved three-state; alerts are never cleared without runtime observation, INV-3) closing the "static first-pass + runtime calibration" loop; truth-source three-state degradation (dump-config/auto/scan/snapshot, scan caps confidence at ≤medium); node:vm sandbox hardening (null-prototype isolation + frozen process + configurable timeout); dashboard adds "Hybrid Validation" (INV-1~6) and "Side-effect Leaks" pages, module nav 8→10, findingsValid render fix; self-contained suites 13→16, total cases 832→883.
 >
@@ -216,7 +216,7 @@ the dashboard always reflects the real combination without a page reload.
 - `dsh web` runs at http://127.0.0.1:3080, no browser errors, **13 tools** registered
 - `analyze_dependencies` live: 4 layers (profile root + dsh-base + dsh-web-app + patch), 138 rows (incl. forge/forge-ui) / 128 packages / 1226+ edges
 - Automated tests (16 self-contained suites; smoke13 13/13 depends on the local harness, not in CI):
-  - `test/ui-test.mjs` — dashboard workspace structure & interaction (48)
+  - `test/ui-test.mjs` — dashboard workspace structure & interaction (77)
   - `test/ui-plugin-test.mjs` — client plugin VM execution + slot registration + modal interaction (22)
   - `test/semver-consistency.test.mjs` — single-source SemVer regression + anti-mirror guard (30)
   - `test/review-fixes.test.mjs` — scope states / event calibration / leak slicing (15)

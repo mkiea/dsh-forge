@@ -27,6 +27,64 @@ function esc(s) {
 }
 
 const SEV_COLOR = { blocking: "#d64545", high: "#e67e22", medium: "#f1c40f", low: "#27ae60", disabled: "#95a5a6" };
+// ── beginner guide + glossary (v0.1.6) ──────────────────────────────────────
+// Plain-language glossary for non-expert users. Hover a .tip to read the meaning.
+const GLOSSARY = [
+  ["整体健康度", "整组合风险的概括评级：A 最健康、D 最需处理，由各插件风险加权计算得出。"],
+  ["依赖边", "插件 A 依赖插件 B 的连线（A→B）。边越多，组合越复杂、越可能冲突。"],
+  ["版本冲突", "多个插件对同一依赖要求的版本互不满足（版本范围打架）。"],
+  ["工具重名", "两个插件暴露了名字相同的工具/命令，可能互相覆盖。"],
+  ["服务覆盖", "某插件声明的服务被另一个同名服务覆盖，后者生效、前者失效。"],
+  ["真相源 truthSource", "本次分析实际读取的数据来源：dump-config（实时配置）/ auto（自动探测）/ scan（扫描目录）/ snapshot（离线快照）。来源为 scan 时置信度整体下调。"],
+  ["置信度上限 confidenceCap", "当前生效的最大可信度。来源降级到 scan 时，所有发现的 confidence 不高于 medium。"],
+  ["findingsValid 校验", "对全部发现的字段合规自检：✓ 通过；✗ (N) 表示有 N 条不合格（缺字段/类型错）。"],
+  ["泄漏发现", "插件 apply 路径上可能在进程外残留的副作用（如未清理的全局监听、定时器），每条带独立 finding_id 便于追踪。"],
+  ["级别", "对每项发现风险或影响的高低估量。颜色全站统一：blocking 阻断(红) / high 高(橙) / medium 中(黄) / low 低(绿)。"],
+  ["置信度 confidence", "该发现自证的可信程度：high / medium / low，需结合真相源与证据来源共同判断。"],
+  ["finding_id", "每条发现的稳定编号，用于在『冲突与发现』等页面跨页追踪同一问题。"],
+  ["假设模拟", "临时添加/移除组合行做“如果这样会怎样”的推演，只读、不落盘、不修改任何组合。"],
+  ["层 layer", "组件从哪个配置层加载（preset 预设 / profile 覆盖 / 基础层等），越上层优先级越高、覆盖下层同名配置。"],
+  ["风险分 risk score", "组件风险信号的加权求和，分数越高越需关注。"],
+  ["信号 signal", "触发风险计算的一条依据（带权重），多条累加得到风险分。"],
+  ["状态 active/disabled", "active＝组件生效中；disabled＝已禁用、不参与运行。"]
+];
+
+// Canonical error/severity labels so every surface uses the same wording.
+const SEV_LABELS = {
+  fatal: "致命", error: "错误", warning: "警告", info: "信息",
+  blocking: "阻断", high: "高", medium: "中", low: "低", disabled: "禁用", verified: "已验证"
+};
+
+// Render a hover-tooltip term. Terms matching GLOSSARY get an explanation popup.
+function tip(term, label) {
+  const row = GLOSSARY.find((g) => g[0] === term);
+  return row ? '<span class="tip" data-tip="' + esc(row[1]) + '">' + esc(label || term) + "</span>" : esc(label || term);
+}
+
+// Unified severity badge (collapses the repeated <span class="sev"> markup).
+function sevBadge(sev) {
+  return '<span class="sev ' + esc(sev) + '">' + esc(sev) + "</span>";
+}
+
+// Per-module plain-language guidance rendered as a banner atop every page (v0.1.6).
+const MODULE_HELP = {
+  "page-feedback": "所有告警汇总，按严重程度「致命 → 错误 → 警告 → 信息」分组。先处理致命/错误；信息默认折叠，点「展开/收起」查看，每条带错误码与建议。",
+  "page-overview": "一张图看懂整组合：关键数字、风险分布环形图、组件按层分布柱图。健康度 A→D 越靠前越健康。",
+  "page-components": "插件清单，一行一个组件。用搜索框、层/风险/状态下拉筛选，点表头排序。风险分越高越需关注。",
+  "page-graph": "依赖关系图：每个色块＝一个插件，颜色＝风险级别，红色连线＝版本冲突（不满足）。",
+  "page-conflicts": "冲突与发现明细：类型 / 级别 / 内容 / 影响 / 建议 / 置信度，红色行最需处理。",
+  "page-shared": "被多个组件共同依赖的包：已装版本能否满足所有消费方要求，✗ 表示不满足。",
+  "page-patterns": "已知风险模式（pattern）与已验证事实（verified）。verified 表示已复核并修正组件风险分。",
+  "page-inv": "静态分析 + 运行时观测的混合验证体系：顶部是真相源/置信度卡片，下方为不变量 INV-1~6 及验证方式。",
+  "page-leaks": "插件 apply 路径上可能残留的副作用（全局监听/定时器等），每条带唯一 finding_id 可跨页追踪。",
+  "page-sim": "沙盒推演：临时添加/移除组件看健康度变化，只读、不落盘、不改真实组合。"
+};
+function modGuide(help) {
+  return '<div class="mod-guide"><b>本页说明：</b>' + help + "</div>";
+}
+
+// Tooltip + error-badge CSS (after STYLE, emitted as a normal string).
+const TIP_STYLE = "<style>.tip{border-bottom:1px dashed #9aa4ae;cursor:help;position:relative}\n.tip:hover::after{content:attr(data-tip);position:absolute;left:0;bottom:135%;z-index:60;width:260px;padding:8px 10px;background:#23272b;color:#f4f6f8;border-radius:8px;font-size:12px;line-height:1.55;box-shadow:0 4px 14px rgba(0,0,0,.28);white-space:normal;font-weight:400;text-align:left}\n.sev.fatal{background:#7a1f1f}.sev.error{background:#d64545}.sev.warning{background:#e67e22;color:#fff}\n.mod-guide{margin:0 0 12px;padding:8px 12px;border-radius:8px;background:#eef5fc;border:1px solid #cfe3f5;color:#3a4a5a;font-size:12px;line-height:1.7}.mod-guide b{color:#1f6feb;font-weight:600}\n</style>";
 
 function tokensOf(pkgName) {
   return String(pkgName).replace(/^@[^/]+\//, "").replace(/^dsh-/, "").split("-").filter(Boolean);
@@ -264,10 +322,10 @@ function invPage(embed) {
   const out = [];
   out.push("<h2>混合验证体系（静态 + 运行时）</h2>");
   out.push("<div class='kpis'>");
-  out.push("<div class='kpi'><div class='kpi-v'>" + esc(embed.truthSource || "scan") + "</div><div class='kpi-k'>真相源 truthSource</div></div>");
-  out.push("<div class='kpi'><div class='kpi-v'>" + esc(embed.confidenceCap || "—") + "</div><div class='kpi-k'>置信度上限 confidenceCap</div></div>");
-  out.push("<div class='kpi'><div class='kpi-v'>" + esc(Array.isArray(embed.findingsValid) ? (embed.findingsValid.length === 0 ? "✓" : "✗ (" + embed.findingsValid.length + ")") : "—") + "</div><div class='kpi-k'>findingsValid 校验</div></div>");
-  out.push("<div class='kpi'><div class='kpi-v'>" + esc(embed.leaks ? embed.leaks.length : 0) + "</div><div class='kpi-k'>泄漏发现</div></div>");
+  out.push("<div class='kpi'><div class='kpi-v'>" + esc(embed.truthSource || "scan") + "</div><div class='kpi-k'>" + tip("真相源 truthSource") + "</div></div>");
+  out.push("<div class='kpi'><div class='kpi-v'>" + esc(embed.confidenceCap || "—") + "</div><div class='kpi-k'>" + tip("置信度上限 confidenceCap") + "</div></div>");
+  out.push("<div class='kpi'><div class='kpi-v'>" + esc(Array.isArray(embed.findingsValid) ? (embed.findingsValid.length === 0 ? "✓" : "✗ (" + embed.findingsValid.length + ")") : "—") + "</div><div class='kpi-k'>" + tip("findingsValid 校验") + "</div></div>");
+  out.push("<div class='kpi'><div class='kpi-v'>" + esc(embed.leaks ? embed.leaks.length : 0) + "</div><div class='kpi-k'>" + tip("泄漏发现") + "</div></div>");
   out.push("</div>");
   out.push("<div class='fb-disclaimer'>" + esc(embed.mixedNote.sourceLabel || "") + "<br>本页展示静态证据 + 置信度元数据；运行时校准在 src 插件壳层订阅 Cordis 生命周期事件后与静态证据融合（INV-1），core 离线一致通关。" + (embed.confidenceCap ? "<br>当前 scan 降级：所有 finding 置信度不高于 <b>medium</b>（INV-4）。" : "") + "</div>");
   out.push("<table class='conf'><thead><tr><th>不变量</th><th>要求</th><th>验证方式</th></tr></thead><tbody>");
@@ -277,7 +335,6 @@ function invPage(embed) {
 }
 
 function feedbackPage(embed) {
-  const sevLabels = { fatal: "致命", error: "错误", warning: "警告", info: "信息" };
   const groups = ["fatal", "error", "warning", "info"];
   const list = (embed.feedback || []).filter((f) => f.code !== "FORGE-014"); // global disclaimer -> footer
   const disclaimer = (embed.feedback || []).find((f) => f.code === "FORGE-014");
@@ -288,11 +345,11 @@ function feedbackPage(embed) {
     const items = list.filter((f) => f.severity === g);
     if (!items.length) continue;
     const collapsible = g === "info";
-    out.push('<div class="fb-group"><b>' + (sevLabels[g] || g) + "（" + items.length + "）</b>" +
+    out.push('<div class="fb-group"><b>' + (SEV_LABELS[g] || g) + "（" + items.length + "）</b>" +
       (collapsible ? ' <button type="button" class="fb-toggle" onclick="window.__DSH_APP__ && window.__DSH_APP__.toggleFbGroup(this)">展开/收起</button>' : ""));
     out.push('<div class="fb-items"' + (collapsible ? ' style="display:none"' : "") + ">");
     for (const f of items) {
-      out.push('<div class="note fb fb-' + esc(g) + '"><span class="sev ' + esc(g) + '">' + esc(g) + "</span> <b>" + esc(f.code) + "</b> " + esc(f.message) +
+      out.push('<div class="note fb fb-' + esc(g) + '">' + sevBadge(g) + ' <b>' + esc(f.code) + "</b> " + esc(f.message) +
         (f.detail ? ' <div class="ev">详情: ' + esc(f.detail) + "</div>" : "") +
         (f.guidance ? ' <div class="ev">建议: ' + esc(f.guidance) + "</div>" : "") +
         (f.source ? ' <div class="ev">来源: ' + esc(f.source) + "</div>" : "") + "</div>");
@@ -318,8 +375,8 @@ function overviewPage(embed, analysis) {
   ];
   out.push("<h2>概览</h2>");
   out.push('<div class="kpis">');
-  for (const [k, v] of kpis) out.push('<div class="kpi"><div class="kpi-v">' + esc(v) + '</div><div class="kpi-k">' + esc(k) + "</div></div>");
-  out.push('<div class="kpi health"><div class="kpi-v badge ' + embed.health + '">' + embed.health + '</div><div class="kpi-k">整体健康度</div></div>');
+  for (const [k, v] of kpis) out.push('<div class="kpi"><div class="kpi-v">' + esc(v) + '</div><div class="kpi-k">' + tip(k) + "</div></div>");
+  out.push('<div class="kpi health"><div class="kpi-v badge ' + embed.health + '">' + embed.health + '</div><div class="kpi-k">' + tip("整体健康度") + "</div></div>");
   out.push("</div>");
   out.push('<div class="panels">' + donut(embed.bySeverity) + layerBars(analysis) + "</div>");
   if (embed.history && embed.history.length) {
@@ -338,7 +395,7 @@ function componentsPage(embed) {
   out.push('<select id="fStatus" onchange="window.__DSH_APP__ && window.__DSH_APP__.apply()"><option value="">全部状态</option><option value="active">active</option><option value="disabled">disabled</option></select>');
   out.push('<span id="rowCount" class="count"></span></div>');
   out.push('<table id="tbl"><thead><tr>');
-  out.push('<th data-k="id">row id</th><th data-k="pkg">package@version</th><th data-k="layer">层</th><th data-k="disabled">状态</th><th data-k="risk">风险</th><th data-k="severity">级别</th><th>信号 / 已验证事实</th></tr></thead><tbody></tbody></table>');
+  out.push('<th data-k="id">row id</th><th data-k="pkg">package@version</th><th data-k="layer">' + tip("层 layer", "层") + '</th><th data-k="disabled">' + tip("状态 active/disabled", "状态") + '</th><th data-k="risk">' + tip("风险分 risk score", "风险") + '</th><th data-k="severity">' + tip("级别", "级别") + '</th><th>信号 / 已验证事实</th></tr></thead><tbody></tbody></table>');
   return out;
 }
 
@@ -353,7 +410,7 @@ function leaksPage(embed) {
   if (!list.length) { out.push("<div class='fb-disclaimer'>扫描范围内未发现 apply 路径裸副作用注册泄漏。</div>"); return out; }
   out.push("<table class='conf'><thead><tr><th>包</th><th>发现</th><th>级别</th><th>证据</th><th>置信度</th><th>finding_id</th></tr></thead><tbody>");
   for (const f of list) {
-    out.push("<tr class='c-" + esc(f.severity) + "'><td>" + esc(f.package) + "</td><td>" + esc(f.message) + "</td><td><span class='sev " + esc(f.severity) + "'>" + esc(f.severity) + "</span></td><td>" + esc(f.evidence) + "</td><td>" + esc(f.confidence) + "</td><td><span class='ev'>" + esc(f.finding_id) + "</span></td></tr>");
+    out.push("<tr class='c-" + esc(f.severity) + "'><td>" + esc(f.package) + "</td><td>" + esc(f.message) + "</td><td>" + sevBadge(f.severity) + "</td><td>" + esc(f.evidence) + "</td><td>" + esc(f.confidence) + "</td><td><span class='ev'>" + esc(f.finding_id) + "</span></td></tr>");
   }
   out.push("</tbody></table>");
   return out;
@@ -363,7 +420,7 @@ function conflictsPage(embed) {
   const out = [];
   out.push('<h2>冲突与发现（' + embed.conflicts.length + " 条）</h2><table class='conf'><thead><tr><th>类型</th><th>级别</th><th>内容</th><th>影响</th><th>建议</th><th>置信度</th></tr></thead><tbody>");
   for (const c of embed.conflicts) {
-    out.push("<tr class='c-" + esc(c.severity) + "'><td>" + esc(c.type) + "</td><td><span class='sev " + esc(c.severity) + "'>" + esc(c.severity) + "</span></td><td>" + esc(c.message) + "</td><td>" + esc(c.impact) + "</td><td>" + esc(c.advice) + "</td><td>" + esc(c.confidence) + "</td></tr>");
+    out.push("<tr class='c-" + esc(c.severity) + "'><td>" + esc(c.type) + "</td><td>" + sevBadge(c.severity) + "</td><td>" + esc(c.message) + "</td><td>" + esc(c.impact) + "</td><td>" + esc(c.advice) + "</td><td>" + esc(c.confidence) + "</td></tr>");
   }
   out.push("</tbody></table>");
   return out;
@@ -384,10 +441,10 @@ function patternsPage(embed) {
   const out = [];
   out.push('<h2>已知模式与运行时验证</h2><div class="notes">');
   for (const p of embed.patterns) {
-    out.push('<div class="note"><span class="sev ' + esc(p.severity) + '">' + esc(p.severity) + "</span> <b>" + esc(p.id) + "</b> " + esc(p.message) + ' <span class="ev">[' + esc(p.evidence) + " · " + esc(p.confidence) + "]</span></div>");
+    out.push('<div class="note">' + sevBadge(p.severity) + ' <b>' + esc(p.id) + "</b> " + esc(p.message) + ' <span class="ev">[' + esc(p.evidence) + " · " + esc(p.confidence) + "]</span></div>");
   }
   for (const v of embed.verified) {
-    out.push('<div class="note verified"><span class="sev verified">verified</span> <b>' + esc(v.id) + "</b> " + esc(v.note) + " <span class='ev'>scoreDelta " + esc(v.scoreDelta) + " · " + esc(v.confidence) + "</span></div>");
+    out.push('<div class="note verified">' + sevBadge("verified") + ' <b>' + esc(v.id) + "</b> " + esc(v.note) + " <span class='ev'>scoreDelta " + esc(v.scoreDelta) + " · " + esc(v.confidence) + "</span></div>");
   }
   out.push("</div>");
   return out;
@@ -407,17 +464,38 @@ function simPage(embed) {
   return out;
 }
 
+function guidePage(embed) {
+  const out = [];
+  out.push("<h2>欢迎 · 使用引导</h2>");
+  out.push("<div class='fb-disclaimer'>新手速览：左栏 " + MODULES.length + " 个模块＝" + MODULES.length + " 张检查页；右上角出现“实时/刷新”时数据来自当前分析，可点刷新重算；鼠标悬停任何带虚线下划线的术语，会弹出白话解释。</div>");
+  out.push("<h3 style='font-size:13px;margin:12px 0 6px'>怎么看这份报告（三步）</h3><ol style='margin:0;padding-left:20px;line-height:1.9'>");
+  out.push("<li>先看右上角<b>整体健康度</b>徽标 " + ["A","B","C","D"].map((h) => '<span class="badge ' + h + '">' + h + "</span>").join("") + "（A 最健康 → D 最需处理）。</li>");
+  out.push("<li>再到<b>错误与反馈</b>处理致命/错误级项；用<b>组件状态表</b>的搜索、下拉与表头排序定位要查的插件。</li>");
+  out.push("<li>想知道“加这个会怎样？”到<b>假设模拟</b>页临时试，不落盘、不改组合。</li>");
+  out.push("</ol>");
+  out.push("<h3 style='font-size:13px;margin:14px 0 6px'>级别颜色（全站统一）</h3><p style='margin:0'>");
+  out.push(["blocking","high","medium","low","disabled"].map((k) => '<span class="sev ' + k + '">' + k + " · " + (SEV_LABELS[k] || k) + "</span>").join(" ") + "　错误反馈："
+    + ["fatal","error","warning","info"].map((k) => '<span class="sev ' + k + '">' + k + " · " + (SEV_LABELS[k] || k) + "</span>").join(" "));
+  out.push("</p>");
+  out.push("<h3 style='font-size:13px;margin:14px 0 6px'>名词解释（悬停术语同样会弹出解释）</h3>");
+  out.push("<table class='conf'><thead><tr><th>术语</th><th>白话解释</th></tr></thead><tbody>");
+  for (const g of GLOSSARY) out.push("<tr><td>" + tip(g[0]) + "</td><td>" + esc(g[1]) + "</td></tr>");
+  out.push("</tbody></table>");
+  return out;
+}
+
 const MODULES = [
-  { id: "page-feedback", label: "错误与反馈", render: feedbackPage, default: true },
-  { id: "page-overview", label: "概览", render: overviewPage },
-  { id: "page-components", label: "组件状态表", render: componentsPage },
-  { id: "page-graph", label: "依赖图谱", render: graphPage },
-  { id: "page-conflicts", label: "冲突与发现", render: conflictsPage },
-  { id: "page-shared", label: "共享依赖", render: sharedPage },
-  { id: "page-patterns", label: "已知模式与验证", render: patternsPage },
-  { id: "page-inv", label: "混合验证体系", render: invPage },
-  { id: "page-leaks", label: "副作用泄漏", render: leaksPage },
-  { id: "page-sim", label: "假设模拟", render: simPage }
+  { id: "page-guide", label: "使用引导", render: guidePage, default: true },
+  { id: "page-feedback", label: "错误与反馈", render: feedbackPage, help: MODULE_HELP["page-feedback"] },
+  { id: "page-overview", label: "概览", render: overviewPage, help: MODULE_HELP["page-overview"] },
+  { id: "page-components", label: "组件状态表", render: componentsPage, help: MODULE_HELP["page-components"] },
+  { id: "page-graph", label: "依赖图谱", render: graphPage, help: MODULE_HELP["page-graph"] },
+  { id: "page-conflicts", label: "冲突与发现", render: conflictsPage, help: MODULE_HELP["page-conflicts"] },
+  { id: "page-shared", label: "共享依赖", render: sharedPage, help: MODULE_HELP["page-shared"] },
+  { id: "page-patterns", label: "已知模式与验证", render: patternsPage, help: MODULE_HELP["page-patterns"] },
+  { id: "page-inv", label: "混合验证体系", render: invPage, help: MODULE_HELP["page-inv"] },
+  { id: "page-leaks", label: "副作用泄漏", render: leaksPage, help: MODULE_HELP["page-leaks"] },
+  { id: "page-sim", label: "假设模拟", render: simPage, help: MODULE_HELP["page-sim"] }
 ];
 
 export function dashboard(analysis, extra = {}) {
@@ -427,6 +505,7 @@ export function dashboard(analysis, extra = {}) {
   const L = [];
   L.push('<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>dsh-forge 组件仪表盘</title>');
   L.push(STYLE);
+  L.push(TIP_STYLE);
   L.push("</head><body>");
   // fixed header (title + meta), centered inner container
   L.push("<header class='ws-header'><div class='ws-header-inner'><div class='head-row'><div><h1>DeepSeek Harness 插件组合仪表盘</h1><div class='sub' id='metaLine'>dsh-forge v" + esc(pkgVersion()) + " · 生成于 " + esc(embed.generatedAt) + " · " + esc(embed.sourceLabel) + " · 只读，模拟不落盘</div></div>");
@@ -445,6 +524,7 @@ export function dashboard(analysis, extra = {}) {
   L.push('<main class="ws-body">');
   for (const m of MODULES) {
     L.push('<section class="ws-page' + (m.default ? " active" : "") + '" id="' + m.id + '">');
+    if (m.help) L.push(modGuide(m.help));
     const lines = m.render(embed, analysis);
     for (const line of lines) L.push(line);
     L.push("</section>");

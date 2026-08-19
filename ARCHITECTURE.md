@@ -198,7 +198,7 @@ check_upgrades execute(args)
 
 | 套件 | 文件 | 项数 | 覆盖 |
 | --- | --- | --- | --- |
-| 仪表盘结构+交互 | `test/ui-test.mjs` | 62 | workspace 结构 / 默认页 / 页切换 + 搜索/筛选/排序/toggle/增删候选 + 133 行数据 + live 动态标记回归 |
+| 仪表盘结构+交互 | `test/ui-test.mjs` | 77 | workspace 结构 / 默认页（使用引导）/ 页切换 + 搜索/筛选/排序/toggle/增删候选 + 名词解释/悬停提示 + 旧模块引导条/表头详释 + 133 行数据 + live 动态标记回归 |
 | 客户端插件 VM 执行 | `test/ui-plugin-test.mjs` | 22 | 2 slot 注册 + locale + 模态开关 + wide/collapsed 渲染 |
 | SemVer 回归 | `test/semver-consistency.test.mjs` | 30 | core/semver.js 单一实现 30 用例固定断言 + 防 dashboard 镜像回归 |
 | 作用域/校准/泄漏 | `test/review-fixes.test.mjs` | 15 | scope 三态 + mock 事件校准 + 泄漏切片 |

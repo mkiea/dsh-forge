@@ -9,6 +9,18 @@
 - renderTui 新增混合验证元数据行：truthSource（dump-config/auto/scan/snapshot 大写）+ confCap + leaks 计数 + findingsValid（ok / N violation(s)）。
 - 版本升级 0.1.5 → 0.1.6（root + ui-plugin 对齐），仪表盘页头与文档版本同步。
 
+### 仪表盘：入门引导 + 名词解释（面向小白）
+
+- 新增「使用引导」默认首页：三步怎么看报告 + 全站统一的级别颜色说明（blocking/high/medium/low/disabled · 致命/错误/警告/信息）。
+- 新增名词解释表，覆盖整体健康度/依赖边/版本冲突/工具重名/服务覆盖/真相源/置信度上限/泄漏发现/级别/置信度/假设模拟等术语。
+- 任意带虚线下划线的术语（.tip）鼠标悬停即弹出白话解释；关键指标（整体健康度、truthSource、confidenceCap、findingsValid、泄漏发现）均已挂载悬停提示。
+- 规范错误/级别中文标签：统一经 SEV_LABELS 输出，消除各表面（错误反馈 / 级别 / 引导页）措辞不一致。
+- ui-test 新增引导页/名词解释/工具提示/规范标签 8 项断言（62 → 70）。
+- 旧模块（10 个）顶部新增「本页说明」引导条：MODULE_HELP 数据驱动，dashboard() 统一注入，替代逐页手写。
+- 抽取 sevBadge() 统一级别徽章渲染，消除错误反馈/冲突/泄漏/模式 4 处重复；tip() 支持「短标签 + 长解释」双参数。
+- 扩展名词解释（层 layer / 风险分 risk score / 信号 signal / 状态 active-disabled）；组件状态表表头加悬停详释。
+- ui-test 断言扩至 77（70 → 77）。
+
 ## [0.1.5] - 2026-08-19
 
 ### 静态-运行时混合验证体系（v0.1.5 P0+P1）
