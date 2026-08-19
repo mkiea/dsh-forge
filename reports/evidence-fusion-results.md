@@ -20,9 +20,9 @@ PASS  matrix medium+heuristic+not-executed -> medium  [heuristic + not-executed/
 PASS  matrix low+contract-source+executed-residual -> low  [contract-source/low]
 PASS  INV-3 count preserved  [3]
 PASS  INV-3 every input present  [3]
-PASS  A-2 id stable across message variance  [edab146bb5d2fd9d==edab146bb5d2fd9d]
+PASS  A-2 id stable across message variance  [acb19405f5856553==acb19405f5856553]
 PASS  A-2 id differs when scope differs
-PASS  A-3 next_action present on upgrade  [检查 PKG-d4c1b3271a2e3]
+PASS  A-3 next_action present on upgrade  [检查 PKG-161b0a8579c59]
 PASS  A-3 reproduce_hint present
 PASS  A-1 default runtimeState not-executed  [not-executed]
 PASS  A-1 not downgraded to clean  [medium]

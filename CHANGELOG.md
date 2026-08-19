@@ -1,6 +1,8 @@
 # Changelog
 ## [Unreleased]
 
+## [0.1.6] - 2026-08-19
+
 ### 8 项断裂点修复（审计）
 
 - **基数上限溢出可观测（不再静默丢弃）**：`runtime-calibration.js` 击穿 cardinalityCap 时累计 overflowDropped，经 counters()/snapshot() 暴露，攻击性填满 slot 导致关键事件丢失时可被察觉。
@@ -21,8 +23,11 @@
 - **报告校准**：`finalSeverity` 未设置时回退 `severity`（P0-3 schema 契约默认）；清除恢复脚本引入的重复导出。
 - **CI 版本锁守卫**：`Validate schema + version lock + gate` 断言报告 `version === package.json` 且 `schemaVersion === dsh-forge/report@1`，杜绝存档报告相对触发源码的工具版本漂移。
 
-## [0.1.6] - 2026-08-19（v0.1.6 预览版）
+### P0-1/P0-2 默认路径证据融合接线（审计锁定断点）
 
+- **主链路 fuse 接线**（`core/index.js` `runAnalysis`）：对 conflicts/leaks findings 调用 `fuse()` + `staticRuntimeCalibration().evidence()`（离线诚实 not-executed 基线），每条 finding 产出 `finalSeverity` / `evidenceTag` / `runtimeState`，与 `buildCheckReport` / `projectFinding` 投影契约一致——修复「证据融合模块已建、主链路未接线」断点，`check --json` 报告的 findings 携带融合字段。
+- **只读注入**：`fuse()` 返回新副本，不改动源 conflict/leak 对象；INV-3 未观测只降权绝不清除，A-1 未观测三态，非运行时观测不视为干净；缓存命中结果保持只读契约。
+- **回归锁定**：新增 `test/main-path-fusion.test.mjs`（8 项，占 921 项之一）：锁默认路径 63/63 finding 均 fused、runtimeState / evidenceTag / finalSeverity 齐全、offline 诚实 not-executed、INV-3 主链路无丢失。
 
 ### TUI 增强（审计 F1/F2 修复）
 
@@ -41,6 +46,7 @@
 - 抽取 sevBadge() 统一级别徽章渲染，消除错误反馈/冲突/泄漏/模式 4 处重复；tip() 支持「短标签 + 长解释」双参数。
 - 扩展名词解释（层 layer / 风险分 risk score / 信号 signal / 状态 active-disabled）；组件状态表表头加悬停详释。
 - ui-test 断言扩至 77（70 → 77）。
+
 
 ## [0.1.5] - 2026-08-19
 

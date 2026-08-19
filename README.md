@@ -6,7 +6,7 @@
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
 
-> **v0.1.7 更新**：CI 门禁（P0-4）——组合变更 PR 自动运行只读组合契约审计 `composition-gate`（`check --json --dataset data/ecosystem.json` 离线快照，无 harness 亦可复现），`gate.pass` 未过即拦截 PR 并上传报告 artifact。**锁版本复现报告（P0-5）**——`check --json` 报告新增 `version`（工具版本）、`reproduce`（精确复现命令，带 `--dataset`）、`inputs.dataset`（数据集指纹），配合 schemaVersion / inputs.rows / truthSource / harnessVersion 冻结触发采样的完整输入环境；CI 进一步断言报告 `version === package.json`，杜绝存档报告相对触发源码的版本漂移。
+> **v0.1.6 更新（正式版）**：默认路径证据融合接线（P0-1/P0-2）——runAnalysis 对 conflicts/leaks 调 fuse + 离线诚实 not-executed 基线，每条 finding 带 finalSeverity / evidenceTag / runtimeState。CI 门禁（P0-4）——组合变更 PR 自动运行只读组合契约审计 `composition-gate`（`check --json --dataset data/ecosystem.json` 离线快照，无 harness 亦可复现），`gate.pass` 未过即拦截 PR 并上传报告 artifact。**锁版本复现报告（P0-5）**——`check --json` 报告新增 `version`（工具版本）、`reproduce`（精确复现命令，带 `--dataset`）、`inputs.dataset`（数据集指纹），配合 schemaVersion / inputs.rows / truthSource / harnessVersion 冻结触发采样的完整输入环境；CI 进一步断言报告 `version === package.json`，杜绝存档报告相对触发源码的版本漂移。
 >> **v0.1.6 更新**：TUI 增强（审计 F1/F2）——R 键刷新失败不再退出进程（保留旧帧，底部内联红字 `refresh failed:...`，对齐仪表盘 /api/refresh 失败保留旧态）；`renderTui` 新增混合验证元数据行（truthSource 大写 + confidenceCap + leaks 计数 + findingsValid ok / N violation(s)）。**新增「使用引导」默认首页 + 名词解释**：面向小白的三步阅读指南、全站统一的级别颜色、悬停术语即弹白话解释（整体健康度 / truthSource / confidenceCap / findingsValid / 泄漏发现 等关键指标均已挂载），并统一各表面的错误/级别中文标签。各旧模块顶部含「本页说明」引导条，组件表表头可悬停查看列含义。
 >
 > **v0.1.5 更新**：静态-运行时混合验证——运行时校准（`core/runtime-calibration.js` 订阅 Cordis 生命周期事件 + finding_id 绑定 + A-4 滑动窗口）与证据融合引擎（静态 + 运行时未观测三态，非运行时观测绝不清除告警，INV-3）打通「静态初筛 + 运行时校准」闭环；真相源三态降级（dump-config/auto/scan/snapshot，scan 全局置信度 ≤ medium）；node:vm 沙箱加固（null 原型隔离 + 冻结 process + 可配置超时）；仪表盘新增「混合验证体系」（INV-1~6）与「副作用泄漏」页，模块导航 8→10，修复 findingsValid 渲染；自包含套件 13→16，用例总数 832→883。
@@ -266,6 +266,7 @@ Web 形态采用**混合审查**：每次请求用当前分析结果新鲜渲染
   - `test/truth-source-degradation.test.mjs` — 真相源三态降级（INV-4 置信度上限，12 项）
   - `test/check-report-schema.test.mjs` — P0-3 冻结 check --json 报告 schema 与 gate 门禁（10 项）
   - `test/finding-id-uniqueness.test.mjs` — finding_id 唯一性消重回归（服务/行/包维度区分 + A-2 稳定，6 项）
+  - `test/main-path-fusion.test.mjs` — 主默认路径融合接线（runAnalysis 对 conflicts/leaks 调 fuse + 离线 not-executed 基线；finalSeverity/evidenceTag/runtimeState + INV-3，8 项）
 
 ## 错误反馈体系
 

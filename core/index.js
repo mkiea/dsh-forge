@@ -276,6 +276,13 @@ export function runAnalysis(opts = {}) {
   const effectiveTruthSource = eco.truthSource || (opts.datasetPath ? "snapshot" : "scan");
   const capSource = effectiveTruthSource === "scan";
   if (capSource) { conflicts.conflicts = capConfidence(conflicts.conflicts, "medium"); leaks.findings = capConfidence(leaks.findings, "medium"); }
+  // P0 read-only fusion (INV-3 / A-1): attach an honest not-executed runtime
+  // baseline and fuse each static finding. Pure and cache-safe: never mutates
+  // the original findings, only replaces them with fused copies carrying
+  // finalSeverity / evidenceTag / runtimeState (offline: UNOBSERVED).
+  const fusionCal = staticRuntimeCalibration();
+  conflicts.conflicts = fuse(conflicts.conflicts, fusionCal.evidence(conflicts.conflicts)).findings;
+  leaks.findings = fuse(leaks.findings, fusionCal.evidence(leaks.findings)).findings;
   const feedback = buildFeedback({ conflicts, leaks, assessment, patterns, verified });
   const findingsValid = validateFindings([...conflicts.conflicts, ...leaks.findings]);
   const result = { ecosystem: eco, graph, conflicts, assessment, patterns, deprecations, verified, leaks, feedback, truthSource: effectiveTruthSource, confidenceCap: capSource ? "medium" : (effectiveTruthSource === "dump-config" ? "high" : null), findingsValid };
