@@ -1,6 +1,18 @@
 # Changelog
 ## [Unreleased]
 
+### 8 项断裂点修复（审计）
+
+- **基数上限溢出可观测（不再静默丢弃）**：`runtime-calibration.js` 击穿 cardinalityCap 时累计 overflowDropped，经 counters()/snapshot() 暴露，攻击性填满 slot 导致关键事件丢失时可被察觉。
+- **单调时钟（防时钟回拨误判）**：事件时间戳与默认 startBoundary 改用 process.hrtime（单调），NTP 回拨不再把所有事件判为“start 之前”。
+- **dispose 释放引用**：dispose() 清空环形缓冲与 counters/lifecycle 各映射，外部闭包句柄不再残留活快照。
+- **融合矩阵补全（INV-3 只降权）**：`evidence-fusion.js` 抽取 resolveFusion 覆盖全 (severity×tier×state)；high+heuristic 等默认分支不再跳过 clean 降级/未观测保持规则。
+- **解除 confidence→tier 混淆**：inferTier 仅认 evidenceTier（缺失默认 heuristic），不再把高置信度升格为 static-suspect。
+- **next_action 文案集中**：默认 zh-CN 引导/复现文案收敛到 ACTION_NEXT/REPRODUCE_DEFAULT，留 i18n 改造缝。
+- **finding_id 哈希扩为 64 位（FNV-1a BigInt）**：16 位 hex，4000+ 插件碰撞概率降至可忽略。
+- **capConfidence 改纯函数**：不再突变入参，返回新数组（仅 cap 项拷贝）；index.js 调用方适配返回值。
+- 测试：evidence-fusion 23（18→23）、runtime-calibration 25（21→25）、truth-source 17（12→17）；用例总数 883→897。
+
 ## [0.1.6] - 2026-08-19（v0.1.6 预览版）
 
 ### TUI 增强（审计 F1/F2 修复）

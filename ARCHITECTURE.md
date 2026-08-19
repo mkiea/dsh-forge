@@ -202,9 +202,9 @@ check_upgrades execute(args)
 | 客户端插件 VM 执行 | `test/ui-plugin-test.mjs` | 22 | 2 slot 注册 + locale + 模态开关 + wide/collapsed 渲染 |
 | SemVer 回归 | `test/semver-consistency.test.mjs` | 30 | core/semver.js 单一实现 30 用例固定断言 + 防 dashboard 镜像回归 |
 | 作用域/校准/泄漏 | `test/review-fixes.test.mjs` | 15 | scope 三态 + mock 事件校准 + 泄漏切片 |
-| 证据融合引擎 | `test/evidence-fusion.test.mjs` | 18 | A-1 三态 + A-2 稳定 id + A-3 可行动 + 7 行矩阵 + INV-3 绝不清除 |
-| 运行时校准 | `test/runtime-calibration.test.mjs` | 21 | A-4 滑窗/基数上限/超限丢帧 + INV-2 时序边界 + 可逆性 |
-| 真相源三态降级 | `test/truth-source-degradation.test.mjs` | 12 | INV-4 置信度上限（只降不升）+ scan 全局降级 |
+| 证据融合引擎 | `test/evidence-fusion.test.mjs` | 23 | A-1 三态 + A-2 稳定 id + A-3 可行动 + 完整融合矩阵 + tier/confidence 去混淆 + INV-3 绝不清除 |
+| 运行时校准 | `test/runtime-calibration.test.mjs` | 25 | A-4 滑窗/基数上限/超限丢帧（可观测）+ INV-2 时序边界（单调时钟）+ 可逆性/dispose 释放引用 |
+| 真相源三态降级 | `test/truth-source-degradation.test.mjs` | 17 | INV-4 置信度上限（只降不升、纯函数不突变）+ scan 全局降级 + 64 位 finding_id 哈希 |
 | 升级检查优化 | `test/upgrade-opt.test.mjs` | 16 | 并发池 + 超时 + 镜像降级 + 安装命令 + 独立性 + 阻断预测 |
 | 错误反馈冒烟 | `test/feedback-smoke.test.mjs` | 40 | FORGE 错误码 / 分级 / 聚合 / 渲染 |
 | 空组合 / 泄漏规则 | `test/empty-plugins.test.mjs` | 24 | 空组合边界 + 泄漏规则 |

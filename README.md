@@ -296,5 +296,5 @@ harnessVersion 绑定与知识库版本门控（R2）、泄漏扫描（R3）、�
 - `prompt/` — 专家 persona 提示词（含风险预测）
 - `data/` — 生态快照（`ecosystem.json` versioned；`history/` 运行期生成，gitignored）
 - `reports/` — 生成的分析报告与图谱
-- `test/` — 自包含测试套件（16 套件 883 项，零本机依赖）
+- `test/` — 自包含测试套件（16 套件 897 项，零本机依赖）
 - `scripts/` — 生成与构建脚本（generate-dashboard / build-ui / mount-ui）

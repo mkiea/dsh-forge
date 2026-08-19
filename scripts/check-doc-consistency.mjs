@@ -72,7 +72,7 @@ const MODULE_COUNT = "25"; // core/ module count excl. index facade (see ARCHITE
   check("README.en.md references " + n + " self-contained suites", read("README.en.md").includes(n + " self-contained suites"));
   check("README.md references cache-behavior suite", read("README.md").includes("test/cache-behavior.test.mjs"));
   check("README.en.md references cache-behavior suite", read("README.en.md").includes("test/cache-behavior.test.mjs"));
-  const TOTAL_CASES = "883";
+  const TOTAL_CASES = "897";
   check("README.md total case count is current (" + TOTAL_CASES + ")", read("README.md").includes(TOTAL_CASES + " 项"));
   check("README.en.md total case count is current (" + TOTAL_CASES + ")", read("README.en.md").includes(TOTAL_CASES + " items"));
 }

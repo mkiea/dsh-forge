@@ -263,5 +263,5 @@ The third-party PM review acceptance criteria are implemented item by item: dump
 - `prompt/` — expert persona prompt (with risk prediction)
 - `data/` — ecosystem snapshots (`ecosystem.json` versioned; `history/` runtime-generated and gitignored)
 - `reports/` — generated reports and graphs
-- `test/` — self-contained test suites (16 suites, 883 items, no machine dependency)
+- `test/` — self-contained test suites (16 suites, 897 items, no machine dependency)
 - `scripts/` — build and mount scripts
