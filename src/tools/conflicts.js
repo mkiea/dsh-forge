@@ -29,7 +29,9 @@ export function conflictsTool(config) {
                 impact: { type: "string", required: true },
                 advice: { type: "string", required: true },
                 confidence: { type: "string", required: true },
-                packages: { type: "array", items: { type: "string" } }
+                packages: { type: "array", items: { type: "string" } },
+                service: { type: "string" },
+                row: { type: "string" }
               }
             }
           },

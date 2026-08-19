@@ -13,7 +13,16 @@
 - **capConfidence 改纯函数**：不再突变入参，返回新数组（仅 cap 项拷贝）；index.js 调用方适配返回值。
 - 测试：evidence-fusion 23（18→23）、runtime-calibration 25（21→25）、truth-source 17（12→17）；用例总数 883→897。
 
+### P0-4 CI 门禁 + P0-5 锁版本 artifact 复现报告
+
+- **P0-4 CI 门禁**（`ci.yml` 新增 `composition-gate` job）：组合变更 PR 自动跑只读组合契约审计（`check --json --dataset data/ecosystem.json` 离线快照），CLI 在 `gate.pass===false` 时 exit 1，作业失败即拦截 PR；报告上传 artifact 供排障。
+- **P0-5 锁版本复现报告**（`core/index.js` 新增 `pkgVersion()`）：报告补 `version`（工具版本，动态读 package.json）/ `reproduce`（精确复现命令，带 `--dataset`）/ `inputs.dataset`（数据集指纹），配合既有 `schemaVersion` / `inputs.rows` / `truthSource` / `harnessVersion` 冻结触发采样的完整输入环境，存档报告可精确追溯复现。
+- **CLI 传递复现字段**（`cli/dsh-forge.mjs`）：`jsonSummary` 转发 `--dataset` 与复现命令到 `buildCheckReport`，`inputs.dataset` 不再恒为 null。
+- **报告校准**：`finalSeverity` 未设置时回退 `severity`（P0-3 schema 契约默认）；清除恢复脚本引入的重复导出。
+- **CI 版本锁守卫**：`Validate schema + version lock + gate` 断言报告 `version === package.json` 且 `schemaVersion === dsh-forge/report@1`，杜绝存档报告相对触发源码的工具版本漂移。
+
 ## [0.1.6] - 2026-08-19（v0.1.6 预览版）
+
 
 ### TUI 增强（审计 F1/F2 修复）
 

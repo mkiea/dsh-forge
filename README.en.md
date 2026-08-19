@@ -6,7 +6,8 @@
 
 A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency analysis, conflict detection, risk assessment (with prediction), visualization and combination simulation.
 
-> **v0.1.6 changes**: TUI enhancement (audit F1/F2) — R-key refresh failure no longer exits the process (keeps the last frame, inline red `refresh failed:...` at the bottom, aligning with the dashboard /api/refresh stale-state behavior); `renderTui` adds a hybrid-validation metadata line (uppercase truthSource + confidenceCap + leaks count + findingsValid ok / N violation(s)). **Added a "Getting Started" default page + glossary** for beginners: a 3-step reading guide, site-wide severity color legend, and hover-tooltip plain-language explanations for terms (health / truthSource / confidenceCap / findingsValid / leaks KPIs all wired), plus unified error/severity Chinese labels across surfaces. Each legacy module gained a top "About this page" guide banner and hoverable column headers.
+> **v0.1.7 changes**: CI gate (P0-4) — a `composition-gate` job now runs a read-only composition-contract audit on combination PRs (`check --json --dataset data/ecosystem.json` offline snapshot, reproducible without a harness); a failed `gate.pass` blocks the PR and uploads the report artifact. **Version-locked reproduction report (P0-5)** — the `check --json` report now carries `version` (tool version), `reproduce` (exact reproduction command, includes `--dataset`), and `inputs.dataset` (dataset fingerprint), together with schemaVersion / inputs.rows / truthSource / harnessVersion to freeze the full triggering input environment; CI additionally asserts report `version === package.json` to prevent drift between archived reports and the source that produced them.
+>> **v0.1.6 changes**: TUI enhancement (audit F1/F2) — R-key refresh failure no longer exits the process (keeps the last frame, inline red `refresh failed:...` at the bottom, aligning with the dashboard /api/refresh stale-state behavior); `renderTui` adds a hybrid-validation metadata line (uppercase truthSource + confidenceCap + leaks count + findingsValid ok / N violation(s)). **Added a "Getting Started" default page + glossary** for beginners: a 3-step reading guide, site-wide severity color legend, and hover-tooltip plain-language explanations for terms (health / truthSource / confidenceCap / findingsValid / leaks KPIs all wired), plus unified error/severity Chinese labels across surfaces. Each legacy module gained a top "About this page" guide banner and hoverable column headers.
 >
 > **v0.1.5 changes**: static+runtime hybrid validation — runtime calibration (`core/runtime-calibration.js` subscribes Cordis lifecycle events, finding_id binding, A-4 sliding window) plus an evidence-fusion engine (static + runtime unobserved three-state; alerts are never cleared without runtime observation, INV-3) closing the "static first-pass + runtime calibration" loop; truth-source three-state degradation (dump-config/auto/scan/snapshot, scan caps confidence at ≤medium); node:vm sandbox hardening (null-prototype isolation + frozen process + configurable timeout); dashboard adds "Hybrid Validation" (INV-1~6) and "Side-effect Leaks" pages, module nav 8→10, findingsValid render fix; self-contained suites 13→16, total cases 832→883.
 >
@@ -215,7 +216,7 @@ the dashboard always reflects the real combination without a page reload.
 
 - `dsh web` runs at http://127.0.0.1:3080, no browser errors, **13 tools** registered
 - `analyze_dependencies` live: 4 layers (profile root + dsh-base + dsh-web-app + patch), 138 rows (incl. forge/forge-ui) / 128 packages / 1226+ edges
-- Automated tests (16 self-contained suites; smoke13 13/13 depends on the local harness, not in CI):
+- Automated tests (19 self-contained suites; smoke13 13/13 depends on the local harness, not in CI):
   - `test/ui-test.mjs` — dashboard workspace structure & interaction (77)
   - `test/ui-plugin-test.mjs` — client plugin VM execution + slot registration + modal interaction (22)
   - `test/semver-consistency.test.mjs` — single-source SemVer regression + anti-mirror guard (30)
@@ -232,6 +233,8 @@ the dashboard always reflects the real combination without a page reload.
   - `test/evidence-fusion.test.mjs` — evidence-fusion engine (A-1 three states + A-2 stable id + A-3 actionable + 7-row matrix + INV-3 never-clear, 18)
   - `test/runtime-calibration.test.mjs` — runtime calibration (A-4 window/cardinality cap + INV-2 ordering + reversibility, 21)
   - `test/truth-source-degradation.test.mjs` — truth-source degradation (INV-4 confidence cap, 12)
+  - `test/check-report-schema.test.mjs` — P0-3 frozen check --json report schema + gate (10)
+  - `test/finding-id-uniqueness.test.mjs` — finding_id uniqueness regression (service/row/package dims + A-2 stability, 6)
 
 ## Error feedback
 
@@ -263,5 +266,5 @@ The third-party PM review acceptance criteria are implemented item by item: dump
 - `prompt/` — expert persona prompt (with risk prediction)
 - `data/` — ecosystem snapshots (`ecosystem.json` versioned; `history/` runtime-generated and gitignored)
 - `reports/` — generated reports and graphs
-- `test/` — self-contained test suites (16 suites, 897 items, no machine dependency)
+- `test/` — self-contained test suites (19 suites, 921 items, no machine dependency)
 - `scripts/` — build and mount scripts

@@ -17,7 +17,7 @@ import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
-  runAnalysis, clearAnalysisCache, buildEmbedData,
+  runAnalysis, clearAnalysisCache, buildEmbedData, buildCheckReport,
   html as renderHtml, dashboard as renderDashboard,
   UI_MODE, decideUiMode, decideAfterPortProbe,
   hasDesktop, COMPLEXITY_LIGHT, COMPLEXITY_HEAVY
@@ -111,25 +111,11 @@ function plainSummary(a) {
   ];
   return lines.join("\n");
 }
-
-function jsonSummary(a) {
-  const s = a.assessment;
-  return JSON.stringify({
-    profile: a.ecosystem.layers.map((l) => l.layer),
-    rows: s.pluginCount,
-    active: s.activeCount,
-    disabled: s.disabledCount,
-    edges: s.edgeCount,
-    health: s.health,
-    avgScore: s.avgScore,
-    maxScore: s.maxScore,
-    bySeverity: s.bySeverity,
-    conflicts: a.conflicts.summary,
-    leaks: (a.leaks && a.leaks.summary) || { total: 0 },
-    truthSource: a.ecosystem.truthSource || "scan",
-    harnessVersion: a.ecosystem.harnessVersion || null,
-    generatedAt: new Date().toISOString()
-  }, null, 2);
+function jsonSummary(a, opts) {
+  return JSON.stringify(buildCheckReport(a, {
+    dataset: opts.dataset || null,
+    reproduce: opts.dataset ? "node cli/dsh-forge.mjs check --json --dataset " + opts.dataset : "node cli/dsh-forge.mjs check --json"
+  }), null, 2);
 }
 
 // ── TUI shell (zero-dependency ANSI renderer) ──────────────────────────────
@@ -169,7 +155,7 @@ function renderTui(a, err) {
     lines.push("");
   }
   const real = c.conflicts.filter((x) => x.severity !== "info");
-  lines.push(C("1", "Conflicts") + "  total " + c.summary.total + " · " + Object.entries(c.summary.bySeverity).map(([k, v]) => k + "=" + v).join(" ") || "");
+  lines.push(C("1", "Conflicts") + "  total " + c.summary.total + " · " + (Object.entries(c.summary.bySeverity).map(([k, v]) => k + "=" + v).join(" ") || "none"));
   for (const x of real.slice(0, 12)) {
     lines.push("  [" + sevBadge(x.severity) + "] " + fit(x.message, width - 20));
     lines.push("      impact : " + fit(x.impact || "", width - 20));
@@ -283,7 +269,7 @@ async function startWeb(initialAnalysis, opts) {
       runInteractiveTui(() => loadAnalysis(opts), opts);
       return;
     }
-    console.log(opts.json ? jsonSummary(analysis) : plainSummary(analysis));
+    console.log(opts.json ? jsonSummary(analysis, opts) : plainSummary(analysis));
     return;
   }
   const server = http.createServer((req, res) => {
@@ -314,7 +300,7 @@ async function startWeb(initialAnalysis, opts) {
   server.on("error", (e) => {
     console.error("[dsh-forge] web server failed: " + String(e.message || e));
     if (process.stdout.isTTY) runInteractiveTui(() => loadAnalysis(opts), opts);
-    else console.log(opts.json ? jsonSummary(analysis) : plainSummary(analysis));
+    else console.log(opts.json ? jsonSummary(analysis, opts) : plainSummary(analysis));
   });
   server.listen(requested, opts.host, () => {
     const actualPort = server.address().port;
@@ -356,7 +342,13 @@ async function main() {
   console.error("[dsh-forge] mode decision: " + decision.mode + " — " + decision.reasons.join("; "));
 
   if (decision.mode === UI_MODE.CHECK) {
-    console.log(opts.json ? jsonSummary(analysis) : plainSummary(analysis));
+    if (opts.json) console.log(jsonSummary(analysis, opts));
+    else console.log(plainSummary(analysis));
+    const gate = buildCheckReport(analysis).gate;
+    if (!gate.pass) {
+      console.error("[dsh-forge] gate BLOCKED: critical " + gate.blocked.critical + ", high " + gate.blocked.high + " — exiting 1 for CI");
+      process.exit(1);
+    }
     return;
   }
   if (decision.mode === UI_MODE.WEB) {

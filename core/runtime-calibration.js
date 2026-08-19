@@ -148,7 +148,7 @@ export function createRuntimeCalibration(ctx, opts = {}) {
       for (const off of offs) { try { off(); } catch { /* ignore */ } }
       offs.length = 0;
       // Release the reference graph the api closure would otherwise retain
-      // (F-7): wipe buffered events + counter/lifecycle maps so a stale handle
+      // (F-3): wipe buffered events + counter/lifecycle maps so a stale handle
       // cannot keep a live snapshot after dispose.
       buffer.fill(null);
       head = 0; filled = 0; distinct = 0; overflowDropped = 0;

@@ -35,3 +35,45 @@ jobs:
                 ;;
             esac
           done
+
+  # P0-4 + P0-5：组合变更 PR 自动跑只读组合契约审计，gate 未过则拦截 PR。
+  # 离线快照（data/ecosystem.json）保证 CI 无 harness 时也可复现；CLI 在
+  # gate.pass===false 时自行 exit 1，重定向保存报告不改写退出码。
+  # P0-5 锁版本守卫：报告 version 必须 === package.json，且 schemaVersion
+  # 为冻结值，确保存档报告与触发它的源码精确对应，杜绝工具版本漂移。
+  composition-gate:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Reproduce composition audit (offline snapshot)
+        run: |
+          mkdir -p reports/ci
+          node cli/dsh-forge.mjs check --json --dataset data/ecosystem.json > reports/ci/check-report.json
+
+      - name: Validate schema + version lock + gate
+        run: |
+          node -e "
+            const r = require('./reports/ci/check-report.json');
+            const pkg = require('./package.json');
+            const expectSchema = 'dsh-forge/report@1';
+            const errs = [];
+            if (r.schemaVersion !== expectSchema) errs.push('schemaVersion=' + r.schemaVersion + ' != ' + expectSchema);
+            if (r.version !== pkg.version) errs.push('artifact version=' + r.version + ' != package.json ' + pkg.version);
+            console.log('reproduce  : ' + r.reproduce);
+            if (errs.length) { console.error('CONTRACT FAIL'); console.error(errs.join('\n')); process.exit(1); }
+            console.log('schema ' + r.schemaVersion + ' | version locked @' + r.version);
+            console.log('gate.pass=' + r.gate.pass + ' blocked=' + JSON.stringify(r.gate.blocked) + ' findings=' + r.findings.length);
+            if (!r.gate.pass) { console.error('COMPOSITE GATE FAILED'); process.exit(1); }
+          "
+
+      - name: Upload version-locked report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: check-report-${{ github.sha }}
+          path: reports/ci/check-report.json

@@ -54,6 +54,81 @@ export { knownPatterns, scanDeprecations, KNOWN_LIBS, CLIENT_PLANE_SERVICES, run
 export { satisfies, compareVersions, parseVersion, maxSatisfying };
 export { UI_MODE, hasDesktop, scenarioHints, decideUiMode, decideAfterPortProbe, COMPLEXITY_LIGHT, COMPLEXITY_HEAVY };
 
+
+// P0-3 frozen check report schema (dsh-forge/report@1). findings[] come from
+// the fused conflicts+leaks (each carries finding_id / severity / finalSeverity
+// / confidence / evidenceTier / runtimeState / evidenceTag). gate.pass is the
+// CI-consumable contract: any blocking or high finding fails the gate. Pure.
+export const CHECK_REPORT_SCHEMA = "dsh-forge/report@1";
+
+function projectFinding(f) {
+  const out = {
+    finding_id: f.finding_id,
+    severity: f.severity,
+    finalSeverity: f.finalSeverity || f.severity,
+    confidence: f.confidence,
+    evidenceTier: f.evidenceTier,
+    runtimeState: f.runtimeState,
+    evidenceTag: f.evidenceTag
+  };
+  if (f.next_action) out.next_action = f.next_action;
+  if (f.reproduce_hint) out.reproduce_hint = f.reproduce_hint;
+  return out;
+}
+
+export function buildCheckReport(analysis, opts = {}) {
+  const s = analysis.assessment;
+  const conflicts = analysis.conflicts.conflicts || [];
+  const leaks = (analysis.leaks && analysis.leaks.findings) || [];
+  const findings = [...conflicts, ...leaks].map(projectFinding);
+  const blocked = { critical: 0, high: 0 };
+  for (const f of findings) {
+    if (f.finalSeverity === "blocking") blocked.critical++;
+    else if (f.finalSeverity === "high") blocked.high++;
+  }
+  const gate = { pass: blocked.critical === 0 && blocked.high === 0, blocked };
+  return {
+    schemaVersion: CHECK_REPORT_SCHEMA,
+    version: opts.version || pkgVersion(),
+    generatedAt: new Date().toISOString(),
+    reproduce: opts.reproduce || "node cli/dsh-forge.mjs check --json",
+    inputs: {
+      profile: analysis.ecosystem.layers.map((l) => l.layer),
+      rows: s.pluginCount,
+      truthSource: analysis.ecosystem.truthSource || "scan",
+      harnessVersion: analysis.ecosystem.harnessVersion || null,
+      dataset: opts.dataset || null
+    },
+    findings,
+    gate,
+    // backward-compatible flat summary (kept for existing CI consumers)
+    profile: analysis.ecosystem.layers.map((l) => l.layer),
+    rows: s.pluginCount,
+    active: s.activeCount,
+    disabled: s.disabledCount,
+    edges: s.edgeCount,
+    health: s.health,
+    avgScore: s.avgScore,
+    maxScore: s.maxScore,
+    bySeverity: s.bySeverity,
+    conflicts: analysis.conflicts.summary,
+    leaks: (analysis.leaks && analysis.leaks.summary) || { total: 0 },
+    truthSource: analysis.ecosystem.truthSource || "scan",
+    harnessVersion: analysis.ecosystem.harnessVersion || null
+  };
+}
+
+// P0-5: lock the tool version so a stored report reproduces which build made it.
+// createRequire reads ../package.json relative to this ESM module (root package).
+export function pkgVersion() {
+  try {
+    const req = createRequire(import.meta.url);
+    return req("../package.json").version || "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
 // ── snapshots (offline analysis / reproducible reports) ──────────────────
 export function saveSnapshot(eco, file) {
   // persist source-scan results so offline (no-dir) round trips stay faithful

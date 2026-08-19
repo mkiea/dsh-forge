@@ -212,6 +212,9 @@ check_upgrades execute(args)
 | 反馈深度探索 | `test/exploratory-feedback.test.mjs` | 563 | 反馈结构合法 / 分级计数 / 排序稳定 / 确定性 |
 | TUI/Web/check 决策 | `test/mode-decision.test.mjs` | 19 | 四层证据决策（命令/环境/场景/复杂度）/ env 一致性 / 端口占用降级 / 场景启发 |
 | 分析缓存守护 | `test/cache-behavior.test.mjs` | 7 | 同参命中 / clear 失效 / 文件变更 / live profile patch 变更 / 淘汰 / 快照 stamp |
+| 主链路融合回归 | `test/main-path-fusion.test.mjs` | 8 | P0 主路径真正 fuse：runAnalysis 项带 runtimeState/finalSeverity/evidenceTag（离线 not-executed）+ INV-3 不清除 + severity 秩有效 |
+| check --json schema 冻结 | `test/check-report-schema.test.mjs` | 10 | P0-3 冻结 check report schema（schemaVersion/inputs/findings[]/gate）+ gate 门禁（high/blocking 拦截）|
+| finding_id 唯一性消重 | `test/finding-id-uniqueness.test.mjs` | 6 | makeFindingId 纳入 involved packages/service/row，区分同类别多条 finding；A-2 message 不变 id（0 碰撞回归）|
 | 13 工具快照半集成 | `test/tools-snapshot-smoke.test.mjs` | 13 | 快照驱动调用 13 个工具 + output.schema 最小校验（防 schema/output 漂移），CI 可运行 |
 | YAML fail-loud / vm 沙箱 | `test/composition-strict.test.mjs` | 8 | 严格解析接受合法 patch（含 config block scalar、cordis inject 行键）/ 未知行键与顶层条目抛错 / globalThis 逃逸被拒 / dshHomePath 可用 |
 

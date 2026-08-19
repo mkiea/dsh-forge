@@ -27,14 +27,22 @@ export function hashId(text) {
 }
 
 // A-2: stable finding_id binding a static suspect to runtime evidence.
-// Derived from scope + name + category + location, so identical findings are
-// reproducible across runs and merge points (not a random uuid).
+// Derived from scope + name + category + location + involved packages, so
+// identical findings are reproducible across runs and merge points (not a
+// random uuid). packages IS part of the identity: multi-plugin findings
+// (provider-indirection / row-override / disabled-row) share scope/name/
+// category/location but differ by which packages they touch, so each gets its
+// own id. Free-text message stays OUT of the key (metadata-only identity).
 export function makeFindingId(find, opts = {}) {
   const scope = find.scope || opts.scope || find.package || find.packageName || "global";
   const category = find.category || find.type || find.kind || find.severity || "finding";
   const name = find.name || find.tool || find.service || find.id || find.row || "";
   const location = find.location || find.file || find.path || "";
-  return hashId([scope, name, category, location].join("|"));
+  const pkgs = Array.isArray(find.packages)
+    ? find.packages
+    : (Array.isArray(opts.packages) ? opts.packages : []);
+  const involved = pkgs.slice().sort().join(",");
+  return hashId([scope, name, category, location, involved].join("|"));
 }
 
 // Attach a deterministic finding_id to every finding. Idempotent: an existing

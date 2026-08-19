@@ -194,6 +194,7 @@ export function checkConflicts(eco, { graph } = {}) {
     if (pkgs.length > 1) {
       conflicts.push({
         type: "service-collision",
+        service: svc,
         kind: "contract",
         evidenceTier: "static-suspect",
         severity: "high",
@@ -217,6 +218,7 @@ export function checkConflicts(eco, { graph } = {}) {
         // statically visible in the leaf package source
         conflicts.push({
           type: "provider-indirection",
+          service: s,
           kind: "heuristic",
           evidenceTier: "static-suspect",
           severity: "info",
@@ -232,6 +234,7 @@ export function checkConflicts(eco, { graph } = {}) {
       // client-plane services are invisible to this host-side scan
       conflicts.push({
         type: "missing-provider",
+        service: s,
         kind: "heuristic",
         evidenceTier: "static-suspect",
         severity: "medium",
@@ -250,6 +253,7 @@ export function checkConflicts(eco, { graph } = {}) {
     if (row.layers.length > 1) {
       conflicts.push({
         type: "row-override",
+        row: row.id,
         kind: "contract",
         evidenceTier: "contract-source",
         severity: "info",
@@ -268,6 +272,7 @@ export function checkConflicts(eco, { graph } = {}) {
     if (row.disabled === true) {
       conflicts.push({
         type: "disabled-row",
+        row: row.id,
         kind: "contract",
         evidenceTier: "contract-source",
         severity: "info",
