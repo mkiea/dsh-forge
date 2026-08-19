@@ -3,12 +3,12 @@
 - 被测对象：reports/dashboard.html（交互仪表盘）、reports/plugin-graph.html（图谱）、web/dashboard-client.js（客户端脚本）
 - 数据来源：data/ecosystem.json（真实装载：web profile + preset:standard，136 行 / 131 插件）
 - 方法：HTML 结构校验 + Node DOM-mock 全交互路径执行（无浏览器环境）
-- 时间：2026-08-19T04:02:14.082Z
+- 时间：2026-08-19T06:06:34.702Z
 
-## 结果：62 通过 / 0 失败
+## 结果：77 通过 / 0 失败
 
 ---
-PASS  dashboard.html exists and non-trivial  [373837B]
+PASS  dashboard.html exists and non-trivial  [380511B]
 PASS  graph html exists  [83338B]
 PASS  balanced script tags
 PASS  has closing html/body
@@ -42,9 +42,24 @@ PASS  graph has svg
 PASS  graph has health badge
 PASS  client script executes without error
 PASS  client app exposed (__DSH_APP__)
-PASS  workspace has module tabs  [10 tabs]
-PASS  default page is feedback  [page-feedback]
-PASS  feedback page active by default
+PASS  workspace has module tabs  [11 tabs]
+PASS  default page is guide  [page-guide]
+PASS  guide page active by default
+PASS  guide nav tab present
+PASS  guide h2 present
+PASS  guide 3-step ol present
+PASS  glossary table present
+PASS  tooltip css .tip:hover::after present
+PASS  tooltip trigger present
+PASS  canonical SEV label 阻断 present
+PASS  glossary term truthSource present
+PASS  10 legacy module guide banners present  [10 banners]
+PASS  mod-guide css present
+PASS  extended glossary: 层 layer
+PASS  extended glossary: 风险分 risk score
+PASS  extended glossary: 信号 signal
+PASS  extended glossary: 状态 active/disabled
+PASS  components header layer tooltip expanded
 PASS  clicking tab switches page
 PASS  back to first tab
 PASS  page-inv page activates

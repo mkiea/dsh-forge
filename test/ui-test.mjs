@@ -126,9 +126,26 @@ const app = windowMock.__DSH_APP__;
 check("client app exposed (__DSH_APP__)", !!app);
 // fire DOMContentLoaded so th click handlers + click delegation register
 if (doc._handlers["DOMContentLoaded"]) doc._handlers["DOMContentLoaded"]();
-check("workspace has module tabs", tabCount === 10, tabCount + " tabs");
-check("default page is feedback", pageIds[0] === "page-feedback", pageIds[0]);
-check("feedback page active by default", pages[0] && pages[0].classList.contains("active"));
+check("workspace has module tabs", tabCount === 11, tabCount + " tabs");
+check("default page is guide", pageIds[0] === "page-guide", pageIds[0]);
+check("guide page active by default", pages[0] && pages[0].classList.contains("active"));
+// v0.1.6 入门引导 + 名词解释（tooltip）
+check("guide nav tab present", dashHtml.includes('data-page="page-guide"'));
+check("guide h2 present", dashHtml.includes("欢迎 · 使用引导"));
+check("guide 3-step ol present", dashHtml.includes("怎么看这份报告（三步）"));
+check("glossary table present", dashHtml.includes("名词解释") && dashHtml.includes("白话解释"));
+check("tooltip css .tip:hover::after present", dashHtml.includes(".tip:hover::after"));
+check("tooltip trigger present", /class="tip" data-tip=/.test(dashHtml));
+check("canonical SEV label 阻断 present", dashHtml.includes("blocking") && dashHtml.includes("阻断"));
+check("glossary term truthSource present", dashHtml.includes("真相源 truthSource"));
+// v0.1.6 旧模块引导条 + 详细显示（tooltip / 扩展术语）
+check("10 legacy module guide banners present", (dashHtml.match(/class="mod-guide"/g) || []).length === 10, (dashHtml.match(/class="mod-guide"/g) || []).length + " banners");
+check("mod-guide css present", dashHtml.includes(".mod-guide{"));
+check("extended glossary: 层 layer", dashHtml.includes("层 layer"));
+check("extended glossary: 风险分 risk score", dashHtml.includes("风险分 risk score"));
+check("extended glossary: 信号 signal", dashHtml.includes("信号 signal"));
+check("extended glossary: 状态 active/disabled", dashHtml.includes("状态 active/disabled"));
+check("components header layer tooltip expanded", dashHtml.includes("组件从哪个配置层加载"));
 // tab switching: click second tab -> pages toggle
 if (tabs.length > 1 && tabs[1].listeners.click) {
   tabs[1].listeners.click();

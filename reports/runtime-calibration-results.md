@@ -1,6 +1,6 @@
 # 运行时校准测试（runtime-calibration）
 
-## 结果：21 通过 / 0 失败
+## 结果：25 通过 / 0 失败
 
 ### 覆盖
 
@@ -33,4 +33,8 @@ PASS  stub.available false (offline)
 PASS  stub snapshot honest not-executed note
 PASS  no-ctx available false
 PASS  no-ctx observeState falls to not-executed  [not-executed]
+PASS  F-8 overflow dropped is observable  [3]
+PASS  F-8 overflow does not bump distinct  [2]
+PASS  F-7 dispose clears retained counter map
+PASS  F-7 dispose resets window/distinct
 ---

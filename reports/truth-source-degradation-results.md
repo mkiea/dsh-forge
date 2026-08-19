@@ -1,6 +1,6 @@
 # 真相源三态降级测试（truth-source-degradation）
 
-## 结果：12 通过 / 0 失败
+## 结果：17 通过 / 0 失败
 
 ### 覆盖
 
@@ -14,7 +14,9 @@
 PASS  INV-4 high capped to medium  [medium]
 PASS  INV-4 medium untouched  [medium]
 PASS  INV-4 low untouched  [low]
+PASS  F-8 capConfidence purity: inputs not mutated  [high]
 PASS  rank cap high->medium  [medium]
+PASS  F-8 rank cap purity: input untouched  [high]
 PASS  invalid cap throws
 PASS  TRUTH_SOURCES = dump-config/auto/scan  [dump-config,auto,scan]
 PASS  truth-source order has scan last
@@ -23,4 +25,7 @@ PASS  snapshot -> confidenceCap null (kept recorded level)  [null]
 PASS  dump-config -> confidenceCap high  [high]
 PASS  CONFIDENCE_LEVELS low/medium/high  [low,medium,high]
 PASS  CONFIDENCE_RANK high==2  [2]
+PASS  F-7 hashId is 16-hex 64-bit  [e689323f6a5f21c7]
+PASS  F-7 hashId deterministic
+PASS  F-7 hashId differs by input
 ---
