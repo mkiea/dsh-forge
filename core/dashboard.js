@@ -72,7 +72,7 @@ const MODULE_HELP = {
   "page-overview": "一张图看懂整组合：关键数字、风险分布环形图、组件按层分布柱图。健康度 A→D 越靠前越健康。",
   "page-components": "插件清单，一行一个组件。用搜索框、层/风险/状态下拉筛选，点表头排序。风险分越高越需关注。",
   "page-graph": "依赖关系图：每个色块＝一个插件，颜色＝风险级别，红色连线＝版本冲突（不满足）。",
-  "page-conflicts": "冲突与发现明细：类型 / 级别 / 内容 / 影响 / 建议 / 置信度，红色行最需处理。",
+  "page-conflicts": "冲突与发现明细：类型 / 原始级别 / 最终级别 / 证据标签 / 运行时状态 / 内容 / 影响 / 建议 / 置信度，红色行最需处理。",
   "page-shared": "被多个组件共同依赖的包：已装版本能否满足所有消费方要求，✗ 表示不满足。",
   "page-patterns": "已知风险模式（pattern）与已验证事实（verified）。verified 表示已复核并修正组件风险分。",
   "page-inv": "静态分析 + 运行时观测的混合验证体系：顶部是真相源/置信度卡片，下方为不变量 INV-1~6 及验证方式。",
@@ -197,7 +197,7 @@ export function buildEmbedData(analysis, extra = {}) {
     pluginCount: assessment.pluginCount,
     edgeCount: graph.edges.length,
     fragile: assessment.fragilePath,
-    conflicts: conflicts.conflicts.map((c) => ({ type: c.type, severity: c.severity, message: c.message, evidence: c.evidence, impact: c.impact, advice: c.advice, confidence: c.confidence, finding_id: c.finding_id })),
+    conflicts: conflicts.conflicts.map((c) => ({ type: c.type, severity: c.severity, finalSeverity: c.finalSeverity, evidenceTag: c.evidenceTag, runtimeState: c.runtimeState, message: c.message, evidence: c.evidence, impact: c.impact, advice: c.advice, confidence: c.confidence, finding_id: c.finding_id })),
     conflictSummary: conflicts.summary,
     sharedDeps: graph.shared.slice(0, 15).map((s) => ({ dep: s.dep, installed: s.installed, ranges: s.ranges.map((r) => ({ range: r.range, count: r.count, satisfied: r.satisfied })) })),
     patterns: patterns.map((p) => ({ id: p.id, severity: p.severity, message: p.message, evidence: p.evidence, confidence: p.confidence })),
@@ -418,9 +418,9 @@ function leaksPage(embed) {
 
 function conflictsPage(embed) {
   const out = [];
-  out.push('<h2>冲突与发现（' + embed.conflicts.length + " 条）</h2><table class='conf'><thead><tr><th>类型</th><th>级别</th><th>内容</th><th>影响</th><th>建议</th><th>置信度</th></tr></thead><tbody>");
+  out.push('<h2>冲突与发现（' + embed.conflicts.length + " 条）</h2><table class='conf'><thead><tr><th>类型</th><th>原始级别</th><th>最终级别</th><th>证据标签</th><th>运行时状态</th><th>内容</th><th>影响</th><th>建议</th><th>置信度</th></tr></thead><tbody>");
   for (const c of embed.conflicts) {
-    out.push("<tr class='c-" + esc(c.severity) + "'><td>" + esc(c.type) + "</td><td>" + sevBadge(c.severity) + "</td><td>" + esc(c.message) + "</td><td>" + esc(c.impact) + "</td><td>" + esc(c.advice) + "</td><td>" + esc(c.confidence) + "</td></tr>");
+    out.push("<tr class='c-" + esc(c.finalSeverity || c.severity) + "'><td>" + esc(c.type) + "</td><td>" + sevBadge(c.severity) + "</td><td>" + sevBadge(c.finalSeverity || c.severity) + "</td><td>" + esc(c.evidenceTag || '—') + "</td><td>" + esc(c.runtimeState || '—') + "</td><td>" + esc(c.message) + "</td><td>" + esc(c.impact) + "</td><td>" + esc(c.advice) + "</td><td>" + esc(c.confidence) + "</td></tr>");
   }
   out.push("</tbody></table>");
   return out;

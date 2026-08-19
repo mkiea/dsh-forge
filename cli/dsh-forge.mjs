@@ -154,10 +154,10 @@ function renderTui(a, err) {
     }
     lines.push("");
   }
-  const real = c.conflicts.filter((x) => x.severity !== "info");
+  const real = c.conflicts.filter((x) => (x.finalSeverity || x.severity) !== "info");
   lines.push(C("1", "Conflicts") + "  total " + c.summary.total + " · " + (Object.entries(c.summary.bySeverity).map(([k, v]) => k + "=" + v).join(" ") || "none"));
   for (const x of real.slice(0, 12)) {
-    lines.push("  [" + sevBadge(x.severity) + "] " + fit(x.message, width - 20));
+    lines.push("  [" + sevBadge(x.finalSeverity || x.severity) + "] " + fit(x.message, width - 20));
     lines.push("      impact : " + fit(x.impact || "", width - 20));
     lines.push("      advice : " + fit(x.advice || "", width - 20));
   }

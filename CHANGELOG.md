@@ -1,6 +1,17 @@
 # Changelog
 ## [Unreleased]
 
+## [0.1.7] - 2026-08-19
+
+### 三展示面融合字段补渲染（弹窗/网页/TUI 一致性）
+
+- **网页/弹窗冲突明细表新增融合列**（`core/dashboard.js`）：`buildEmbedData` 将 v0.1.6 证据融合产物 `finalSeverity` / `evidenceTag` / `runtimeState` 一并注入 embed；`conflictsPage` 冲突明细表由「类型/级别/内容/影响/建议/置信度」扩展为「类型/原始级别/最终级别/证据标签/运行时状态/内容/影响/建议/置信度」。旧数据（无融合字段）安全回退 `finalSeverity → severity`、缺失标 `—`；page-conflicts 引导文案同步。
+
+- **TUI 冲突列表改用最终级别**（`cli/dsh-forge.mjs`）：`renderTui` 冲突筛选与徽章渲染统一使用 `finalSeverity`，与 summary.bySeverity（融合计数）同源一致，不再与原始 severity 混用。
+
+- 说明：融合字段自 v0.1.6 已在 `check --json` 报告 findings 中暴露，本版补齐网页/弹窗/TUI 三条 UI 链路的可视化，收敛三面展示一致性。无新增测试，用例总数保持 921。
+
+
 ## [0.1.6] - 2026-08-19
 
 ### 8 项断裂点修复（审计）
