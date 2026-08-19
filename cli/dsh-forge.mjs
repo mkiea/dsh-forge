@@ -142,7 +142,7 @@ function fit(text, width) {
   return s.length <= width ? s : s.slice(0, Math.max(0, width - 1)) + "…";
 }
 
-function renderTui(a) {
+function renderTui(a, err) {
   const width = process.stdout.columns || 100;
   const g = a.graph;
   const s = a.assessment;
@@ -155,6 +155,11 @@ function renderTui(a) {
     "  edges " + s.edgeCount +
     "  avgRisk " + s.avgScore + "  maxRisk " + s.maxScore);
   lines.push("layers " + (g.rows[0] && g.rows[0].layers ? a.ecosystem.layers.map((l) => l.layer).join(" -> ") : ""));
+  const ts = String(a.truthSource || "scan").toUpperCase();
+  const cc = a.confidenceCap || "—";
+  const leakN = (a.leaks && a.leaks.summary && a.leaks.summary.total) || 0;
+  const fv = Array.isArray(a.findingsValid) ? (a.findingsValid.length === 0 ? "ok" : a.findingsValid.length + " violation(s)") : "—";
+  lines.push(C("1", "verify") + "  truthSource " + C("1;33", ts) + "  confCap " + cc + "  leaks " + leakN + "  findingsValid " + fv);
   lines.push("");
   if (s.pluginCount <= COMPLEXITY_LIGHT) {
     lines.push(C("1", "Composed rows (lightweight composition)"));
@@ -186,15 +191,17 @@ function renderTui(a) {
     lines.push("  none");
   }
   lines.push("");
+  if (err) lines.push(C("31", "  refresh failed: " + err));
   lines.push(C("90", "  [W] open web panel   [R] refresh   [Q] quit   (TUI → Web one-key switch)"));
   return lines.join("\n");
 }
 
 function runInteractiveTui(getAnalysis, opts, initialAnalysis) {
   let analysis = initialAnalysis || loadAnalysis(opts);
+  let lastError = null;
   const draw = () => {
     console.clear();
-    process.stdout.write(renderTui(analysis) + "\n");
+    process.stdout.write(renderTui(analysis, lastError) + "\n");
   };
   draw();
   if (!process.stdin.isTTY) return; // explicit `tui` in a pipe: render once, then exit
@@ -211,7 +218,13 @@ function runInteractiveTui(getAnalysis, opts, initialAnalysis) {
       await startWeb(analysis, opts);
     } else if (k === "r") {
       clearAnalysisCache(); // R = explicit refresh: skip the analysis cache
-      analysis = loadAnalysis(opts);
+      try {
+        analysis = runAnalysis({ profile: opts.profile, datasetPath: opts.dataset });
+        lastError = null;
+      } catch (e) {
+        // keep the last frame, surface the refresh error inline instead of exiting
+        lastError = String((e && e.message) || e).split("\n")[0];
+      }
       draw();
     }
   };

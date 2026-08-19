@@ -1,6 +1,14 @@
 # Changelog
 ## [Unreleased]
 
+## [0.1.6] - 2026-08-19（v0.1.6 预览版）
+
+### TUI 增强（审计 F1/F2 修复）
+
+- R 键刷新失败不再退出进程：保留旧帧，底部内联红字显示 `refresh failed: ...`（对齐仪表盘 /api/refresh 失败保留旧态的行为）。
+- renderTui 新增混合验证元数据行：truthSource（dump-config/auto/scan/snapshot 大写）+ confCap + leaks 计数 + findingsValid（ok / N violation(s)）。
+- 版本升级 0.1.5 → 0.1.6（root + ui-plugin 对齐），仪表盘页头与文档版本同步。
+
 ## [0.1.5] - 2026-08-19
 
 ### 静态-运行时混合验证体系（v0.1.5 P0+P1）
