@@ -22,16 +22,22 @@ export const UNOBSERVED_STATE = "not-executed";
 export const OBSERVED_STATES = Object.freeze(["not-executed", "executed-clean", "executed-residual"]);
 
 export function createRuntimeCalibration(ctx, opts = {}) {
+  // Monotonic tick source (F-2): Date.now() is non-monotonic, so a clock/NTP
+  // rollback could make observed events look like they pre-date the start
+  // boundary. hrtime is monotonic; Date.now() only as fallback.
+  const nowMs = () => { try { return Number(process.hrtime.bigint() / 1000000n); } catch { return Date.now(); } };
+
   const cfg = {
     windowSize: Number(opts.windowSize) > 0 ? Number(opts.windowSize) : 256,   // A-4: buffered event capacity
     cardinalityCap: Number(opts.cardinalityCap) > 0 ? Number(opts.cardinalityCap) : 512, // A-4: max distinct keys
-    startBoundary: opts.startBoundary || Date.now()
+    startBoundary: opts.startBoundary == null ? nowMs() : opts.startBoundary
   };
 
   let active = false;
   const offs = [];
   const counters = Object.create(null);          // eventType -> count (always retained)
   let distinct = 0;
+  let overflowDropped = 0; // F-8: distinct keys dropped at the cardinality cap (observable, not silent)
   const buffer = new Array(cfg.windowSize);      // ring: { evtType, t }
   let head = 0, filled = 0;
 
@@ -53,12 +59,12 @@ export function createRuntimeCalibration(ctx, opts = {}) {
     if (counters[evtType] === undefined) {
       // A-4: cardinality guard — a new high-cardinality key is dropped, but
       // already-retained counters keep counting (counts-first policy).
-      if (distinct >= cfg.cardinalityCap) return;
+      if (distinct >= cfg.cardinalityCap) { overflowDropped++; return; }
       counters[evtType] = 0;
       distinct++;
     }
     counters[evtType]++;
-    buffer[head] = { evtType, t: Date.now() };
+    buffer[head] = { evtType, t: nowMs() };
     head = (head + 1) % cfg.windowSize;
     if (filled < cfg.windowSize) filled++;
   }
@@ -98,7 +104,7 @@ export function createRuntimeCalibration(ctx, opts = {}) {
     // evidence when it can observe a post-dispose lingering side effect.
     markResidual: (pkg) => { const k = keyOf(pkg); if (k) lifecycle.residual[k] = 1; return api; },
 
-    counters: () => ({ ...counters, cardinality: { distinct, cap: cfg.cardinalityCap }, window: { size: cfg.windowSize, filled } }),
+    counters: () => ({ ...counters, cardinality: { distinct, cap: cfg.cardinalityCap, dropped: overflowDropped }, window: { size: cfg.windowSize, filled } }),
 
     // A-1: derive the three-state observation for a single finding (bound to a
     // package via f.package / f.scope). Absence of activation => NOT healthy.
@@ -125,7 +131,7 @@ export function createRuntimeCalibration(ctx, opts = {}) {
         available: api.available(),
         windowSize: cfg.windowSize,
         windowFilled: filled,
-        cardinality: { distinct, cap: cfg.cardinalityCap },
+        cardinality: { distinct, cap: cfg.cardinalityCap, dropped: overflowDropped },
         counters: { ...counters },
         lifecycle: {
           activated: { ...lifecycle.activated },
@@ -141,6 +147,15 @@ export function createRuntimeCalibration(ctx, opts = {}) {
       active = false;
       for (const off of offs) { try { off(); } catch { /* ignore */ } }
       offs.length = 0;
+      // Release the reference graph the api closure would otherwise retain
+      // (F-7): wipe buffered events + counter/lifecycle maps so a stale handle
+      // cannot keep a live snapshot after dispose.
+      buffer.fill(null);
+      head = 0; filled = 0; distinct = 0; overflowDropped = 0;
+      for (const key of Object.keys(counters)) delete counters[key];
+      for (const key of Object.keys(lifecycle.activated)) delete lifecycle.activated[key];
+      for (const key of Object.keys(lifecycle.disposed)) delete lifecycle.disposed[key];
+      for (const key of Object.keys(lifecycle.residual)) delete lifecycle.residual[key];
     }
   };
   return api;

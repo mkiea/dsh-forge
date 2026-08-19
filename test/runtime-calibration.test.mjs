@@ -120,6 +120,23 @@ function makeFakeCtx() {
   cal.dispose();
 }
 
+// ---- 7) overflow observable + dispose releases references (F-8 / F-7) ----
+{
+  const ctx = makeFakeCtx();
+  const cal = createRuntimeCalibration(ctx, { windowSize: 8, cardinalityCap: 2 }).start();
+  ctx.emit("plugin/apply", { data: { name: "a" } });
+  ctx.emit("plugin/apply", { data: { name: "b" } }); // distinct reaches the cap (2)
+  for (let i = 0; i < 3; i++) ctx.emit("plugin/apply", { data: { name: "c" } }); // 4th key -> dropped
+  const c = cal.counters();
+  check("F-8 overflow dropped is observable", c.cardinality.dropped >= 3, c.cardinality.dropped);
+  check("F-8 overflow does not bump distinct", c.cardinality.distinct === 2, c.cardinality.distinct);
+  cal.dispose();
+  const after = cal.counters();
+  const dataKeys = Object.keys(after).filter((k) => k !== "cardinality" && k !== "window");
+  check("F-7 dispose clears retained counter map", dataKeys.length === 0, dataKeys.length);
+  check("F-7 dispose resets window/distinct", after.cardinality.distinct === 0 && after.window.filled === 0);
+}
+
 const lines = [
   "# 运行时校准测试（runtime-calibration）", "", "## 结果：" + passed + " 通过 / " + failed + " 失败", "", "### 覆盖", "",
   "1. A-4 滑动窗口 + 事件基数上限 + 计数优先/超限丢帧", "2. A-4 可逆性（dispose 清除全部监听器）",

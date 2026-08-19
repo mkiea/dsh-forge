@@ -12,13 +12,18 @@ export const TRUTH_SOURCES = Object.freeze(["dump-config", "auto", "scan"]);
 
 // Stable FNV-1a hash of a string -> 8-hex id.
 export function hashId(text) {
-  let h = 0x811c9dc5;
+  // F-7: widened from 32-bit FNV-1a to true 64-bit (BigInt). At ~4000+ plugins a
+  // 32-bit space yields non-negligible collision probability; 64-bit shrinks it to
+  // negligible while staying deterministic across runs and Node versions.
   const s = String(text == null ? "" : text);
+  let h = 14695981039346656037n; // FNV-1a 64-bit offset basis
+  const prime = 1099511628211n;
+  const mask = 0xFFFFFFFFFFFFFFFFn;
   for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = (h >>> 0) * 0x01000193;
+    h ^= BigInt(s.charCodeAt(i));
+    h = (h * prime) & mask;
   }
-  return (h >>> 0).toString(16).padStart(8, "0");
+  return h.toString(16).padStart(16, "0");
 }
 
 // A-2: stable finding_id binding a static suspect to runtime evidence.
@@ -55,15 +60,22 @@ export function capConfidence(findings, cap) {
   const rank = typeof cap === "string" ? CONFIDENCE_RANK[cap] : cap;
   if (rank === undefined) throw new TypeError("invalid confidence cap: " + String(cap));
   if (!Array.isArray(findings)) return findings;
+  // F-8: pure — never mutate the input. First scan for any capping needed (fast
+  // path returns the same array when nothing changes), then map only the affected
+  // entries to capped copies.
+  let cappedAny = false;
   for (const f of findings) {
     if (!f || typeof f !== "object" || f.confidence === undefined) continue;
     const r = CONFIDENCE_RANK[f.confidence];
-    if (r !== undefined && r > rank) {
-      f.confidence = CONFIDENCE_LEVELS[rank];
-      f.capped = true;
-    }
+    if (r !== undefined && r > rank) { cappedAny = true; break; }
   }
-  return findings;
+  if (!cappedAny) return findings;
+  return findings.map((f) => {
+    if (!f || typeof f !== "object" || f.confidence === undefined) return f;
+    const r = CONFIDENCE_RANK[f.confidence];
+    if (r !== undefined && r > rank) return { ...f, confidence: CONFIDENCE_LEVELS[rank], capped: true };
+    return f;
+  });
 }
 
 // INV-6 schema check: every finding must carry confidence + evidence.

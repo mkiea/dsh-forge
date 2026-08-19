@@ -4,7 +4,7 @@
 // transparent (capped flag) and full-chain propagated via runAnalysis metadata.
 import * as path from "node:path";
 import * as fs from "node:fs";
-import { capConfidence, CONFIDENCE_LEVELS, CONFIDENCE_RANK, TRUTH_SOURCES } from "../core/evidence.js";
+import { capConfidence, hashId, CONFIDENCE_LEVELS, CONFIDENCE_RANK, TRUTH_SOURCES } from "../core/evidence.js";
 
 let passed = 0, failed = 0;
 const results = [];
@@ -21,17 +21,19 @@ const ROOT = path.dirname(path.dirname(new URL(import.meta.url).pathname.replace
     { confidence: "medium", evidence: "e" },
     { confidence: "low", evidence: "e" }
   ];
-  capConfidence(findings, "medium");
-  check("INV-4 high capped to medium", findings[0].confidence === "medium" && findings[0].capped === true, findings[0].confidence);
-  check("INV-4 medium untouched", findings[1].confidence === "medium" && !findings[1].capped, findings[1].confidence);
-  check("INV-4 low untouched", findings[2].confidence === "low", findings[2].confidence);
+  const capped = capConfidence(findings, "medium");
+  check("INV-4 high capped to medium", capped[0].confidence === "medium" && capped[0].capped === true, capped[0].confidence);
+  check("INV-4 medium untouched", capped[1].confidence === "medium" && !capped[1].capped, capped[1].confidence);
+  check("INV-4 low untouched", capped[2].confidence === "low", capped[2].confidence);
+  check("F-8 capConfidence purity: inputs not mutated", findings[0].confidence === "high" && !findings[0].capped, findings[0].confidence);
 }
 
 // ---- 2) cap by rank number ----
 {
   const a = [{ confidence: "high" }];
-  capConfidence(a, CONFIDENCE_RANK["medium"]);
-  check("rank cap high->medium", a[0].confidence === "medium", a[0].confidence);
+  const r = capConfidence(a, CONFIDENCE_RANK["medium"]);
+  check("rank cap high->medium", r[0].confidence === "medium", r[0].confidence);
+  check("F-8 rank cap purity: input untouched", a[0].confidence === "high", a[0].confidence);
 }
 
 // ---- 3) invalid cap throws (fail-loud) ----
@@ -73,6 +75,13 @@ const ROOT = path.dirname(path.dirname(new URL(import.meta.url).pathname.replace
 {
   check("CONFIDENCE_LEVELS low/medium/high", CONFIDENCE_LEVELS.length === 3 && CONFIDENCE_LEVELS[0] === "low", CONFIDENCE_LEVELS.join(","));
   check("CONFIDENCE_RANK high==2", CONFIDENCE_RANK["high"] === 2, CONFIDENCE_RANK["high"]);
+}
+
+// ---- 7) 64-bit stable finding hash (F-7) ----
+{
+  check("F-7 hashId is 16-hex 64-bit", /^[0-9a-f]{16}$/.test(hashId("a|b|c")), hashId("a|b|c"));
+  check("F-7 hashId deterministic", hashId("scope|name|cat|loc") === hashId("scope|name|cat|loc"));
+  check("F-7 hashId differs by input", hashId("x") !== hashId("y"));
 }
 
 const lines = [

@@ -21,21 +21,54 @@ function normSeverity(s) {
 }
 
 function inferTier(f) {
-  if (f.evidenceTier) return f.evidenceTier;
-  const conf = String(f.confidence || "low").toLowerCase();
-  return conf === "high" ? "static-suspect" : conf === "medium" ? "heuristic" : "heuristic";
+  // F-5: evidenceTier is the authoritative provenance dimension (conflicts/leaks
+  // set it explicitly). confidence is a separate certainty axis — mapping one to
+  // the other conflates two dimensions. Unclassified static findings default to
+  // heuristic (conservative; runtime may correct them).
+  return f.evidenceTier || "heuristic";
 }
 
 // A-3: an upgrade/confirmation to high must be actionable and reproducible.
+// Localization seam (F-6): default zh-CN action/reproduce copy lives here rather
+// than inline across the fusion branches, so a future i18n pass touches one place.
+const ACTION_NEXT_DEFAULT = (out) =>
+  "检查 " + (out.package || out.scope || "该插件") +
+  " 的副作用注册是否在卸载/dispose 中清理（使用 ctx.on / ctx.effect 或显式 disposer 而非裸 listener/timer 注册）。";
+const ACTION_REPRODUCE_DEFAULT = (out) =>
+  "在同一运行时窗口内对 " + (out.package || out.scope || "该实例") +
+  " 执行 加载 -> 卸载，再对比事件流计数：若残留监听器/定时器未归零即可复现（executed-residual）。";
+
 function requireAction(out) {
-  if (!out.next_action) {
-    out.next_action = "检查 " + (out.package || out.scope || "该插件") +
-      " 的副作用注册是否在卸载/dispose 中清理（使用 ctx.on / ctx.effect 或显式 disposer 而非裸 listener/timer 注册）。";
+  if (!out.next_action) out.next_action = ACTION_NEXT_DEFAULT(out);
+  if (!out.reproduce_hint) out.reproduce_hint = ACTION_REPRODUCE_DEFAULT(out);
+}
+
+// Fuse ONE static finding against a runtime observation state
+// (default to UNOBSERVED when none recorded). Returns a non-mutated copy of
+// the finding with fused fields set (finalSeverity, evidenceTag, runtimeState).
+function nextLower(sev) { return sev === "high" ? "medium" : sev === "medium" ? "low" : sev; }
+function nextHigher(sev) { return sev === "high" ? "high" : sev === "medium" ? "high" : sev === "low" ? "medium" : "info"; }
+
+// Complete fusion matrix (F-4): the former 7-row subset let combinations like
+// high+heuristic fall into a default branch and skip INV-3 (clean only downgrades,
+// never clears). Every (severity x tier x state) resolves here explicitly:
+//   contract-source   runtime-immune (verified-by-design) — never changes.
+//   static/heuristic  executed-residual -> confirm / escalate toward high;
+//                     executed-clean    -> downgrade one step (INV-3);
+//                     not-executed      -> keep severity, mark pending (A-1).
+function resolveFusion(sev, tier, state) {
+  if (tier === "contract-source") {
+    return { finalSeverity: sev, evidenceTag: "contract-source", runtimeOnly: false };
   }
-  if (!out.reproduce_hint) {
-    out.reproduce_hint = "在同一运行时窗口内对 " + (out.package || out.scope || "该实例") +
-      " 执行 加载 -> 卸载，再对比事件流计数：若残留监听器/定时器未归零即可复现（executed-residual）。";
+  const tag = tier === "unknown" ? "heuristic" : tier;
+  if (state === "executed-residual") {
+    const up = sev === "high" || sev === "medium" ? "high" : nextHigher(sev);
+    return { finalSeverity: up, evidenceTag: tag + " -> runtime-confirmed", fused: true, confirmedHigh: up === "high" };
   }
+  if (state === "executed-clean") {
+    return { finalSeverity: nextLower(sev), evidenceTag: tag + " + executed-clean", fused: true };
+  }
+  return { finalSeverity: sev, evidenceTag: tag + " + not-executed", pendingConfirmation: sev !== "info" };
 }
 
 // Fuse ONE static finding against a runtime observation state
@@ -44,57 +77,12 @@ function requireAction(out) {
 function fuseOne(f, state) {
   const finalState = OBSERVED_STATES.includes(state) ? state : UNOBSERVED;
   const out = { ...f, runtimeState: finalState };
-  const tier = inferTier(f);
-  const sev = normSeverity(f.severity);
-
-  // low + contract-source: verified-by-design, never upgraded at runtime.
-  if (sev === "low" && tier === "contract-source") {
-    out.finalSeverity = "low";
-    out.evidenceTag = "contract-source";
-    out.runtimeOnly = false;
-    return out;
-  }
-
-  if (sev === "high" && tier === "static-suspect") {
-    if (finalState === "executed-residual") {
-      out.finalSeverity = "high";
-      out.evidenceTag = "static-suspect -> runtime-confirmed";
-      out.fused = true;
-      requireAction(out);
-    } else if (finalState === "executed-clean") {
-      out.finalSeverity = "medium";
-      out.evidenceTag = "static-suspect + executed-clean";
-      out.fused = true;
-    } else {
-      out.finalSeverity = "high";
-      out.evidenceTag = "static-suspect + not-executed";
-      out.pendingConfirmation = true;
-    }
-    return out;
-  }
-
-  if (sev === "medium" && tier === "heuristic") {
-    if (finalState === "executed-residual") {
-      out.finalSeverity = "high";
-      out.evidenceTag = "heuristic -> runtime-confirmed";
-      out.fused = true;
-      requireAction(out);
-    } else if (finalState === "executed-clean") {
-      out.finalSeverity = "low";
-      out.evidenceTag = "heuristic + executed-clean";
-      out.fused = true;
-    } else {
-      out.finalSeverity = "medium";
-      out.evidenceTag = "heuristic + not-executed";
-      out.pendingConfirmation = true;
-    }
-    return out;
-  }
-
-  // Default: no runtime-sensitive rule for this pair; reflect the observed
-  // state without escalating (matches "low + contract-source", info, etc.).
-  out.finalSeverity = sev;
-  out.evidenceTag = (tier || "unknown") + (finalState !== UNOBSERVED ? " + " + finalState : "");
+  const d = resolveFusion(normSeverity(f.severity), inferTier(f), finalState);
+  if (d.finalSeverity !== undefined) out.finalSeverity = d.finalSeverity;
+  if (d.evidenceTag) out.evidenceTag = d.evidenceTag;
+  if (d.fused) out.fused = true;
+  if (d.pendingConfirmation) out.pendingConfirmation = true;
+  if (d.confirmedHigh) requireAction(out); // A-3: confirmed-high must be actionable
   return out;
 }
 

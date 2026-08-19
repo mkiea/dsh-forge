@@ -84,6 +84,25 @@ function fuseWith(base, state) {
   check("empty input -> empty summary", summary.total === 0, summary.total);
 }
 
+// ---- 7) matrix completeness + tier/confidence decoupling (F-4 / F-5) ----
+{
+  // high+heuristic previously fell into the default branch; now honours INV-3.
+  const hh = { package: NAME, scope: "s", type: "t", location: "l", severity: "high", evidenceTier: "heuristic", confidence: "high", evidence: "e" };
+  const clean = fuseWith(hh, "executed-clean");
+  check("F-4 high+heuristic+clean downgrades to medium (INV-3)", clean.finalSeverity === "medium", clean.finalSeverity);
+  const resid = fuseWith(hh, "executed-residual");
+  check("F-4 high+heuristic+residual confirms high", resid.finalSeverity === "high" && resid.evidenceTag.includes("runtime-confirmed"), resid.evidenceTag);
+  const unobs = fuseWith(hh, null);
+  check("F-4 high+heuristic+unobserved stays high pending", unobs.finalSeverity === "high" && unobs.pendingConfirmation === true, unobs.finalSeverity);
+  // medium + static-suspect (was also a default-branch combo)
+  const ms = { package: NAME, scope: "s", type: "t", location: "l", severity: "medium", evidenceTier: "static-suspect", confidence: "medium", evidence: "e" };
+  check("F-4 medium+static-suspect+unobserved stays medium", fuseWith(ms, null).finalSeverity === "medium");
+  // confidence is a separate axis: a high-confidence finding without an
+  // evidenceTier must NOT be silently promoted to static-suspect (F-5).
+  const noTier = fuseWith({ package: NAME, scope: "s", type: "t", location: "l", severity: "high", confidence: "high", evidence: "e" }, null);
+  check("F-5 no evidenceTier defaults heuristic, not static-suspect", noTier.evidenceTag.includes("heuristic") && !noTier.evidenceTag.includes("static-suspect"), noTier.evidenceTag);
+}
+
 const lines = [
   "# 证据融合测试（evidence-fusion）", "", "## 结果：" + passed + " 通过 / " + failed + " 失败", "", "### 覆盖", "",
   "1. A-1 未观测三态（not-executed/executed-clean/executed-residual）",

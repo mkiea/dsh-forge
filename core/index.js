@@ -200,7 +200,7 @@ export function runAnalysis(opts = {}) {
   // (dump-config may reach high; dataset/snapshot loads keep their recorded level).
   const effectiveTruthSource = eco.truthSource || (opts.datasetPath ? "snapshot" : "scan");
   const capSource = effectiveTruthSource === "scan";
-  if (capSource) { capConfidence(conflicts.conflicts, "medium"); capConfidence(leaks.findings, "medium"); }
+  if (capSource) { conflicts.conflicts = capConfidence(conflicts.conflicts, "medium"); leaks.findings = capConfidence(leaks.findings, "medium"); }
   const feedback = buildFeedback({ conflicts, leaks, assessment, patterns, verified });
   const findingsValid = validateFindings([...conflicts.conflicts, ...leaks.findings]);
   const result = { ecosystem: eco, graph, conflicts, assessment, patterns, deprecations, verified, leaks, feedback, truthSource: effectiveTruthSource, confidenceCap: capSource ? "medium" : (effectiveTruthSource === "dump-config" ? "high" : null), findingsValid };
