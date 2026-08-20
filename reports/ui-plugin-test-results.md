@@ -2,7 +2,7 @@
 
 - 被测对象：ui-plugin/lib/client.js（ModuleLoader 客户端 bundle，内嵌 reports/dashboard.html）
 - 方法：vm + mock __ModuleLoader__ / react（createElement/useState/useEffect）真实执行 bundle，驱动开/关交互
-- 时间：2026-08-20T03:36:24.233Z
+- 时间：2026-08-20T08:40:14.518Z
 
 ## 结果：22 通过 / 0 失败
 

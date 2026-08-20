@@ -24,7 +24,7 @@ function exists(rel) {
   return fs.existsSync(path.join(ROOT, rel));
 }
 
-const MODULE_COUNT = "25"; // core/ module count excl. index facade (see ARCHITECTURE.md)
+const MODULE_COUNT = "26"; // core/ module count excl. index facade (see ARCHITECTURE.md)
 
 // 1. test files must carry a test suffix (.test.mjs or -test.mjs); bare names
 //    (the historical hazard) are flagged

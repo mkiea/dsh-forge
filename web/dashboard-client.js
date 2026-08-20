@@ -179,6 +179,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
+    applySkin(currentSkin());
     var tabs = document.querySelectorAll('.ws-tab');
     for (var i = 0; i < tabs.length; i++) {
       (function (el) {
@@ -232,5 +233,18 @@
     });
   }
 
-  window.__DSH_APP__ = { apply: apply, addRow: addRow, removeRow: removeRow, reset: reset, toggle: toggle, toggleFbGroup: toggleFbGroup, refresh: refresh, state: state };
+  var skinCache = 'light';
+  function currentSkin() {
+    try { var v = window.localStorage.getItem('dsh-skin'); if (v === 'light' || v === 'dark') return v; } catch (e) { }
+    return skinCache;
+  }
+  function applySkin(skin) { var root = document.documentElement; if (root) root.setAttribute('data-skin', skin); }
+  function toggleSkin() {
+    var next = currentSkin() === 'dark' ? 'light' : 'dark';
+    skinCache = next;
+    try { window.localStorage.setItem('dsh-skin', next); } catch (e) { }
+    applySkin(next);
+  }
+
+  window.__DSH_APP__ = { apply: apply, addRow: addRow, removeRow: removeRow, reset: reset, toggle: toggle, toggleFbGroup: toggleFbGroup, refresh: refresh, toggleSkin: toggleSkin, state: state };
 })();

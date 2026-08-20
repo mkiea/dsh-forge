@@ -30,7 +30,8 @@ function renderNode(n) {
 }
 
 function makeReact() {
-  let state = false;
+  const states = [];
+  let hookIdx = 0;
   let rerender = null;
   let effectCleanup = null;
   const keydownHandlers = [];
@@ -42,9 +43,10 @@ function makeReact() {
     Fragment: Symbol("fragment"),
     createElement: (type, props, ...children) => ({ type: type || null, props: props || {}, children }),
     useState(init) {
-      if (init !== undefined && state === false && init !== false) state = !!init;
-      return [state, (v) => {
-        state = typeof v === "function" ? v(state) : !!v;
+      const idx = hookIdx++;
+      if (states.length <= idx) states.push(init);
+      return [states[idx], (v) => {
+        states[idx] = typeof v === "function" ? v(states[idx]) : v;
         if (rerender) rerender();
       }];
     },
@@ -54,7 +56,13 @@ function makeReact() {
       effectCleanup = typeof ret === "function" ? ret : null;
     }
   };
-  return { react, doc, setRerender: (f) => { rerender = f; }, keydown: (k) => keydownHandlers.forEach((h) => h(k)) };
+  return { 
+    react, 
+    doc, 
+    setRerender: (f) => { rerender = () => { hookIdx = 0; f(); }; }, 
+    keydown: (k) => keydownHandlers.forEach((h) => h(k)),
+    resetHooks: () => { hookIdx = 0; }
+  };
 }
 
 // ---- load bundle ----
@@ -136,6 +144,8 @@ if (plugin) {
   check("embedded html contains health badge", treeStr.indexOf("badge") >= 0);
   check("modal has close affordance", treeStr.indexOf("✕") >= 0 || treeStr.indexOf("关闭") >= 0);
   m.keydown({ key: "Escape" });
+  // Manually re-render to ensure tree is updated after state change
+  tree = render();
   check("Escape closes modal", !hasIframe(tree));
   openBtn.props.onClick();
   check("reopens", hasIframe(tree));

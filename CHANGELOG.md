@@ -1,6 +1,27 @@
 # Changelog
 ## [Unreleased]
 
+## [0.1.9-beta] - 2026-08-20
+
+### UI 三端信息补全 + 皮肤系统 + 图表增强 + 端口 3060
+
+- **三端融合详情补齐**：Web/弹窗（`core/dashboard.js`）与 TUI（`cli/dsh-forge.mjs`）统一展示 `finalSeverity`/`evidenceTag`/`runtimeState`/`finding_id`；conflicts 表与 leaks 表同步补全「原始级别/最终级别/证据标签/运行时状态」列，旧数据安全回退（`finalSeverity → severity`、缺失标 `—`）。
+- **图表增强**：概览页新增「运行时校准三态分布」环形图、「冲突类型分布」柱图与「快照历史趋势（行数）」折线图，全部零依赖 SVG 并用 CSS 变量适配主题。
+- **皮肤系统**：新增 `core/skins.js`（light/dark 双主题 token + `skinCssVars`）；`dashboard.js` 样式表全面 CSS 变量化（`var(--dsh-*)`），页头新增主题切换按钮并 localStorage 持久化；弹窗与 Web 复用同一套 HTML/CSS/JS，替换 `:root` 变量即可换肤。
+- **端口调整**：Web 默认端口 8080 → 3060（`cli/dsh-forge.mjs` `DEFAULT_WEB_PORT`、`--port` 帮助文本与 README/README.en 示例同步）。
+- **文档同步**：core 纯逻辑模块数 25→26（新增 `skins.js`），ARCHITECTURE 模块表纳入 `skins.js`，doc-consistency `MODULE_COUNT` 同步。
+- **弹窗直连 3060**：ui-plugin 弹窗打开时经 iframe `fetch http://localhost:3060/` 拉取实时网页仪表盘，与 Web 端同一数据源；3060 不可用时回退内嵌快照。
+- **开发者数据面板**：概览页新增「开发者数据 · 扫描概览」——真相源/置信度上限/harness 版本/组合行数/包数/依赖边/配置层数/快照时间 KPI + 分层分布柱图；如实注明 dsh-forge 为静态依赖分析器、不产生 LLM token 用量，故不展示伪造的 token 指标。
+
+### 实时集成进弹窗 + 生成报告 + 开发者面板 + 快照历史
+
+- **弹窗承载实时功能**：插件弹窗成为主界面——打开即经 3060 数据通道 fetch 最新仪表盘（live 徽标），3060 不可用自动回退内嵌快照（snapshot 徽标）；文案由「只读 · 模拟不落盘」改为如实反映「实时分析 · 动态刷新 · 报告可生成」。
+- **弹窗操作按钮**：弹窗页头新增「生成报告」+「快照历史」+「刷新」三按钮——生成报告经 `POST /api/report` 返回落盘路径并归档快照；快照历史经 `GET /api/history` 返回归档条数；刷新重新拉取最新仪表盘。
+- **报告生成 core 能力**（新增 `core/report.js`）：`buildMarkdownReport` 把 `runAnalysis()` 结果渲染为 Markdown（总览/冲突明细/泄露明细/高风险 Top/脆弱链路/开发者数据），`writeReport` 写入 `reports/report-*.md` 并归档快照到 `data/history/`；`core/index.js` 同步导出，零依赖。
+- **3060 数据通道协议**：`cli/dsh-forge.mjs` Web 服务新增 `GET /api/refresh`（重分析并附带报告）、`POST /api/report`（生成报告+归档）、`GET /api/history`（历史归档列表），连同既有 `/healthz` 供弹窗消费。
+- **TUI 报告视图**：TUI 新增 `G` 一键生成报告并进入可上下滑动长文本视图（↑/↓/PgUp/PgDn/space/b，`Q`/Esc 返回），`V` 手动打开，`R` 在报告视图中重新生成，底部滚动条显示行号区间与文件 basename；无浏览器/服务器的系统可直接在终端浏览长报告。
+- **TUI 开发者面板**：`D` 键切换开发者面板（组合行数/唯一包数/依赖边/配置层数/真相源/置信度上限/harness/收集时间/冲突/泄露/平均与最大风险/校验结果）。
+- **模块计数同步**：ARCHITECTURE 模块表与 doc-consistency MODULE_COUNT 纳入 `core/report.js`，全量 20+ 自包含测试套件 + 组合契约均通过。
 ## [0.1.8] - 2026-08-20
 
 ### v0.1.8 正式版：live 混合验证打通 + 复数感知校准统一

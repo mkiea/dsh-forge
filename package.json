@@ -1,6 +1,6 @@
 {
   "name": "dsh-forge",
-  "version": "0.1.8",
+  "version": "0.1.9-beta",
   "description": "Plugin-combination analysis for the DeepSeek Harness: dependency trees, conflict detection, risk scoring with prediction, visualization, and combination simulation.",
   "type": "module",
   "main": "src/index.js",

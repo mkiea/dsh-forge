@@ -7,24 +7,45 @@ window.__ModuleLoader__.load({
     let react = require("react");
     var DASHBOARD_HTML = "__DASHBOARD_HTML__";
     var GENERATED_AT = "__GENERATED_AT__";
+    var SERVER = "http://localhost:3060";
     var NS = "forge";
     var zh = {
       "title": "dsh-forge 插件仪表盘",
-      "subtitle": "插件组合分析 · 只读 · 模拟不落盘",
+      "subtitle": "插件组合实时分析 · 动态刷新 · 报告可生成",
       "open": "插件仪表盘",
       "openShort": "仪表盘",
       "generatedAt": "生成于",
+      "live": "实时",
+      "snapshot": "快照",
+      "refresh": "刷新",
+      "refreshing": "刷新中…",
+      "refreshDone": "已刷新最新分析结果",
+      "report": "生成报告",
+      "reporting": "生成中…",
+      "reportDone": "报告已生成",
+      "history": "快照历史",
+      "historyLoading": "读取历史…",
       "close": "关闭",
-      "hint": "可用 analyze_dependencies / check_conflicts 分析组合；仪表盘展示组件状态、风险评分与假设模拟。"
+      "hint": "实时分析当前插件组合（刷新以重新扫描），可生成 Markdown 报告并归档快照；仪表盘如实呈现健康度、冲突、风险与运行时状态。"
     };
     var en = {
       "title": "dsh-forge plugin dashboard",
-      "subtitle": "plugin analysis · read-only · simulation never persisted",
+      "subtitle": "live plugin analysis · refresh · report",
       "open": "Plugin dashboard",
       "openShort": "Dashboard",
       "generatedAt": "generated at",
+      "live": "live",
+      "snapshot": "snapshot",
+      "refresh": "Refresh",
+      "refreshing": "Refreshing…",
+      "refreshDone": "Latest analysis loaded",
+      "report": "Generate report",
+      "reporting": "Generating…",
+      "reportDone": "Report generated",
+      "history": "Snapshots",
+      "historyLoading": "Loading history…",
       "close": "Close",
-      "hint": "Analyze the composition with analyze_dependencies / check_conflicts; the dashboard shows component status, risk and simulation."
+      "hint": "Analyze the live plugin composition live (Refresh to re-scan), generate a Markdown report and archive snapshots; the dashboard honestly shows health, conflicts, risk and runtime state."
     };
 
     function btnStyle(wide) {
@@ -98,6 +119,18 @@ window.__ModuleLoader__.load({
         borderRadius: 6
       };
     }
+    function actionBtnStyle() {
+      return {
+        border: "1px solid var(--dsw-alias-border-l2, rgba(127,127,127,.3))",
+        background: "var(--dsw-alias-button-elevated-fill, rgba(127,127,127,.08))",
+        color: "var(--dsw-alias-label-primary, #222)",
+        borderRadius: 6,
+        padding: "4px 10px",
+        cursor: "pointer",
+        fontSize: 12,
+        whiteSpace: "nowrap"
+      };
+    }
 
     function makeT(ctx) {
       return function (key) {
@@ -112,27 +145,120 @@ window.__ModuleLoader__.load({
     }
 
     // Self-contained modal wrapper: any trigger button opens it.
+    // Live-first: fetch the dashboard from the local 3060 data channel so the
+    // popup always reflects the real latest analysis; the snapshot (and any
+    // still-shown server error) degrades to the embedded dashboard when the
+    // server is unreachable. Refresh re-fetches; Generate report POSTs to the
+    // 3060 report endpoint and surfaces the written file path.
     function WithModal(props) {
       var openState = react.useState(false);
       var isOpen = openState[0];
       var setOpen = openState[1];
+      var iframeState = react.useState(DASHBOARD_HTML);
+      var iframeHtml = iframeState[0];
+      var setIframeHtml = iframeState[1];
+      var liveState = react.useState(false);
+      var live = liveState[0];
+      var setLive = liveState[1];
+      var statusState = react.useState("");
+      var status = statusState[0];
+      var setStatus = statusState[1];
+      var busyState = react.useState("");
+      var busy = busyState[0];
+      var setBusy = busyState[1];
+
+      var loadLive = function () {
+        if (typeof fetch === "undefined") { setLive(false); return; }
+        setBusy(props.t("refreshing"));
+        fetch(SERVER + "/").then(function (r) {
+          if (!r.ok) throw new Error(String(r.status));
+          return r.text();
+        }).then(function (html) {
+          setIframeHtml(html);
+          setLive(true);
+          setStatus(props.t("refreshDone"));
+          setBusy("");
+        }).catch(function () {
+          setLive(false);
+          setStatus("");
+          setBusy("");
+        });
+      };
+
+      var generateReport = function () {
+        if (typeof fetch === "undefined") { setStatus("report API unavailable"); return; }
+        setBusy(props.t("reporting"));
+        fetch(SERVER + "/api/report", { method: "POST" }).then(function (r) { return r.json(); }).then(function (d) {
+          setBusy("");
+          if (d && d.ok) setStatus(props.t("reportDone") + " · " + d.file);
+          else setStatus("report failed: " + (d && d.error || "unknown"));
+        }).catch(function (e) {
+          setBusy("");
+          setStatus("report failed: " + String(e && e.message || e));
+        });
+      };
+
+      var loadHistory = function () {
+        if (typeof fetch === "undefined") { setStatus("history API unavailable"); return; }
+        setBusy(props.t("historyLoading"));
+        fetch(SERVER + "/api/history").then(function (r) { return r.json(); }).then(function (d) {
+          setBusy("");
+          if (d && d.ok) setStatus("快照历史 " + (d.list ? d.list.length : 0) + " 条");
+          else setStatus("history failed: " + (d && d.error || "unknown"));
+        }).catch(function (e) {
+          setBusy("");
+          setStatus("history failed: " + String(e && e.message || e));
+        });
+      };
+
       react.useEffect(function () {
         if (!isOpen) return;
         function onKey(e) { if (e.key === "Escape") setOpen(false); }
         document.addEventListener("keydown", onKey);
         return function () { document.removeEventListener("keydown", onKey); };
       }, [isOpen]);
+
+      react.useEffect(function () {
+        if (!isOpen) return;
+        var cancelled = false;
+        if (typeof fetch !== "undefined") {
+          setBusy(props.t("refreshing"));
+          fetch(SERVER + "/").then(function (r) {
+            if (!r.ok) throw new Error(String(r.status));
+            return r.text();
+          }).then(function (html) {
+            if (cancelled) return;
+            setIframeHtml(html);
+            setLive(true);
+            setStatus("");
+            setBusy("");
+          }).catch(function () {
+            if (cancelled) return;
+            setLive(false);
+            setBusy("");
+          });
+        }
+        return function () { cancelled = true; };
+      }, [isOpen]);
+
       var trigger = props.renderTrigger(setOpen);
       if (!isOpen) return trigger;
+      var subtitle = props.t(live ? "live" : "snapshot") + " · " + props.t("generatedAt") + " " + GENERATED_AT;
       var modal = react.createElement("div", { style: overlayStyle() },
         react.createElement("div", { style: modalStyle() },
           react.createElement("div", { style: headerStyle() },
             react.createElement("strong", null, props.t("title")),
-            react.createElement("span", { style: { fontSize: 11, color: "var(--dsw-alias-label-secondary, #888)" } }, props.t("generatedAt") + " " + GENERATED_AT + " · " + props.t("subtitle")),
+            react.createElement("span", { style: { fontSize: 11, color: "var(--dsw-alias-label-secondary, #888)" } }, subtitle + " " + (busy ? "· " + busy : "")),
+            react.createElement("button", { type: "button", onClick: generateReport, style: actionBtnStyle(), "aria-label": props.t("report") }, props.t("report")),
+            react.createElement("button", { type: "button", onClick: loadHistory, style: actionBtnStyle(), "aria-label": props.t("history") }, props.t("history")),
+            react.createElement("button", { type: "button", onClick: loadLive, style: actionBtnStyle(), "aria-label": props.t("refresh") }, props.t("refresh")),
             react.createElement("button", { type: "button", onClick: function () { setOpen(false); }, style: closeStyle(), "aria-label": props.t("close") }, "✕")
           ),
+          status
+            ? react.createElement("div", { style: { flex: "none", padding: "6px 14px", background: "var(--dsw-alias-background-fill, rgba(127,127,127,.06))", borderBottom: "1px solid var(--dsw-alias-border-l2, rgba(127,127,127,.2))", fontSize: 12, color: "var(--dsw-alias-label-secondary, #666)", fontFamily: "monospace" } }, status)
+            : null,
           react.createElement("iframe", {
-            srcDoc: DASHBOARD_HTML,
+            srcDoc: iframeHtml,
             title: props.t("title"),
             style: { width: "100%", flex: 1, border: 0, background: "#f4f6f8" }
           })
@@ -141,7 +267,7 @@ window.__ModuleLoader__.load({
       return react.createElement(react.Fragment, null, trigger, modal);
     }
 
-    // 1) sidebar footer entry
+    // 1) sidebar footer entry (弹窗按钮)
     function SidebarEntry(props) {
       var t = props.t;
       return react.createElement(WithModal, {
@@ -160,7 +286,7 @@ window.__ModuleLoader__.load({
       });
     }
 
-    // 3) turn-tail hint card
+    // 3) turn-tail hint card (弹窗按钮)
     function TurnTailCard(props) {
       var t = props.t;
       return react.createElement(WithModal, {

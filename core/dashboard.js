@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { KNOWN_LIBS } from "./knowledge.js";
 import { buildFeedback } from "./errors.js";
 import { satisfies } from "./semver.js";
+import { skinCssVars } from "./skins.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLIENT_PATH = path.join(__dirname, "..", "web", "dashboard-client.js");
@@ -84,7 +85,7 @@ function modGuide(help) {
 }
 
 // Tooltip + error-badge CSS (after STYLE, emitted as a normal string).
-const TIP_STYLE = "<style>.tip{border-bottom:1px dashed #9aa4ae;cursor:help;position:relative}\n.tip:hover::after{content:attr(data-tip);position:absolute;left:0;bottom:135%;z-index:60;width:260px;padding:8px 10px;background:#23272b;color:#f4f6f8;border-radius:8px;font-size:12px;line-height:1.55;box-shadow:0 4px 14px rgba(0,0,0,.28);white-space:normal;font-weight:400;text-align:left}\n.sev.fatal{background:#7a1f1f}.sev.error{background:#d64545}.sev.warning{background:#e67e22;color:#fff}\n.mod-guide{margin:0 0 12px;padding:8px 12px;border-radius:8px;background:#eef5fc;border:1px solid #cfe3f5;color:#3a4a5a;font-size:12px;line-height:1.7}.mod-guide b{color:#1f6feb;font-weight:600}\n</style>";
+const TIP_STYLE = "<style>.tip{border-bottom:1px dashed var(--dsh-textFaint,#9aa4ae);cursor:help;position:relative}\n.tip:hover::after{content:attr(data-tip);position:absolute;left:0;bottom:135%;z-index:60;width:260px;padding:8px 10px;background:var(--dsh-tipBg,#23272b);color:var(--dsh-tipText,#f4f6f8);border-radius:8px;font-size:12px;line-height:1.55;box-shadow:0 4px 14px rgba(0,0,0,.28);white-space:normal;font-weight:400;text-align:left}\n.sev.fatal{background:var(--dsh-sevFatal,#7a1f1f)}.sev.error{background:var(--dsh-sevBlocking,#d64545)}.sev.warning{background:var(--dsh-sevHigh,#e67e22);color:#fff}\n.mod-guide{margin:0 0 12px;padding:8px 12px;border-radius:8px;background:var(--dsh-accentHoverBg,#eef5fc);border:1px solid var(--dsh-accentBorder,#cfe3f5);color:var(--dsh-accentText,#3a4a5a);font-size:12px;line-height:1.7}.mod-guide b{color:var(--dsh-accent,#1f6feb);font-weight:600}\n</style>";
 
 function tokensOf(pkgName) {
   return String(pkgName).replace(/^@[^/]+\//, "").replace(/^dsh-/, "").split("-").filter(Boolean);
@@ -205,12 +206,25 @@ export function buildEmbedData(analysis, extra = {}) {
     rows: rowsData,
     candidates,
     history: historySeries(),
-    leaks: (leaks ? leaks.findings : []).map((f) => ({ kind: f.kind, severity: f.severity, message: f.message, evidence: f.evidence, impact: f.impact, advice: f.advice, confidence: f.confidence, finding_id: f.finding_id, package: f.package })),
+    leaks: (leaks ? leaks.findings : []).map((f) => ({ kind: f.kind, severity: f.severity, finalSeverity: f.finalSeverity, evidenceTag: f.evidenceTag, runtimeState: f.runtimeState, message: f.message, evidence: f.evidence, impact: f.impact, advice: f.advice, confidence: f.confidence, finding_id: f.finding_id, package: f.package })),
     leakSummary: leaks ? leaks.summary : { total: 0, bySeverity: {} },
     truthSource,
     confidenceCap,
     findingsValid,
     mixedNote: { live, sourceLabel },
+    devInfo: {
+      truthSource,
+      confidenceCap,
+      generatedAt: new Date().toISOString(),
+      harnessVersion: eco.harnessVersion || null,
+      collectedAt: eco.collectedAt || null,
+      nmRoot: eco.nmRoot || null,
+      layerCount: new Set(rowsData.map((r) => r.layer)).size,
+      packageCount: Object.keys(packages).length,
+      edgeCount: graph.edges.length,
+      rowCount: rowsData.length,
+      byLayer: Object.entries(rowsData.reduce((m, r) => { m[r.layer] = (m[r.layer] || 0) + 1; return m; }, {})).map(([layer, n]) => ({ layer, n }))
+    },
     feedback: buildFeedbackList({ conflicts, leaks: leaks || { findings: [] }, patterns, verified })
   };
 }
@@ -249,7 +263,7 @@ function donut(bySeverity) {
     arcs.push('<path d="M50 50 L' + x0.toFixed(1) + " " + y0.toFixed(1) + " A40 40 0 " + large + " 1 " + x1.toFixed(1) + " " + y1.toFixed(1) + ' Z" fill="' + SEV_COLOR[s] + '"></path>');
   }
   const legend = segs.filter((s) => (bySeverity[s] || 0) > 0).map((s) => '<span><i style="background:' + SEV_COLOR[s] + '"></i>' + s + " " + bySeverity[s] + "</span>").join("");
-  return '<div class="panel"><h3>风险分布</h3><svg viewBox="0 0 100 100" width="150" height="150"><circle cx="50" cy="50" r="40" fill="#f2f3f5"></circle>' + arcs.join("") + '<text x="50" y="54" text-anchor="middle" font-size="13" font-weight="600" fill="#333">' + total + "</text></svg><div class='legend'>" + legend + "</div></div>";
+  return '<div class="panel"><h3>风险分布</h3><svg viewBox="0 0 100 100" width="150" height="150"><circle cx="50" cy="50" r="40" fill="var(--dsh-track,#eef0f2)"></circle>' + arcs.join("") + '<text x="50" y="54" text-anchor="middle" font-size="13" font-weight="600" fill="var(--dsh-text,#222)">' + total + "</text></svg><div class='legend'>" + legend + "</div></div>";
 }
 
 function layerBars(analysis) {
@@ -263,6 +277,73 @@ function layerBars(analysis) {
     const w = Math.round((n / max) * 100);
     return '<div class="lbar"><span class="lname">' + esc(l) + '</span><div class="ltrack"><div class="lfill" style="width:' + w + '%"></div></div><span class="ln">' + n + "</span></div>";
   }).join("") + "</div>";
+}
+
+const RT_COLOR = { "not-executed": "#95a5a6", "executed-clean": "#27ae60", "executed-residual": "#e67e22" };
+const RT_LABEL = { "not-executed": "未观测", "executed-clean": "已观测干净", "executed-residual": "已观测残留" };
+
+// Generic themed donut: entries = [{label, value, color}]. Center shows the real sum.
+function donutChart(title, entries) {
+  const realTotal = entries.reduce((a, e) => a + e.value, 0);
+  const total = Math.max(1, realTotal);
+  let acc = 0;
+  const arcs = [];
+  for (const e of entries) {
+    if (!e.value) continue;
+    const a0 = (acc / total) * 2 * Math.PI - Math.PI / 2;
+    acc += e.value;
+    const a1 = (acc / total) * 2 * Math.PI - Math.PI / 2;
+    const x0 = 50 + 40 * Math.cos(a0), y0 = 50 + 40 * Math.sin(a0);
+    const x1 = 50 + 40 * Math.cos(a1), y1 = 50 + 40 * Math.sin(a1);
+    const large = a1 - a0 > Math.PI ? 1 : 0;
+    arcs.push('<path d="M50 50 L' + x0.toFixed(1) + " " + y0.toFixed(1) + " A40 40 0 " + large + " 1 " + x1.toFixed(1) + " " + y1.toFixed(1) + ' Z" fill="' + e.color + '"></path>');
+  }
+  const legend = entries.filter((e) => e.value > 0).map((e) => '<span><i style="background:' + e.color + '"></i>' + esc(e.label) + " " + e.value + "</span>").join("");
+  return '<div class="panel"><h3>' + title + '</h3><svg viewBox="0 0 100 100" width="150" height="150"><circle cx="50" cy="50" r="40" fill="var(--dsh-track,#eef0f2)"></circle>' + arcs.join("") + '<text x="50" y="54" text-anchor="middle" font-size="13" font-weight="600" fill="var(--dsh-text,#222)">' + realTotal + "</text></svg><div class='legend'>" + legend + "</div></div>";
+}
+
+// runtimeState tri-state donut across all fused findings (conflicts + leaks).
+function runtimeStateDonut(embed) {
+  const c = { "not-executed": 0, "executed-clean": 0, "executed-residual": 0 };
+  for (const f of [...(embed.conflicts || []), ...(embed.leaks || [])]) {
+    const s = f.runtimeState || "not-executed";
+    if (c[s] !== undefined) c[s]++;
+  }
+  return donutChart("运行时校准三态分布", ["not-executed", "executed-clean", "executed-residual"].map((k) => ({ label: RT_LABEL[k], value: c[k], color: RT_COLOR[k] })));
+}
+
+// conflict-type horizontal bars from conflictSummary.byType.
+function conflictTypeBars(embed) {
+  const byType = (embed.conflictSummary && embed.conflictSummary.byType) || {};
+  const entries = Object.entries(byType).map(([k, v]) => ({ label: k, value: v }));
+  const max = Math.max(1, ...entries.map((e) => e.value));
+  const bars = entries.map((e) => '<div class="lbar"><span class="lname">' + esc(e.label) + '</span><div class="ltrack"><div class="lfill" style="width:' + Math.round((e.value / max) * 100) + '%"></div></div><span class="ln">' + e.value + "</span></div>").join("");
+  return '<div class="panel"><h3>冲突类型分布</h3>' + (bars || '<div class="fb-disclaimer">暂无冲突</div>') + "</div>";
+}
+
+// snapshot history row-count line chart (themed, zero-dependency SVG).
+function historyLine(embed) {
+  const h = embed.history || [];
+  const W = 1000, H = 180, P = 46;
+  if (!h.length) return "<h3>快照历史趋势</h3><div class='fb-disclaimer'>暂无历史快照数据。</div>";
+  const vals = h.map((x) => x.rows || 0);
+  const max = Math.max(1, ...vals);
+  const n = h.length;
+  const X = (i) => (n === 1 ? W / 2 : P + (i / (n - 1)) * (W - 2 * P));
+  const Y = (v) => H - P - (v / max) * (H - 2 * P);
+  const pts = vals.map((v, i) => X(i).toFixed(1) + "," + Y(v).toFixed(1)).join(" ");
+  const dots = vals.map((v, i) => '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(v).toFixed(1) + '" r="3" fill="var(--dsh-brand,#2e86c1)"></circle>').join("");
+  const labels = h.map((x, i) => {
+    const m = /^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2})-([0-9]{2})/.exec(x.file || "");
+    const lab = m ? m[2] + "-" + m[3] + " " + m[4] + ":" + m[5] : String(x.file || "").slice(0, 8);
+    return '<text x="' + X(i).toFixed(1) + '" y="' + (H - P + 16) + '" text-anchor="middle" font-size="9" fill="var(--dsh-textFaint,#98a1aa)">' + esc(lab) + "</text>";
+  }).join("");
+  return "<h3>快照历史趋势（行数 · 最近 " + n + " 条）</h3><svg viewBox='0 0 " + W + " " + H + "' style='width:100%;height:auto;display:block'>" +
+    '<line x1="' + P + '" y1="' + (H - P) + '" x2="' + (W - P) + '" y2="' + (H - P) + '" stroke="var(--dsh-border,#e3e6ea)"></line>' +
+    '<line x1="' + P + '" y1="0" x2="' + P + '" y2="' + (H - P) + '" stroke="var(--dsh-border,#e3e6ea)"></line>' +
+    '<text x="' + P + '" y="' + (P - 10) + '" font-size="9" fill="var(--dsh-textFaint,#98a1aa)">' + max + "</text>" +
+    '<polyline points="' + pts + '" fill="none" stroke="var(--dsh-brand,#2e86c1)" stroke-width="2" stroke-linejoin="round"></polyline>' +
+    dots + labels + "</svg>";
 }
 
 function renderGraph(analysis) {
@@ -290,7 +371,7 @@ function renderGraph(analysis) {
     const from = nodes.find((n) => n.id === e.from);
     const to = nodes.find((n) => n.id === e.to);
     if (!from || !to) continue;
-    const color = e.satisfied === false ? "#d64545" : "#b9c2c9";
+    const color = e.satisfied === false ? "#d64545" : "var(--dsh-textFaint,#98a1aa)";
     const x1 = from._x + W, y1 = from._y + 14, x2 = to._x, y2 = to._y + 14;
     const mx = (x1 + x2) / 2;
     parts.push('<path d="M' + x1 + " " + y1 + " C" + mx + " " + y1 + "," + mx + " " + y2 + "," + x2 + " " + y2 + '" stroke="' + color + '" stroke-width="1" fill="none" opacity="0.6"></path>');
@@ -300,10 +381,10 @@ function renderGraph(analysis) {
     const color = SEV_COLOR[sev] || "#27ae60";
     parts.push('<g transform="translate(' + n._x + "," + n._y + ')"><rect width="' + W + '" height="28" rx="5" fill="' + color + '" fill-opacity="0.12" stroke="' + color + '" stroke-width="1.2"></rect><text x="8" y="18" font-size="10" font-family="Consolas,monospace">' + esc(n.id) + "</text></g>");
   }
-  return '<svg viewBox="0 0 ' + SVG_W + " " + SVG_H + '" style="width:100%;border:1px solid #e3e6ea;border-radius:8px;background:#fff">' + parts.join("") + "</svg>";
+  return '<svg viewBox="0 0 ' + SVG_W + " " + SVG_H + '" style="width:100%;border:1px solid var(--dsh-border,#e3e6ea);border-radius:8px;background:var(--dsh-surface,#fff)">' + parts.join("") + "</svg>";
 }
 
-const STYLE = "<style>" + "html,body{height:100%;margin:0}\nbody{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f6f8;color:#222;display:flex;flex-direction:column;overflow:hidden}\n.wrap{max-width:1180px;margin:0 auto;padding:20px 24px 40px}\nheader h1{font-size:22px;margin:0}.sub{color:#7a828b;font-size:12px;margin:4px 0 16px}\n.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}\n.kpi{background:#fff;border:1px solid #e3e6ea;border-radius:10px;padding:10px 12px;text-align:center}\n.kpi-v{font-size:22px;font-weight:700}.kpi-k{font-size:11px;color:#7a828b;margin-top:2px}\n.badge{display:inline-block;padding:2px 12px;border-radius:12px;color:#fff;font-weight:700}.badge.A{background:#27ae60}.badge.B{background:#2e86c1}.badge.C{background:#e67e22}.badge.D{background:#d64545}\n.panels{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}\n.panel{background:#fff;border:1px solid #e3e6ea;border-radius:10px;padding:12px 14px}\n.panel h3{font-size:13px;margin:0 0 8px}.legend span{font-size:11px;margin-right:10px}.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}\n.lbar{display:flex;align-items:center;gap:8px;margin:5px 0}.lname{font-size:11px;width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ltrack{flex:1;background:#eef0f2;border-radius:4px;height:10px}.lfill{background:#2e86c1;border-radius:4px;height:10px}.ln{font-size:11px;color:#7a828b;width:26px;text-align:right}\nsection{background:#fff;border:1px solid #e3e6ea;border-radius:10px;padding:14px 16px;margin-top:14px}\nsection h2{font-size:15px;margin:0 0 10px}\n.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}\ninput,select{font-size:12px;padding:5px 8px;border:1px solid #cfd5da;border-radius:6px}\n#q{min-width:220px}.count{font-size:12px;color:#7a828b;margin-left:auto}\ntable{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}\nth,td{border:1px solid #e7eaee;padding:5px 8px;text-align:left;vertical-align:top}\nth{background:#f2f4f6;cursor:pointer;user-select:none;white-space:nowrap}\ntbody tr:hover{background:#f7f9fb}\n.sev{padding:1px 8px;border-radius:10px;color:#fff;font-size:10px;white-space:nowrap}\n.sev.blocking{background:#d64545}.sev.high{background:#e67e22}.sev.medium{background:#f1c40f;color:#333}.sev.low{background:#27ae60}.sev.info{background:#95a5a6}.sev.disabled{background:#95a5a6}.sev.verified{background:#16a085}\n.c-blocking td{background:#fdecea}.c-high td{background:#fdf2e6}.c-medium td{background:#fdf8e3}\n.ev{color:#98a1aa;font-size:10px}\n.notes .note{border:1px solid #e7eaee;border-radius:8px;padding:8px 10px;margin:6px 0;font-size:12px}\n.note.verified{border-color:#b8e0d5;background:#f2fbf8}.fb-group{margin:8px 0}.fb-group>b{font-size:12px;color:#555}.fb-toggle{font-size:11px;border:1px solid #cfd5da;border-radius:5px;background:#fff;color:#666;cursor:pointer;margin-left:8px;padding:1px 8px}.fb-disclaimer{margin-top:10px;padding:8px 12px;border-radius:8px;background:#f6f8fa;border:1px dashed #cfd5da;color:#888;font-size:11px}.fb.fatal{border-color:#d64545;background:#fdecea}.fb.error{border-color:#e67e22;background:#fdf2e6}.fb.warning{border-color:#f1c40f;background:#fdf8e3}\n.sim-ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}\n.sim-result{margin-top:10px;font-size:12px;line-height:1.7}\n.sim-result .chg{color:#1f6feb;font-weight:600}\nfooter{color:#98a1aa;font-size:11px;margin-top:18px;text-align:center;flex:0 0 auto;padding:10px 24px 14px;background:#f4f6f8}\n.toggle{width:14px;height:14px;accent-color:#2e86c1}\n.workspace{flex:1 1 auto;min-height:0;display:flex;gap:14px;padding:14px 24px;box-sizing:border-box;overflow:hidden}\n.ws-header{flex:0 0 auto;background:#f4f6f8;border-bottom:1px solid #e3e6ea;box-shadow:0 1px 0 rgba(0,0,0,.02)}\n.ws-header-inner{max-width:1180px;margin:0 auto;padding:14px 24px 12px}\n.ws-header-inner h1{font-size:20px;margin:0}.ws-header-inner .sub{color:#7a828b;font-size:12px;margin:4px 0 0}\n.ws-nav{flex:0 0 170px;background:#fff;border:1px solid #e3e6ea;border-radius:10px;padding:10px;overflow-y:auto;align-self:stretch;max-height:100%}\n.ws-brand{font-size:13px;font-weight:700;color:#555;padding:4px 8px 10px;border-bottom:1px solid #eef0f2;margin-bottom:8px}\n.ws-tab{display:block;width:100%;text-align:left;border:none;background:transparent;padding:8px 10px;border-radius:7px;cursor:pointer;font-size:13px;color:#444;margin:1px 0}\n.ws-tab:hover{background:#f2f4f6}.ws-tab.active{background:#1f6feb;color:#fff;font-weight:600}\n.ws-body{flex:1 1 auto;min-width:0;min-height:0;overflow-y:auto;padding-right:4px}\n.ws-page{display:none}.ws-page.active{display:block}\n.ws-page h2{font-size:15px;margin:0 0 10px}\n" + ".head-row{display:flex;align-items:flex-start;gap:16px;justify-content:space-between;flex-wrap:wrap}\n" + ".head-tools{display:flex;align-items:center;gap:8px;flex:0 0 auto;padding-top:2px}\n" + ".live-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;color:#fff;background:#27ae60;white-space:nowrap}\n" + ".live-badge.stale{background:#e67e22}\n" + "#refreshBtn{font-size:12px;padding:5px 12px;border:1px solid #cfd5da;border-radius:6px;background:#fff;color:#2e86c1;cursor:pointer}\n" + "#refreshBtn:hover{background:#eef5fc}\n" + "#refreshBtn:disabled{opacity:.55;cursor:wait}\n" + "</style>";
+const STYLE = "<style>" + "html,body{height:100%;margin:0}\nbody{font-family:'Segoe UI',system-ui,sans-serif;background:var(--dsh-bg,#f4f6f8);color:var(--dsh-text,#222);display:flex;flex-direction:column;overflow:hidden}\n.wrap{max-width:1180px;margin:0 auto;padding:20px 24px 40px}\nheader h1{font-size:22px;margin:0}.sub{color:var(--dsh-textMuted,#7a828b);font-size:12px;margin:4px 0 16px}\n.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}\n.kpi{background:var(--dsh-surface,#fff);border:1px solid var(--dsh-border,#e3e6ea);border-radius:10px;padding:10px 12px;text-align:center}\n.kpi-v{font-size:22px;font-weight:700}.kpi-k{font-size:11px;color:var(--dsh-textMuted,#7a828b);margin-top:2px}\n.badge{display:inline-block;padding:2px 12px;border-radius:12px;color:#fff;font-weight:700}.badge.A{background:var(--dsh-sevLow,#27ae60)}.badge.B{background:var(--dsh-brand,#2e86c1)}.badge.C{background:var(--dsh-sevHigh,#e67e22)}.badge.D{background:var(--dsh-sevBlocking,#d64545)}\n.panels{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}\n.panel{background:var(--dsh-surface,#fff);border:1px solid var(--dsh-border,#e3e6ea);border-radius:10px;padding:12px 14px}\n.panel h3{font-size:13px;margin:0 0 8px}.legend span{font-size:11px;margin-right:10px}.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}\n.lbar{display:flex;align-items:center;gap:8px;margin:5px 0}.lname{font-size:11px;width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ltrack{flex:1;background:var(--dsh-track,#eef0f2);border-radius:4px;height:10px}.lfill{background:var(--dsh-brand,#2e86c1);border-radius:4px;height:10px}.ln{font-size:11px;color:var(--dsh-textMuted,#7a828b);width:26px;text-align:right}\nsection{background:var(--dsh-surface,#fff);border:1px solid var(--dsh-border,#e3e6ea);border-radius:10px;padding:14px 16px;margin-top:14px}\nsection h2{font-size:15px;margin:0 0 10px}\n.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}\ninput,select{font-size:12px;padding:5px 8px;border:1px solid var(--dsh-inputBorder,#cfd5da);border-radius:6px}\n#q{min-width:220px}.count{font-size:12px;color:var(--dsh-textMuted,#7a828b);margin-left:auto}\ntable{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}\nth,td{border:1px solid var(--dsh-borderSoft,#e7eaee);padding:5px 8px;text-align:left;vertical-align:top}\nth{background:var(--dsh-hover,#f2f4f6);cursor:pointer;user-select:none;white-space:nowrap}\ntbody tr:hover{background:var(--dsh-hoverRow,#f7f9fb)}\n.sev{padding:1px 8px;border-radius:10px;color:#fff;font-size:10px;white-space:nowrap}\n.sev.blocking{background:var(--dsh-sevBlocking,#d64545)}.sev.high{background:var(--dsh-sevHigh,#e67e22)}.sev.medium{background:var(--dsh-sevMedium,#f1c40f);color:#333}.sev.low{background:var(--dsh-sevLow,#27ae60)}.sev.info{background:var(--dsh-sevDisabled,#95a5a6)}.sev.disabled{background:var(--dsh-sevDisabled,#95a5a6)}.sev.verified{background:var(--dsh-sevVerified,#16a085)}\n.c-blocking td{background:var(--dsh-rowBlocking,#fdecea)}.c-high td{background:var(--dsh-rowHigh,#fdf2e6)}.c-medium td{background:var(--dsh-rowMedium,#fdf8e3)}\n.ev{color:var(--dsh-textFaint,#98a1aa);font-size:10px}\n.notes .note{border:1px solid var(--dsh-borderSoft,#e7eaee);border-radius:8px;padding:8px 10px;margin:6px 0;font-size:12px}\n.note.verified{border-color:var(--dsh-verifiedBorder,#b8e0d5);background:var(--dsh-verifiedBg,#f2fbf8)}.fb-group{margin:8px 0}.fb-group>b{font-size:12px;color:var(--dsh-textStrong,#555)}.fb-toggle{font-size:11px;border:1px solid var(--dsh-inputBorder,#cfd5da);border-radius:5px;background:var(--dsh-surface,#fff);color:var(--dsh-textSecondary,#666);cursor:pointer;margin-left:8px;padding:1px 8px}.fb-disclaimer{margin-top:10px;padding:8px 12px;border-radius:8px;background:var(--dsh-fbDisclaimerBg,#f6f8fa);border:1px dashed var(--dsh-inputBorder,#cfd5da);color:var(--dsh-fbDisclaimerText,#888);font-size:11px}.fb.fatal{border-color:var(--dsh-sevBlocking,#d64545);background:var(--dsh-rowBlocking,#fdecea)}.fb.error{border-color:var(--dsh-sevHigh,#e67e22);background:var(--dsh-rowHigh,#fdf2e6)}.fb.warning{border-color:var(--dsh-sevMedium,#f1c40f);background:var(--dsh-rowMedium,#fdf8e3)}\n.sim-ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}\n.sim-result{margin-top:10px;font-size:12px;line-height:1.7}\n.sim-result .chg{color:var(--dsh-accent,#1f6feb);font-weight:600}\nfooter{color:var(--dsh-textFaint,#98a1aa);font-size:11px;margin-top:18px;text-align:center;flex:0 0 auto;padding:10px 24px 14px;background:var(--dsh-bg,#f4f6f8)}\n.toggle{width:14px;height:14px;accent-color:var(--dsh-brand,#2e86c1)}\n.workspace{flex:1 1 auto;min-height:0;display:flex;gap:14px;padding:14px 24px;box-sizing:border-box;overflow:hidden}\n.ws-header{flex:0 0 auto;background:var(--dsh-bg,#f4f6f8);border-bottom:1px solid var(--dsh-border,#e3e6ea);box-shadow:0 1px 0 rgba(0,0,0,.02)}\n.ws-header-inner{max-width:1180px;margin:0 auto;padding:14px 24px 12px}\n.ws-header-inner h1{font-size:20px;margin:0}.ws-header-inner .sub{color:var(--dsh-textMuted,#7a828b);font-size:12px;margin:4px 0 0}\n.ws-nav{flex:0 0 170px;background:var(--dsh-surface,#fff);border:1px solid var(--dsh-border,#e3e6ea);border-radius:10px;padding:10px;overflow-y:auto;align-self:stretch;max-height:100%}\n.ws-brand{font-size:13px;font-weight:700;color:var(--dsh-textStrong,#555);padding:4px 8px 10px;border-bottom:1px solid var(--dsh-borderSofter,#eef0f2);margin-bottom:8px}\n.ws-tab{display:block;width:100%;text-align:left;border:none;background:transparent;padding:8px 10px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--dsh-textNav,#444);margin:1px 0}\n.ws-tab:hover{background:var(--dsh-hover,#f2f4f6)}.ws-tab.active{background:var(--dsh-accent,#1f6feb);color:#fff;font-weight:600}\n.ws-body{flex:1 1 auto;min-width:0;min-height:0;overflow-y:auto;padding-right:4px}\n.ws-page{display:none}.ws-page.active{display:block}\n.ws-page h2{font-size:15px;margin:0 0 10px}\n" + ".head-row{display:flex;align-items:flex-start;gap:16px;justify-content:space-between;flex-wrap:wrap}\n" + ".head-tools{display:flex;align-items:center;gap:8px;flex:0 0 auto;padding-top:2px}\n" + ".live-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;color:#fff;background:var(--dsh-sevLow,#27ae60);white-space:nowrap}\n" + ".live-badge.stale{background:var(--dsh-sevHigh,#e67e22)}\n" + "#refreshBtn{font-size:12px;padding:5px 12px;border:1px solid var(--dsh-inputBorder,#cfd5da);border-radius:6px;background:var(--dsh-surface,#fff);color:var(--dsh-brand,#2e86c1);cursor:pointer}\n" + "#refreshBtn:hover{background:var(--dsh-accentHoverBg,#eef5fc)}\n" + "#refreshBtn:disabled{opacity:.55;cursor:wait}\n" + "#skinBtn{font-size:12px;padding:5px 12px;border:1px solid var(--dsh-inputBorder,#cfd5da);border-radius:6px;background:var(--dsh-surface,#fff);color:var(--dsh-brand,#2e86c1);cursor:pointer}\n" + "#skinBtn:hover{background:var(--dsh-accentHoverBg,#eef5fc)}\n" + "</style>";
 
 
 // ── workspace modules ────────────────────────────────────────────────────
@@ -363,6 +444,35 @@ function feedbackPage(embed) {
   return out;
 }
 
+// Developer-facing scan overview: exposes raw trustworthy facts (truth source,
+// confidence cap, snapshot time, row/layer totals) so readers can cross-check
+// what evidence the dashboard is built from. No LLM token metric is shown:
+// dsh-forge is a static dependency analyzer and produces no token telemetry.
+function discOf(embed) {
+  const dev = embed.devInfo || {};
+  return '<div class="fb-disclaimer">扫描概览：真相源 ' + esc(dev.truthSource || "—") +
+    ' · 生效置信度上限 ' + esc(dev.confidenceCap || "—") +
+    ' · harness ' + esc(dev.harnessVersion || "—") +
+    " · 快照 " + esc((dev.collectedAt || "—").replace("T", " ").slice(0, 19)) + "</div>";
+}
+
+function devStats(embed) {
+  const dev = embed.devInfo || {};
+  const kv = [
+    ["harness 版本", dev.harnessVersion], ["真相源", dev.truthSource], ["置信度上限", dev.confidenceCap],
+    ["组合行数", dev.rowCount], ["唯一插件包", dev.packageCount], ["依赖边", dev.edgeCount],
+    ["配置层数", dev.layerCount], ["快照时间", (dev.collectedAt || "—").replace("T", " ").slice(0, 19)]
+  ];
+  const max = Math.max(1, dev.rowCount || 1);
+  const rows = (dev.byLayer || []).map((b) =>
+    '<div class="lbar"><span class="lname">' + esc(b.layer) + '</span><div class="ltrack"><div class="lfill" style="width:' +
+    Math.min(100, Math.round((b.n / max) * 100)) + '%"></div></div><span class="ln">' + b.n + '</span></div>').join("");
+  return '<section style="margin-top:14px"><h2>开发者数据 · 扫描概览</h2>' +
+    '<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(118px,1fr))">' +
+    kv.map(([k, v]) => '<div class="kpi"><div class="kpi-v" style="font-size:15px">' + esc(v == null ? "—" : String(v)) + '</div><div class="kpi-k">' + esc(k) + "</div></div>").join("") +
+    '</div><div style="margin-top:10px">' + (rows || '<div class="fb-disclaimer">暂无分层数据</div>') + "</div></section>";
+}
+
 function overviewPage(embed, analysis) {
   const out = [];
   const kpis = [
@@ -378,10 +488,11 @@ function overviewPage(embed, analysis) {
   for (const [k, v] of kpis) out.push('<div class="kpi"><div class="kpi-v">' + esc(v) + '</div><div class="kpi-k">' + tip(k) + "</div></div>");
   out.push('<div class="kpi health"><div class="kpi-v badge ' + embed.health + '">' + embed.health + '</div><div class="kpi-k">' + tip("整体健康度") + "</div></div>");
   out.push("</div>");
-  out.push('<div class="panels">' + donut(embed.bySeverity) + layerBars(analysis) + "</div>");
+  out.push(discOf(embed));
+  out.push(devStats(embed));
+  out.push('<div class="panels">' + donut(embed.bySeverity) + layerBars(analysis) + runtimeStateDonut(embed) + conflictTypeBars(embed) + "</div>");
   if (embed.history && embed.history.length) {
-    const items = embed.history.map((h) => '<div class="lbar"><span class="lname">' + esc(h.file.slice(0, 19)) + '</span><div class="ltrack"><div class="lfill" style="width:100%"></div></div><span class="ln">' + h.rows + "</span></div>").join("");
-    out.push('<div class="panel" style="grid-column:1/-1"><h3>快照历史（最近 ' + embed.history.length + " 条）</h3>" + items + "</div>");
+    out.push('<div class="panel" style="grid-column:1/-1;padding-bottom:8px">' + historyLine(embed) + "</div>");
   }
   return out;
 }
@@ -408,9 +519,9 @@ function leaksPage(embed) {
   const list = embed.leaks || [];
   out.push("<h2>副作用泄漏发现（" + list.length + " 条 · 带 finding_id）</h2>");
   if (!list.length) { out.push("<div class='fb-disclaimer'>扫描范围内未发现 apply 路径裸副作用注册泄漏。</div>"); return out; }
-  out.push("<table class='conf'><thead><tr><th>包</th><th>发现</th><th>级别</th><th>证据</th><th>置信度</th><th>finding_id</th></tr></thead><tbody>");
+  out.push("<table class='conf'><thead><tr><th>包</th><th>发现</th><th>原始级别</th><th>最终级别</th><th>证据标签</th><th>运行时状态</th><th>证据</th><th>置信度</th><th>finding_id</th></tr></thead><tbody>");
   for (const f of list) {
-    out.push("<tr class='c-" + esc(f.severity) + "'><td>" + esc(f.package) + "</td><td>" + esc(f.message) + "</td><td>" + sevBadge(f.severity) + "</td><td>" + esc(f.evidence) + "</td><td>" + esc(f.confidence) + "</td><td><span class='ev'>" + esc(f.finding_id) + "</span></td></tr>");
+    out.push("<tr class='c-" + esc(f.finalSeverity || f.severity) + "'><td>" + esc(f.package) + "</td><td>" + esc(f.message) + "</td><td>" + sevBadge(f.severity) + "</td><td>" + sevBadge(f.finalSeverity || f.severity) + "</td><td>" + esc(f.evidenceTag || '—') + "</td><td>" + esc(f.runtimeState || '—') + "</td><td>" + esc(f.evidence) + "</td><td>" + esc(f.confidence) + "</td><td><span class='ev'>" + esc(f.finding_id) + "</span></td></tr>");
   }
   out.push("</tbody></table>");
   return out;
@@ -504,14 +615,17 @@ export function dashboard(analysis, extra = {}) {
   const client = fs.readFileSync(CLIENT_PATH, "utf8");
   const L = [];
   L.push('<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>dsh-forge 组件仪表盘</title>');
+  L.push("<style>" + skinCssVars() + "</style>");
   L.push(STYLE);
   L.push(TIP_STYLE);
   L.push("</head><body>");
   // fixed header (title + meta), centered inner container
   L.push("<header class='ws-header'><div class='ws-header-inner'><div class='head-row'><div><h1>DeepSeek Harness 插件组合仪表盘</h1><div class='sub' id='metaLine'>dsh-forge v" + esc(pkgVersion()) + " · 生成于 " + esc(embed.generatedAt) + " · " + esc(embed.sourceLabel) + " · 只读，模拟不落盘</div></div>");
+  L.push("<div class='head-tools'><button type='button' id='skinBtn' onclick=\"window.__DSH_APP__ && window.__DSH_APP__.toggleSkin()\" title=\"切换明暗主题\">◐ 主题</button>");
   if (embed.live) {
-    L.push("<div class='head-tools'><span class='live-badge' id='liveBadge'>● 实时</span><button type='button' id='refreshBtn' onclick=\"window.__DSH_APP__ && window.__DSH_APP__.refresh()\">↻ 刷新</button></div>");
+    L.push("<span class='live-badge' id='liveBadge'>● 实时</span><button type='button' id='refreshBtn' onclick=\"window.__DSH_APP__ && window.__DSH_APP__.refresh()\">↻ 刷新</button>");
   }
+  L.push("</div>");
   L.push("</div></div></header>");
   L.push('<div class="workspace">');
   // left nav: module tabs

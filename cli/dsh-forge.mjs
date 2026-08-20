@@ -18,13 +18,14 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
   runAnalysis, clearAnalysisCache, buildEmbedData, buildCheckReport,
+  buildMarkdownReport, writeReport, listHistory,
   html as renderHtml, dashboard as renderDashboard,
   UI_MODE, decideUiMode, decideAfterPortProbe,
   hasDesktop, COMPLEXITY_LIGHT, COMPLEXITY_HEAVY
 } from "../core/index.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DEFAULT_WEB_PORT = Number(process.env.DSH_FORGE_PORT || 8080);
+const DEFAULT_WEB_PORT = Number(process.env.DSH_FORGE_PORT || 3060);
 const DEFAULT_HOST = process.env.DSH_FORGE_HOST || "127.0.0.1";
 
 // ── argument parsing ────────────────────────────────────────────────────────
@@ -66,7 +67,7 @@ Usage:
 Options:
   --profile <name>         profile to analyze (default: web)
   --dataset <path>         offline ecosystem snapshot JSON
-  --port <n>               web port (default: 8080, env DSH_FORGE_PORT)
+  --port <n>               web port (default: 3060, env DSH_FORGE_PORT)
   --host <addr>            web bind address (default: 127.0.0.1)
   --json, -j               machine-readable check output
   --no-open                do not auto-open the browser in web mode
@@ -128,7 +129,7 @@ function fit(text, width) {
   return s.length <= width ? s : s.slice(0, Math.max(0, width - 1)) + "…";
 }
 
-function renderTui(a, err) {
+function renderTui(a, err, dev) {
   const width = process.stdout.columns || 100;
   const g = a.graph;
   const s = a.assessment;
@@ -157,7 +158,10 @@ function renderTui(a, err) {
   const real = c.conflicts.filter((x) => (x.finalSeverity || x.severity) !== "info");
   lines.push(C("1", "Conflicts") + "  total " + c.summary.total + " · " + (Object.entries(c.summary.bySeverity).map(([k, v]) => k + "=" + v).join(" ") || "none"));
   for (const x of real.slice(0, 12)) {
+    const meta = [x.evidenceTag, (x.runtimeState && x.runtimeState !== "not-executed") ? x.runtimeState : null].filter(Boolean).join(" | ");
+    const fid = x.finding_id ? "#" + x.finding_id : "";
     lines.push("  [" + sevBadge(x.finalSeverity || x.severity) + "] " + fit(x.message, width - 20));
+    if (meta || fid) lines.push("      tag/runtime : " + fit((meta + "  " + fid).trim(), width - 24));
     lines.push("      impact : " + fit(x.impact || "", width - 20));
     lines.push("      advice : " + fit(x.advice || "", width - 20));
   }
@@ -177,25 +181,86 @@ function renderTui(a, err) {
     lines.push("  none");
   }
   lines.push("");
+  if (dev) {
+    lines.push(C("1", "Developer panel"));
+    lines.push("  rowCount " + s.pluginCount + "  pkgCount " + (a.ecosystem.packages ? Object.keys(a.ecosystem.packages).length : "—") +
+      "  edges " + s.edgeCount + "  layers " + (a.ecosystem.layers ? a.ecosystem.layers.length : "—"));
+    lines.push("  truthSource " + ts + "  confCap " + cc + "  harness " + (a.ecosystem.harnessVersion || "—"));
+    lines.push("  collectedAt " + (a.ecosystem.collectedAt || "—").replace("T", " ").slice(0, 19));
+    lines.push("  conflicts " + c.summary.total + "  leaks " + leakN + "  avgScore " + s.avgScore + "  maxScore " + s.maxScore);
+    lines.push("  findingsValid " + fv);
+    lines.push("");
+  }
   if (err) lines.push(C("31", "  refresh failed: " + err));
-  lines.push(C("90", "  [W] open web panel   [R] refresh   [Q] quit   (TUI → Web one-key switch)"));
+  lines.push(C("90", "  [W] web  [R] refresh  [G] 生成报告(长文本浏览)  [D] 开发者面板  [V] 查看报告  [Q] quit"));
   return lines.join("\n");
 }
 
 function runInteractiveTui(getAnalysis, opts, initialAnalysis) {
   let analysis = initialAnalysis || loadAnalysis(opts);
   let lastError = null;
+  let devPanel = false;
+  let view = null; // null = main frame; "report" = scrollable markdown report
+  let viewOffset = 0;
+  let reportPath = null;
+
+  const mdLines = () => buildMarkdownReport(analysis, { reproduce: "node cli/dsh-forge.mjs check --json" }).split("\n");
+
   const draw = () => {
     console.clear();
-    process.stdout.write(renderTui(analysis, lastError) + "\n");
+    if (view === "report") {
+      const lines = mdLines();
+      const h = Math.max(10, (process.stdout.rows || 30) - 1);
+      const total = lines.length;
+      if (viewOffset > Math.max(0, total - h)) viewOffset = Math.max(0, total - h);
+      if (viewOffset < 0) viewOffset = 0;
+      const win = lines.slice(viewOffset, viewOffset + h);
+      const fp = reportPath ? path.basename(reportPath) : "";
+      process.stdout.write(win.join("\n") + "\n" +
+        C("90", " ⠿ report " + (viewOffset + 1) + "-" + Math.min(total, viewOffset + h) + "/" + total + (fp ? " · " + fp : "") +
+          "  [↑][↓][PgUp][PgDn]/[space][b] scroll  [R] 重新生成  [Q]/[Esc] 返回  ") + "\n");
+      return;
+    }
+    process.stdout.write(renderTui(analysis, lastError, devPanel) + "\n");
   };
+
+  const clearLast = () => { lastError = null; };
+
+  const generateReport = () => {
+    try {
+      clearAnalysisCache();
+      analysis = runAnalysis({ profile: opts.profile, datasetPath: opts.dataset });
+      const rep = writeReport(analysis, { reproduce: "node cli/dsh-forge.mjs check --json" });
+      reportPath = rep.reportPath;
+      lastError = null;
+      view = "report";
+      viewOffset = 0;
+    } catch (e) {
+      lastError = String((e && e.message) || e).split("\n")[0];
+      view = null;
+    }
+  };
+
   draw();
   if (!process.stdin.isTTY) return; // explicit `tui` in a pipe: render once, then exit
   process.stdin.setRawMode(true);
   process.stdin.resume();
   process.stdin.setEncoding("utf8");
+
   const onData = async (key) => {
-    const k = key.toLowerCase();
+    const k = (key || "").toLowerCase();
+    if (view === "report") {
+      // ── scrollable report pager ──
+      if (k === "q" || key === "\u0003" || key === "\u001b") { view = null; draw(); return; }
+      if (key === "\u001b[A") { viewOffset = Math.max(0, viewOffset - 1); draw(); return; }  // ↑
+      if (key === "\u001b[B") { viewOffset += 1; draw(); return; }                            // ↓
+      if (key === " " || key === "\u001b[6~") { viewOffset = Math.max(0, viewOffset - 1) + 10; draw(); return; } // PgDn
+      if (k === "b" || key === "\u001b[5~") { viewOffset = Math.max(0, viewOffset - 10); draw(); return; }        // PgUp
+      if (key === "\u0001") { viewOffset = 0; draw(); return; }                               // Home
+      if (k === "r") { generateReport(); draw(); return; }
+      return;
+    }
+    // ── main TUI frame ──
     if (k === "q" || key === "\u0003") {
       cleanup();
       process.exit(0);
@@ -206,11 +271,16 @@ function runInteractiveTui(getAnalysis, opts, initialAnalysis) {
       clearAnalysisCache(); // R = explicit refresh: skip the analysis cache
       try {
         analysis = runAnalysis({ profile: opts.profile, datasetPath: opts.dataset });
-        lastError = null;
+        clearLast();
       } catch (e) {
-        // keep the last frame, surface the refresh error inline instead of exiting
         lastError = String((e && e.message) || e).split("\n")[0];
       }
+      draw();
+    } else if (k === "g" || k === "v") {
+      generateReport();
+      draw();
+    } else if (k === "d") {
+      devPanel = !devPanel;
       draw();
     }
   };
@@ -287,10 +357,33 @@ async function startWeb(initialAnalysis, opts) {
         analysis = runAnalysis({ profile: opts.profile, datasetPath: opts.dataset });
         const data = buildEmbedData(analysis, { live: true });
         res.writeHead(200, { "content-type": "application/json" });
-        res.end(JSON.stringify({ ok: true, data }));
+        res.end(JSON.stringify({ ok: true, data, report: buildMarkdownReport(analysis, { reproduce: "node cli/dsh-forge.mjs check --json" }) }));
       } catch (e) {
         res.writeHead(500, { "content-type": "application/json" });
         res.end(JSON.stringify({ ok: false, error: String(e.message || e).split("\n")[0] }));
+      }
+      return;
+    }
+    if (pathname === "/api/report") {
+      try {
+        clearAnalysisCache();
+        analysis = runAnalysis({ profile: opts.profile, datasetPath: opts.dataset });
+        const rep = writeReport(analysis, { reproduce: "node cli/dsh-forge.mjs check --json" });
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ ok: true, file: rep.reportPath, report: rep.markdown, historyFile: rep.historyFile, rows: analysis.assessment.pluginCount }));
+      } catch (e) {
+        res.writeHead(500, { "content-type": "application/json" });
+        res.end(JSON.stringify({ ok: false, error: String(e.message || e) }));
+      }
+      return;
+    }
+    if (pathname === "/api/history") {
+      try {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ ok: true, list: listHistory() }));
+      } catch (e) {
+        res.writeHead(500, { "content-type": "application/json" });
+        res.end(JSON.stringify({ ok: false, error: String(e.message || e) }));
       }
       return;
     }

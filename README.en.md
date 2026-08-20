@@ -2,7 +2,7 @@
 
 > [English](./README.en.md) | [中文](./README.md)
 
-> Version: 0.1.8 (official) · harnessVersion: 0.1.0-rc.6
+> Version: 0.1.9-beta (beta) · harnessVersion: 0.1.0-rc.6
 
 A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency analysis, conflict detection, risk assessment (with prediction), visualization and combination simulation.
 
@@ -57,7 +57,7 @@ A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency an
 Three layers, see [ARCHITECTURE.md](./ARCHITECTURE.md):
 
 ```
-core/          dependency-free engine (25 modules, Node built-ins only)
+core/          dependency-free engine (26 modules, Node built-ins only)
   ├─ composition.js   composition discovery + YAML parsing + ecosystem collection
   ├─ truth.js         dump-config ground truth (auto/dump-config/scan)
   ├─ analyze.js       dependency graph + risk scoring
@@ -198,7 +198,7 @@ The package exposes a `dsh-forge` bin (`cli/dsh-forge.mjs`). The UI shape is dec
 ```bash
 node cli/dsh-forge.mjs               # auto decision (TUI by default in a real terminal)
 node cli/dsh-forge.mjs tui           # force TUI (W=open web, R=refresh, Q=quit)
-node cli/dsh-forge.mjs web           # force Web (--port 8080, --no-open to skip browser)
+node cli/dsh-forge.mjs web           # force Web (--port 3060, --no-open to skip browser)
 node cli/dsh-forge.mjs check --json  # CI/CD machine output
 ```
 

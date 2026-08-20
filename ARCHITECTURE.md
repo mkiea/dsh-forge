@@ -1,6 +1,6 @@
 # dsh-forge 架构文档
 
-> 版本：0.1.8（正式版）· 最后更新：2026-08-20
+> 版本：0.1.9-beta（测试版）· 最后更新：2026-08-20
 
 ## 1. 总览
 
@@ -29,7 +29,7 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 │  │            │          │  │  └────────────────────┘  │ │
 │  │   ┌────────▼────────┐ │  └──────────────────────────┘ │
 │  │   │  core/ (引擎)   │ │                               │
-│  │   │  25 个纯逻辑模块 │ │                               │
+│  │   │  26 个纯逻辑模块 │ │                               │
 │  │   └─────────────────┘ │                               │
 │  └───────────────────────┘                               │
 └─────────────────────────────────────────────────────────┘
@@ -55,6 +55,7 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 | `simulate.js` | 组合模拟 | `simulateCombination`, `applyOps` |
 | `visualize.js` | 多格式可视化 | `html`, `mermaid`, `asciiTree` |
 | `dashboard.js` | 交互仪表盘数据构建 | `dashboard`, `buildEmbedData` |
+| `skins.js` | 仪表盘皮肤 token（light/dark 双主题，零依赖纯逻辑） | `SKINS`, `DEFAULT_SKIN`, `skinCssVars` |
 | `history.js` | 快照存档与加载 | `archiveSnapshot`, `listHistory`, `loadHistory` |
 | `stats.js` | 历史趋势统计 | `historyStats` |
 | `presets.js` | 预设对比 | `comparePresets`, `readPreset` |

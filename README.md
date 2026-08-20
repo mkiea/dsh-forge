@@ -2,7 +2,7 @@
 
 > [English](./README.en.md) | 中文
 
-> 版本：0.1.8（正式版）· harnessVersion: 0.1.0-rc.6
+> 版本：0.1.9-beta（测试版）· harnessVersion: 0.1.0-rc.6
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
 
@@ -62,7 +62,7 @@ DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、�
 三层分离，详见 [ARCHITECTURE.md](./ARCHITECTURE.md)：
 
 ```
-core/          零依赖分析引擎（25 个模块，Node 内置 API only）
+core/          零依赖分析引擎（26 个模块，Node 内置 API only）
   ├─ composition.js   组合源发现 + YAML 解析 + 生态收集
   ├─ truth.js         dump-config 真相源（auto/dump-config/scan 三态）
   ├─ analyze.js       依赖图构建 + 风险评估
@@ -232,7 +232,7 @@ UI 形态不靠猜测，由 `core/mode.js` 按四层证据决策：
 ```bash
 node cli/dsh-forge.mjs               # 自动决策（终端内默认 TUI）
 node cli/dsh-forge.mjs tui           # 强制 TUI（W=打开 Web，R=刷新，Q=退出）
-node cli/dsh-forge.mjs web           # 强制 Web（--port 8080，--no-open 不自动开浏览器）
+node cli/dsh-forge.mjs web           # 强制 Web（--port 3060，--no-open 不自动开浏览器）
 node cli/dsh-forge.mjs check --json  # CI/CD 机器输出
 ```
 
