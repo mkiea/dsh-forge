@@ -1,0 +1,7 @@
+# dsh-forge bundle patch: insert the host plugin into the composition.
+# Installed via: dsh plugin --profile web add github:mkiea/dsh-forge
+- insert:
+    - id: forge
+      name: 'dsh-forge'
+      config:
+        profile: web
