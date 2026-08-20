@@ -257,8 +257,13 @@ function analysisKey(opts) {
 export function clearAnalysisCache() { analysisCache.clear(); }
 
 export function runAnalysis(opts = {}) {
-  const key = analysisKey(opts);
-  const hit = analysisCache.get(key);
+  // live runtime calibration injected by a mounted plugin shell: observation
+  // state derives from the current mounted-lifetime / event window, so it is
+  // context-dependent and must NOT be cached. Offline/CLI/CI default stays
+  // the static stub (not-executed) and remains fully cacheable.
+  const live = Boolean(opts.runtimeCalibration);
+  const key = live ? null : analysisKey(opts);
+  const hit = !live && analysisCache.get(key);
   if (hit) return hit;
   const eco = opts.datasetPath ? loadSnapshot(opts.datasetPath) : collectEcosystem(opts);
   const graph = buildGraph(eco);
@@ -280,14 +285,16 @@ export function runAnalysis(opts = {}) {
   // baseline and fuse each static finding. Pure and cache-safe: never mutates
   // the original findings, only replaces them with fused copies carrying
   // finalSeverity / evidenceTag / runtimeState (offline: UNOBSERVED).
-  const fusionCal = staticRuntimeCalibration();
+  const fusionCal = opts.runtimeCalibration || staticRuntimeCalibration();
   conflicts.conflicts = fuse(conflicts.conflicts, fusionCal.evidence(conflicts.conflicts)).findings;
   leaks.findings = fuse(leaks.findings, fusionCal.evidence(leaks.findings)).findings;
   const feedback = buildFeedback({ conflicts, leaks, assessment, patterns, verified });
   const findingsValid = validateFindings([...conflicts.conflicts, ...leaks.findings]);
   const result = { ecosystem: eco, graph, conflicts, assessment, patterns, deprecations, verified, leaks, feedback, truthSource: effectiveTruthSource, confidenceCap: capSource ? "medium" : (effectiveTruthSource === "dump-config" ? "high" : null), findingsValid };
-  if (analysisCache.size >= ANALYSIS_CACHE_MAX) analysisCache.delete(analysisCache.keys().next().value);
-  analysisCache.set(key, result);
+  if (!live) {
+    if (analysisCache.size >= ANALYSIS_CACHE_MAX) analysisCache.delete(analysisCache.keys().next().value);
+    analysisCache.set(key, result);
+  }
   return result;
 }
 

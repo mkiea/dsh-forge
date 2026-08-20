@@ -1,7 +1,7 @@
 // dsh-forge/src/tools/conflicts.js
 // Tool 2: check_conflicts.
 "use strict";
-import { buildGraph, checkConflicts, scanLeaks } from "../../core/index.js";
+import { buildGraph, checkConflicts, scanLeaks, fuse, staticRuntimeCalibration } from "../../core/index.js";
 import { SOURCES_PARAMS, selectEco, buildFeedback, renderFeedback } from "./common.js";
 
 export function conflictsTool(config) {
@@ -31,13 +31,20 @@ export function conflictsTool(config) {
                 confidence: { type: "string", required: true },
                 packages: { type: "array", items: { type: "string" } },
                 service: { type: "string" },
-                row: { type: "string" }
+                row: { type: "string" },
+                finding_id: { type: "string" },
+                finalSeverity: { type: "string" },
+                evidenceTag: { type: "string" },
+                runtimeState: { type: "string" },
+                next_action: { type: "string" },
+                reproduce_hint: { type: "string" }
               }
             }
           },
           serviceProviders: { type: "object", required: true, additionalProperties: true },
           leaks: { type: "array", required: true, items: { type: "object", additionalProperties: true } },
           calibration: { type: "object", additionalProperties: true },
+          runtimeCalibration: { type: "object", additionalProperties: true },
           inputScope: { type: "object", additionalProperties: true },
           feedback: { type: "array", required: true, items: { type: "object", additionalProperties: true } },
           truthSource: { type: "string" },
@@ -76,17 +83,25 @@ export function conflictsTool(config) {
       const graph = buildGraph(eco);
       const result = checkConflicts(eco, { graph });
       const leaks = scanLeaks(eco.packages);
+      // P0 read-only fusion: prefer a live calibrator fed by the harness bus;
+      // otherwise the honest offline stub (all findings not-executed).
+      const liveCal = (config.runtimeCalibration && typeof config.runtimeCalibration.evidence === "function") ? config.runtimeCalibration : null;
+      const fusionCal = liveCal || staticRuntimeCalibration();
+      const conflicts = fuse(result.conflicts, fusionCal.evidence(result.conflicts)).findings;
+      const fusedLeaks = fuse(leaks.findings, fusionCal.evidence(leaks.findings)).findings;
       const calibration = config.calibration ? config.calibration.snapshot() : null;
+      const runtimeSnapshot = (typeof fusionCal.snapshot === "function") ? fusionCal.snapshot() : null;
       return {
         summary: result.summary,
-        conflicts: result.conflicts,
+        conflicts,
         serviceProviders: Object.fromEntries(Object.entries(result.services.provides).map(([p, svcs]) => [p, svcs])),
-        leaks: leaks.findings,
+        leaks: fusedLeaks,
         inputScope: { rows: eco.rows.length, packages: Object.keys(eco.packages).length, layers: eco.layers.map((l) => l.layer), disabledRows: eco.rows.filter((r) => r.disabled === true).length, truthSource: eco.truthSource || "scan" },
-        feedback: buildFeedback({ conflicts: result, leaks, assessment: null, patterns: [], verified: [] }),
+        feedback: buildFeedback({ conflicts: result, leaks: fusedLeaks, assessment: null, patterns: [], verified: [] }),
         ...(calibration ? { calibration } : {}),
+        ...(runtimeSnapshot ? { runtimeCalibration: runtimeSnapshot } : {}),
         truthSource: eco.truthSource || "scan",
-        disclaimer: "静态扫描为疑似清单（static-suspect），非 harness 实际拒绝的确认；kind=contract 表示 harness 契约确定行为，heuristic 为未校准信号。"
+        disclaimer: "静态扫描为疑似清单（static-suspect），非 harness 实际拒绝的确认；kind=contract 表示 harness 契约确定行为。fused finalSeverity/runtimeState：无 live 事件流时为 not-executed（诚实未观测，不视为干净）。"
       };
     },
     presentCall: (args) => ({ card: "generic", title: "Check plugin conflicts", kind: "other", rawInput: args })

@@ -1,6 +1,15 @@
 # Changelog
 ## [Unreleased]
 
+## [0.1.8] - 2026-08-20
+
+### v0.1.8 预览：live 混合验证打通（harness 内真实生命周期 → 融合）
+
+- **引擎注入点**（`core/index.js` `runAnalysis`）：新增可选 `opts.runtimeCalibration`；live 注入时绕缓存（观测依赖挂载期事件窗，非复现基线），缺省仍 `staticRuntimeCalibration()`（诚实 not-executed），CLI/离线/CI 零变化且可复现。
+- **壳总线适配**（`src/index.js`）：新增 `buildHarnessRuntimeCalibration`，把 harness 的 `session/event` 总线经虚拟 ctx 转发为运行时校准器订阅的 top-level 事件并 `start()`；无总线可绑定时 `dispose()` 返回 `null`，回退离线源。
+- **工具层 fuse 接线**（`src/tools/conflicts.js`）：`check_conflicts` 先 `fuse` 再输出，findings 携带 `finalSeverity`/`evidenceTag`/`runtimeState`/`finding_id`，顶层附 `runtimeCalibration` 快照；schema 补齐声明。无 live 时 fuse static 基线，输出与 CLI 引擎一致（not-executed，诚实未观测，不视为干净）。
+- 说明：harness 壳真机执行依赖 harness 运行时（本环境不可直测），总线→top-level 适配语义经等价单测验证。启发式检测（裸 timer/listener、动态工具名）仍止于可疑级，非形式化证明。
+
 ## [0.1.7] - 2026-08-19
 
 ### 三展示面融合字段补渲染（弹窗/网页/TUI 一致性）
