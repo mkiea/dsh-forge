@@ -2,12 +2,11 @@
 
 > [English](./README.en.md) | 中文
 
-> 版本：0.1.9（正式版）· harnessVersion: 0.1.0-rc.6
+> 版本：0.1.10（正式版）· harnessVersion: 0.1.0-rc.6
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
 
-> **v0.1.9 正式版**：三端（Web/弹窗/TUI）融合详情补齐 `finalSeverity` / `evidenceTag` / `runtimeState` / `finding_id`（旧数据安全回退）+ 皮肤系统（light/dark CSS 变量换肤 + 主题切换记忆）+ 图表增强（运行时校准三态环形图 / 冲突类型柱图 / 快照历史折线图，零依赖 SVG）+ 端口 8080→3060 + 弹窗直连 3060 实时分析（未启动自动回退快照，明确标注「实时 · 3060 已连接」/「快照」）+ 开发者数据面板 + 报告生成与快照历史（`POST /api/report` / `GET /api/history`，写盘路径可用 `DSH_FORGE_REPORTS_DIR` / `DSH_FORGE_HISTORY_DIR` 覆盖，历史归档失败显式上报）+ API 安全加固（仅 POST 生成报告、非本机主机拒绝写盘、本地开发 CORS）+ 报告泄漏语义统一为「副作用泄漏」。现有 13 个只读工具（`simulate_combination` / `archive_snapshot` 不碰组合本体），`core/` 27 个纯逻辑模块零依赖，22 个自包含套件 + 组合契约 + doc-consistency 全部通过。
-
+> **v0.1.10 补丁**：Web 面板共享化（CLI 与 harness 壳复用同一 `core/web-server.js`，核心模块 27→28）+ 后端启动时自动拉起 3060 web 面板（无需手动 `dsh-forge web`，弹窗仪表盘即开即实时）+ 弹窗「新窗口」按钮（`window.open` 独立打开仪表盘）。现有 13 个只读工具，`core/` 28 个纯逻辑模块零依赖，22 个自包含套件全部通过。
 ## 工具（13 个，全部只读；simulate_combination / archive_snapshot 不碰组合本体）
 
 ### 分析
@@ -40,7 +39,7 @@ DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、�
 三层分离，详见 [ARCHITECTURE.md](./ARCHITECTURE.md)：
 
 ```
-core/          零依赖分析引擎（27 个模块，Node 内置 API only）
+core/          零依赖分析引擎（28 个模块，Node 内置 API only）
   ├─ composition.js   组合源发现 + YAML 解析 + 生态收集
   ├─ truth.js         dump-config 真相源（auto/dump-config/scan 三态）
   ├─ analyze.js       依赖图构建 + 风险评估

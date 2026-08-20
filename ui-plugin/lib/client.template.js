@@ -28,6 +28,8 @@ window.__ModuleLoader__.load({
       "history": "快照历史",
       "historyLoading": "读取历史…",
       "close": "关闭",
+      "openInNewWindow": "新窗口",
+      "newWindowDone": "新窗口已打开 · ",
       "hint": "实时分析当前插件组合（刷新以重新扫描），可生成 Markdown 报告并归档快照；仪表盘如实呈现健康度、冲突、风险与运行时状态。"
     };
     var en = {
@@ -49,6 +51,8 @@ window.__ModuleLoader__.load({
       "history": "Snapshots",
       "historyLoading": "Loading history…",
       "close": "Close",
+      "openInNewWindow": "New window",
+      "newWindowDone": "opened in new window · ",
       "hint": "Analyze the live plugin composition live (Refresh to re-scan), generate a Markdown report and archive snapshots; the dashboard honestly shows health, conflicts, risk and runtime state."
     };
 
@@ -215,6 +219,12 @@ window.__ModuleLoader__.load({
         });
       };
 
+      var openInNewWindow = function () {
+        if (typeof window === "undefined" || !window.open) { setStatus("window.open unavailable"); return; }
+        window.open(SERVER + "/", "_blank");
+        setStatus(props.t("newWindowDone") + SERVER + "/");
+      };
+
       react.useEffect(function () {
         if (!isOpen) return;
         function onKey(e) { if (e.key === "Escape") setOpen(false); }
@@ -255,7 +265,7 @@ window.__ModuleLoader__.load({
             react.createElement("span", { style: { fontSize: 11, color: "var(--dsw-alias-label-secondary, #888)", marginLeft: 8 } }, subtitle + (busy ? " · " + busy : "")),
             react.createElement("button", { type: "button", onClick: generateReport, style: actionBtnStyle(), "aria-label": props.t("report") }, props.t("report")),
             react.createElement("button", { type: "button", onClick: loadHistory, style: actionBtnStyle(), "aria-label": props.t("history") }, props.t("history")),
-            react.createElement("button", { type: "button", onClick: function () { setOpen(false); }, style: closeStyle(), "aria-label": props.t("close") }, "✕")
+            react.createElement("button", { type: "button", onClick: openInNewWindow, style: actionBtnStyle(), "aria-label": props.t("openInNewWindow"), title: SERVER + "/" }, "⧉ " + props.t("openInNewWindow")), react.createElement("button", { type: "button", onClick: function () { setOpen(false); }, style: closeStyle(), "aria-label": props.t("close") }, "✕")
           ),
           status
             ? react.createElement("div", { style: { flex: "none", padding: "6px 14px", background: "var(--dsw-alias-background-fill, rgba(127,127,127,.06))", borderBottom: "1px solid var(--dsw-alias-border-l2, rgba(127,127,127,.2))", fontSize: 12, color: "var(--dsw-alias-label-secondary, #666)", fontFamily: "monospace" } }, status)

@@ -23,7 +23,8 @@ import * as path from "node:path";
 import z from "@deepseek-ai/schemastery";
 import { defineTool } from "@deepseek-ai/dsh-tools";
 import { analyzeTool, conflictsTool, visualizeTool, simulateTool, auditTool, diffTool, historyTool, archiveTool, presetTool, verifyTool, suggestTool, upgradeTool, statsTool } from "./tools/index.js";
-import { connectHarnessEvents, createRuntimeCalibration, preflight, collectEcosystem } from "../core/index.js";
+import { connectHarnessEvents, createRuntimeCalibration, preflight, collectEcosystem, runAnalysis } from "../core/index.js";
+import { startWebServer } from "../core/web-server.js";
 
 export const name = "dsh-forge";
 export const inject = ["tools"];
@@ -78,6 +79,33 @@ function buildHarnessRuntimeCalibration(ctx) {
 }
 
 
+const AUTO_WEB_PORT = Number(process.env.DSH_FORGE_PORT || 3060);
+const AUTO_WEB_HOST = process.env.DSH_FORGE_HOST || "127.0.0.1";
+
+// Best-effort simultaneous web panel: whenever the harness mounts this plugin we
+// start the same shared 3060 data channel the popup dashboard reads, so the
+// dashboard is live without a manual `dsh-forge web`. Never auto-opens a browser.
+async function startAutoWeb(cfg) {
+  try {
+    const refresh = () => runAnalysis({
+      profile: cfg.profile, root: cfg.root, datasetPath: cfg.datasetPath,
+      runtimeCalibration: cfg.runtimeCalibration
+    });
+    const server = await startWebServer({
+      host: AUTO_WEB_HOST, port: AUTO_WEB_PORT, open: false,
+      initialAnalysis: refresh(),
+      refresh,
+      reportOpts: () => ({ reproduce: "node cli/dsh-forge.mjs check --json" }),
+      onListen: (url) => console.log("[dsh-forge] web panel (auto) listening at " + url),
+      onOccupied: () => console.log("[dsh-forge] web panel (auto) skipped: port " + AUTO_WEB_PORT + " already in use")
+    });
+    return server;
+  } catch (e) {
+    console.error("[dsh-forge] web panel (auto) start skipped: " + String(e.message || e).split("\n")[0]);
+    return null;
+  }
+}
+
 export function apply(ctx, config = {}) {
   const cfg = {
     profile: config.profile || "web",
@@ -111,6 +139,8 @@ export function apply(ctx, config = {}) {
   for (const factory of ALL_TOOLS) {
     ctx.tools.register(defineTool(factory(cfg)));
   }
+  // 后端启动时同步拉起 web 端（自动 Web 服务，供弹窗仪表盘实时读取）
+  void startAutoWeb(cfg);
   // 启动成功提示：在 harness 终端显示，方便用户确认插件已加载
   try {
     const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"));

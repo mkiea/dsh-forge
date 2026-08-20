@@ -1,4 +1,12 @@
 # Changelog
+## [0.1.10] - 2026-08-20
+
+### v0.1.10 补丁 — Web 面板共享化 + 后端自动拉起 + 弹窗新窗口
+
+- **`core/web-server.js` 共享模块**：将 CLI 的 HTTP 路由/CORS/端口探测/浏览器打开抽为可复用模块（纯 Node 内置 API），CLI 与 harness 插件壳 `src/index.js` 复用同一 3060 数据通道，核心模块 27→28。
+- **后端自动拉起 Web 面板**：`apply(ctx, config)` 注册工具后 `void startAutoWeb(cfg)` 同步启动 3060 服务（best-effort，失败/端口占用自动降级并显式提示），弹窗仪表盘无需手动 `dsh-forge web` 即可实时读取。
+- **弹窗「新窗口」按钮**（`ui-plugin/lib/client.template.js`）：头部新增按钮，`window.open(SERVER + "/", "_blank")` 在独立浏览器窗口打开仪表盘。
+
 ## [0.1.9] - 2026-08-20
 
 ### v0.1.9 正式版 — 文案纠偏 / 实时依赖明示 / 构建与文档同步 / 写盘 API 收紧

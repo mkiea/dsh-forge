@@ -1,6 +1,6 @@
 # dsh-forge 架构文档
 
-> 版本：0.1.9（正式版）· 最后更新：2026-08-20
+> 版本：0.1.10（正式版）· 最后更新：2026-08-20
 
 ## 1. 总览
 
@@ -29,7 +29,7 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 │  │            │          │  │  └────────────────────┘  │ │
 │  │   ┌────────▼────────┐ │  └──────────────────────────┘ │
 │  │   │  core/ (引擎)   │ │                               │
-│  │   │  27 个纯逻辑模块 │ │                               │
+│  │   │  28 个纯逻辑模块 │ │                               │
 │  │   └─────────────────┘ │                               │
 │  └───────────────────────┘                               │
 └─────────────────────────────────────────────────────────┘
@@ -68,6 +68,7 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 | `evidence.js` | 证据元数据（INV-6/A-2）：稳定 finding_id + 置信度上限 + schema 校验 | `makeFindingId`, `attachFindingIds`, `capConfidence`, `validateFindings` |
 | `evidence-fusion.js` | 证据融合（A-1 三态 + A-3 可行动 + INV-3 只降不清除） | `fuse` |
 | `runtime-calibration.js` | 运行时校准（A-4 滑窗 + INV-2 时序边界 + A-2 关联键） | `createRuntimeCalibration`, `staticRuntimeCalibration` |
+| `web-server.js` | Web 面板共享服务（CLI 与 harness 壳复用的 3060 数据通道 + CORS/端口探测/浏览器打开） | `createWebHandler`, `startWebServer`, `probePort`, `openBrowser` |
 
 `core/index.js` 是门面模块，统一 re-export 全部公共 API，并提供 `runAnalysis()` 一站式管线和 `saveSnapshot()` / `loadSnapshot()` 快照序列化。
 
@@ -75,7 +76,7 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 
 | 文件 | 职责 |
 | --- | --- |
-| `src/index.js` | cordis 插件入口：`apply(ctx, config)` → 创建 calibration → 遍历 13 个工具工厂 → `defineTool` 注册 |
+| `src/index.js` | cordis 插件入口：`apply(ctx, config)` → 创建 calibration → 遍历 13 个工具工厂 → `defineTool` 注册；注册后 `void startAutoWeb(cfg)` 同步拉起共享 Web 面板（3060，不自动开浏览器） |
 | `src/tools/index.js` + `src/tools/*.js` | 13 个工具定义（每工具一文件，共享 `common.js`）：name / description / parameters(JSON Schema) / output.schema / execute / render |
 
 工具注册流程：

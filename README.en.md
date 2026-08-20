@@ -2,12 +2,11 @@
 
 > [English](./README.en.md) | [中文](./README.md)
 
-> Version: 0.1.9 (official) · harnessVersion: 0.1.0-rc.6
+> Version: 0.1.10 (official) · harnessVersion: 0.1.0-rc.6
 
 A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency analysis, conflict detection, risk assessment (with prediction), visualization and combination simulation.
 
-> **v0.1.9 (official)**: full cross-surface detail parity (Web / popup / TUI) exposing `finalSeverity` / `evidenceTag` / `runtimeState` / `finding_id` with safe fallbacks for legacy data; a skin system (light/dark CSS-variable theming with a remembered toggle); zero-dependency SVG charts (runtime-calibration tri-state ring, conflict-type bars, snapshot-history line); default web port moved 8080→3060; the popup now streams live analysis over the 3060 channel (auto-falls back to a snapshot, showing an explicit "live · 3060 connected" / "snapshot" label); a developer data panel; report generation and snapshot history (`POST /api/report` / `GET /api/history`) with overridable paths via `DSH_FORGE_REPORTS_DIR` / `DSH_FORGE_HISTORY_DIR` and explicit history-failure reporting; API hardening (`/api/report` POST-only, writes refused on non-loopback hosts, local-dev CORS); and report "leak" semantics normalized to side-effect leaks. 13 read-only tools (`simulate_combination` / `archive_snapshot` never touch the composition), 27 zero-dependency core modules, and 22 self-contained suites + composition gate + doc-consistency all pass.
-
+> **v0.1.10 patch**: shared web panel (`core/web-server.js` reused by the CLI and harness shell, core modules 27→28) + the backend auto-starts the 3060 web panel on load (no manual `dsh-forge web`; the popup dashboard is live immediately) + a popup "New window" button (`window.open`). 13 read-only tools, `core/` 28 zero-dependency modules, 22 self-contained suites all pass.
 ## Tools (13, all read-only; simulate_combination / archive_snapshot never touch the composition)
 
 ### Analysis
@@ -40,7 +39,7 @@ A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency an
 Three layers, see [ARCHITECTURE.md](./ARCHITECTURE.md):
 
 ```
-core/          dependency-free engine (27 modules, Node built-ins only)
+core/          dependency-free engine (28 modules, Node built-ins only)
   ├─ composition.js   composition discovery + YAML parsing + ecosystem collection
   ├─ truth.js         dump-config ground truth (auto/dump-config/scan)
   ├─ analyze.js       dependency graph + risk scoring

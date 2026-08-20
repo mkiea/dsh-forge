@@ -11,15 +11,12 @@
 //   3. user scenario      4. data complexity (plugin count thresholds)
 "use strict";
 import * as fs from "node:fs";
-import * as net from "node:net";
-import * as http from "node:http";
 import * as path from "node:path";
-import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { isLoopbackHost, openBrowser, startWebServer } from "../core/web-server.js";
 import {
-  runAnalysis, clearAnalysisCache, buildEmbedData, buildCheckReport,
-  buildMarkdownReport, writeReport, listHistory,
-  html as renderHtml, dashboard as renderDashboard,
+  runAnalysis, clearAnalysisCache, buildCheckReport,
+  buildMarkdownReport, writeReport,
   UI_MODE, decideUiMode, decideAfterPortProbe,
   hasDesktop, COMPLEXITY_LIGHT, COMPLEXITY_HEAVY
 } from "../core/index.js";
@@ -30,18 +27,6 @@ const DEFAULT_HOST = process.env.DSH_FORGE_HOST || "127.0.0.1";
 const REPORTS_DIR = process.env.DSH_FORGE_REPORTS_DIR || null;
 const HISTORY_DIR = process.env.DSH_FORGE_HISTORY_DIR || null;
 
-function isLoopbackHost(h) {
-  h = String(h || "").toLowerCase().replace(/^\[|\]$/g, "");
-  return h === "127.0.0.1" || h === "localhost" || h === "::1";
-}
-
-function applyCors(req, res) {
-  const origin = req.headers.origin;
-  res.setHeader("access-control-allow-origin", origin || "*");
-  if (origin) res.setHeader("vary", "Origin");
-  res.setHeader("access-control-allow-methods", "GET, POST");
-  res.setHeader("access-control-allow-headers", "Content-Type");
-}
 function reportOpts() {
   const o = { reproduce: "node cli/dsh-forge.mjs check --json" };
   if (REPORTS_DIR) o.reportsDir = REPORTS_DIR;
@@ -313,127 +298,39 @@ function runInteractiveTui(getAnalysis, opts, initialAnalysis) {
   process.stdin.on("data", onData);
 }
 
-// ── Web shell (zero-dependency node:http, self-contained HTML) ─────────────
-function probePort(port, host = DEFAULT_HOST) {
-  return new Promise((resolve) => {
-    const srv = net.createServer();
-    srv.once("error", () => resolve(false));
-    srv.listen(port, host, () => {
-      srv.close(() => resolve(true));
-    });
-  });
-}
-
-function openBrowser(url) {
-  const cmd = process.platform === "win32"
-    ? ["cmd", ["/c", "start", "", url]]
-    : process.platform === "darwin"
-      ? ["open", [url]]
-      : ["xdg-open", [url]];
-  try {
-    spawn(cmd[0], cmd[1], { detached: true, stdio: "ignore", windowsHide: true }).unref();
-    return true;
-  } catch {
-    return false; // spawn failed -> browser just won't open; web server still serves
-  }
-}
-
 async function startWeb(initialAnalysis, opts) {
-  let analysis = initialAnalysis;
-  // Per-request fresh render: the interactive workspace reflects the latest
-  // analysis, falling back to the self-contained SVG topology page when
-  // web/dashboard-client.js is not shipped alongside.
-  const renderPage = () => {
-    try {
-      return renderDashboard(analysis, { live: true });
-    } catch {
-      return renderHtml(analysis.ecosystem, analysis.assessment, analysis.conflicts);
+  const requested = opts.port;
+  const degrade = (analysis) => {
+    if (process.stdout.isTTY && decideAfterPortProbe(UI_MODE.WEB, false, { tty: true }).mode === UI_MODE.TUI) {
+      runInteractiveTui(() => loadAnalysis(opts), opts);
+    } else {
+      console.log(opts.json ? jsonSummary(analysis, opts) : plainSummary(analysis));
     }
   };
-  const requested = opts.port;
-  const free = await probePort(requested, opts.host);
-  if (!free) {
-    const tty = process.stdout.isTTY;
-    const fallback = decideAfterPortProbe(UI_MODE.WEB, false, { tty });
-    console.error("[dsh-forge] port " + requested + " is occupied → " + fallback.mode + " (" + fallback.reasons.join("; ") + ")");
-    if (fallback.mode === UI_MODE.TUI) {
-      runInteractiveTui(() => loadAnalysis(opts), opts);
-      return;
+  const server = await startWebServer({
+    host: opts.host,
+    port: requested,
+    open: opts.open,
+    initialAnalysis,
+    refresh: () => { clearAnalysisCache(); return runAnalysis({ profile: opts.profile, datasetPath: opts.dataset }); },
+    reportOpts,
+    onOccupied: () => {
+      console.error("[dsh-forge] port " + requested + " is occupied \u2192 degrade");
+      degrade(initialAnalysis);
+    },
+    onError: (e) => {
+      console.error("[dsh-forge] web server failed: " + String(e.message || e));
+      degrade(initialAnalysis);
+    },
+    onListen: (url, actualPort) => {
+      if (!isLoopbackHost(opts.host)) console.log("[dsh-forge] WARNING: bound to non-loopback host; /api/report (write) is REFUSED here.");
+      console.log("[dsh-forge] web panel listening at " + url);
+      if (opts.open && openBrowser(url)) console.log("[dsh-forge] browser opened: " + url);
+      console.log("[dsh-forge] press Ctrl+C to stop");
     }
-    console.log(opts.json ? jsonSummary(analysis, opts) : plainSummary(analysis));
-    return;
-  }
-  const server = http.createServer((req, res) => {
-    const method = (req.method || "GET").toUpperCase();
-    applyCors(req, res);
-    if (method === "OPTIONS") { res.writeHead(204); res.end(); return; }
-    const pathname = (req.url || "/").split("?")[0];
-    if (pathname === "/healthz") {
-      res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify({ ok: true, rows: analysis.assessment.pluginCount }));
-      return;
-    }
-    if (pathname === "/api/refresh") {
-      if (method !== "GET") { res.writeHead(405, { "content-type": "application/json" }); res.end(JSON.stringify({ ok: false, error: "method not allowed (GET)" })); return; }
-      // Dynamic re-analysis: skips the analysis cache, returns fresh embed data
-      // so the client can re-render without a full page reload.
-      clearAnalysisCache();
-      try {
-        analysis = runAnalysis({ profile: opts.profile, datasetPath: opts.dataset });
-        const data = buildEmbedData(analysis, { live: true });
-        res.writeHead(200, { "content-type": "application/json" });
-        res.end(JSON.stringify({ ok: true, data, report: buildMarkdownReport(analysis, { reproduce: "node cli/dsh-forge.mjs check --json" }) }));
-      } catch (e) {
-        res.writeHead(500, { "content-type": "application/json" });
-        res.end(JSON.stringify({ ok: false, error: String(e.message || e).split("\n")[0] }));
-      }
-      return;
-    }
-    if (pathname === "/api/report") {
-      if (method !== "POST") { res.writeHead(405, { "content-type": "application/json" }); res.end(JSON.stringify({ ok: false, error: "method not allowed (POST)" })); return; }
-      if (!isLoopbackHost(opts.host)) { res.writeHead(403, { "content-type": "application/json" }); res.end(JSON.stringify({ ok: false, error: "report write refused: bind to a loopback host (--host 127.0.0.1)" })); return; }
-      try {
-        clearAnalysisCache();
-        analysis = runAnalysis({ profile: opts.profile, datasetPath: opts.dataset });
-        const rep = writeReport(analysis, reportOpts());
-        res.writeHead(200, { "content-type": "application/json" });
-        res.end(JSON.stringify({ ok: true, file: rep.reportPath, report: rep.markdown, historyFile: rep.historyFile, historyError: rep.historyError, rows: analysis.assessment.pluginCount }));
-      } catch (e) {
-        res.writeHead(500, { "content-type": "application/json" });
-        res.end(JSON.stringify({ ok: false, error: String(e.message || e) }));
-      }
-      return;
-    }
-    if (pathname === "/api/history") {
-      if (method !== "GET") { res.writeHead(405, { "content-type": "application/json" }); res.end(JSON.stringify({ ok: false, error: "method not allowed (GET)" })); return; }
-      try {
-        res.writeHead(200, { "content-type": "application/json" });
-        res.end(JSON.stringify({ ok: true, list: listHistory() }));
-      } catch (e) {
-        res.writeHead(500, { "content-type": "application/json" });
-        res.end(JSON.stringify({ ok: false, error: String(e.message || e) }));
-      }
-      return;
-    }
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(renderPage());
   });
-  server.on("error", (e) => {
-    console.error("[dsh-forge] web server failed: " + String(e.message || e));
-    if (process.stdout.isTTY) runInteractiveTui(() => loadAnalysis(opts), opts);
-    else console.log(opts.json ? jsonSummary(analysis, opts) : plainSummary(analysis));
-  });
-  server.listen(requested, opts.host, () => {
-    const actualPort = server.address().port;
-    const url = "http://" + opts.host + ":" + actualPort + "/";
-    if (!isLoopbackHost(opts.host)) console.log("[dsh-forge] WARNING: bound to non-loopback host; /api/report (write) is REFUSED here.");
-    console.log("[dsh-forge] web panel listening at " + url);
-    if (opts.open && openBrowser(url)) console.log("[dsh-forge] browser opened: " + url);
-    console.log("[dsh-forge] press Ctrl+C to stop");
-  });
-  process.once("SIGINT", () => {
-    server.close(() => process.exit(0));
-  });
+  if (!server) return;
+  process.once("SIGINT", () => { server.close(() => process.exit(0)); });
 }
 
 // ── main: four-layer evidence decision ──────────────────────────────────────
