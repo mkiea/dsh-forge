@@ -9,6 +9,7 @@ const SCOPE = "@deepseek-ai/";
 
 export function buildGraph(eco) {
   const { rows, packages, installed } = eco;
+  const safeInstalled = installed || {};
   const rowsByName = new Map();
   for (const [p] of Object.entries(packages)) rowsByName.set(p, rows.filter((r) => packageOf(r.name) === p));
 
@@ -98,7 +99,7 @@ export function buildGraph(eco) {
       r.from.push(e.from);
       ranges.set(key, r);
     }
-    shared.push({ dep, installed: installed[dep] || null, ranges: [...ranges.values()] });
+    shared.push({ dep, installed: safeInstalled[dep] || null, ranges: [...ranges.values()] });
   }
   shared.sort((a, b) => {
     const ca = a.ranges.reduce((s, r) => s + r.count, 0);

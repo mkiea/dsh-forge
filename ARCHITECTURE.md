@@ -1,6 +1,6 @@
 # dsh-forge 架构文档
 
-> 版本：0.1.9-beta（测试版）· 最后更新：2026-08-20
+> 版本：0.1.9（正式版）· 最后更新：2026-08-20
 
 ## 1. 总览
 
@@ -9,7 +9,7 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 
 ### 设计原则
 
-- **零副作用**：所有工具只读；`simulate_combination` 操作虚拟副本，`archive_snapshot` 仅写 data/history 快照。
+- **分析只读**：所有分析计算只读；`simulate_combination` 操作虚拟副本；报告生成与历史归档为**可选落盘**（`writeReport` → `reports/`，`archive_snapshot` → `data/history/`），路径可经 `DSH_FORGE_REPORTS_DIR` / `DSH_FORGE_HISTORY_DIR` 覆盖。
 - **零依赖引擎**：`core/` 仅使用 Node.js 内置 API（fs / path / module），不依赖任何第三方包。
 - **诚实声明**：静态扫描结果标注 `confidence` / `evidenceTier`，未校准数据标 `calibrated: false` + 免责声明。
 - **三层分离**：分析引擎（core）↔ 插件壳（src）↔ 客户端 UI（ui-plugin）职责清晰，可独立测试。
@@ -29,7 +29,7 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 │  │            │          │  │  └────────────────────┘  │ │
 │  │   ┌────────▼────────┐ │  └──────────────────────────┘ │
 │  │   │  core/ (引擎)   │ │                               │
-│  │   │  26 个纯逻辑模块 │ │                               │
+│  │   │  27 个纯逻辑模块 │ │                               │
 │  │   └─────────────────┘ │                               │
 │  └───────────────────────┘                               │
 └─────────────────────────────────────────────────────────┘
@@ -57,6 +57,7 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 | `dashboard.js` | 交互仪表盘数据构建 | `dashboard`, `buildEmbedData` |
 | `skins.js` | 仪表盘皮肤 token（light/dark 双主题，零依赖纯逻辑） | `SKINS`, `DEFAULT_SKIN`, `skinCssVars` |
 | `history.js` | 快照存档与加载 | `archiveSnapshot`, `listHistory`, `loadHistory` |
+| `report.js` | Markdown 报告生成 + 写入归档（报告/history 路径可配置，history 失败可见） | `buildMarkdownReport`, `writeReport`, `gates`, `reportsDir`, `historyDir`, `pkgVersion` |
 | `stats.js` | 历史趋势统计 | `historyStats` |
 | `presets.js` | 预设对比 | `comparePresets`, `readPreset` |
 | `verify.js` | 行级装载预检 | `verifyRows` |
@@ -80,7 +81,7 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 工具注册流程：
 ```
 apply(ctx, config)
-  → createCalibration(ctx)          // 运行期事件订阅 or 静态降级
+  → createRuntimeCalibration(ctx)   // 运行期事件订阅 or 静态降级
   → probeRuntime(ctx)               // 探测 22 个 harness 服务
   → for each factory in ALL_TOOLS:
       ctx.tools.register(defineTool(factory(cfg)))

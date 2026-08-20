@@ -2,33 +2,11 @@
 
 > [English](./README.en.md) | 中文
 
-> 版本：0.1.9-beta（测试版）· harnessVersion: 0.1.0-rc.6
+> 版本：0.1.9（正式版）· harnessVersion: 0.1.0-rc.6
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
 
-> **v0.1.6 更新（正式版）**：默认路径证据融合接线（P0-1/P0-2）——runAnalysis 对 conflicts/leaks 调 fuse + 离线诚实 not-executed 基线，每条 finding 带 finalSeverity / evidenceTag / runtimeState。CI 门禁（P0-4）——组合变更 PR 自动运行只读组合契约审计 `composition-gate`（`check --json --dataset data/ecosystem.json` 离线快照，无 harness 亦可复现），`gate.pass` 未过即拦截 PR 并上传报告 artifact。**锁版本复现报告（P0-5）**——`check --json` 报告新增 `version`（工具版本）、`reproduce`（精确复现命令，带 `--dataset`）、`inputs.dataset`（数据集指纹），配合 schemaVersion / inputs.rows / truthSource / harnessVersion 冻结触发采样的完整输入环境；CI 进一步断言报告 `version === package.json`，杜绝存档报告相对触发源码的版本漂移。
->> **v0.1.6 更新**：TUI 增强（审计 F1/F2）——R 键刷新失败不再退出进程（保留旧帧，底部内联红字 `refresh failed:...`，对齐仪表盘 /api/refresh 失败保留旧态）；`renderTui` 新增混合验证元数据行（truthSource 大写 + confidenceCap + leaks 计数 + findingsValid ok / N violation(s)）。**新增「使用引导」默认首页 + 名词解释**：面向小白的三步阅读指南、全站统一的级别颜色、悬停术语即弹白话解释（整体健康度 / truthSource / confidenceCap / findingsValid / 泄漏发现 等关键指标均已挂载），并统一各表面的错误/级别中文标签。各旧模块顶部含「本页说明」引导条，组件表表头可悬停查看列含义。
->
-> **v0.1.5 更新**：静态-运行时混合验证——运行时校准（`core/runtime-calibration.js` 订阅 Cordis 生命周期事件 + finding_id 绑定 + A-4 滑动窗口）与证据融合引擎（静态 + 运行时未观测三态，非运行时观测绝不清除告警，INV-3）打通「静态初筛 + 运行时校准」闭环；真相源三态降级（dump-config/auto/scan/snapshot，scan 全局置信度 ≤ medium）；node:vm 沙箱加固（null 原型隔离 + 冻结 process + 可配置超时）；仪表盘新增「混合验证体系」（INV-1~6）与「副作用泄漏」页，模块导航 8→10，修复 findingsValid 渲染；自包含套件 13→16，用例总数 832→883。
->
-> **v0.1.1 更新**：统一错误反馈体系（FORGE-001~014 错误码 + fatal/error/warning/info 分级 + 仪表盘"错误与反馈"面板 +
-> 启动预检终端诊断）；作用域感知冲突判定（per-agent 变体合法）；运行期事件校准（tool/call·tool/result·turn/end 行为基线）；
-> 泄漏扫描 apply 路径切片；仪表盘入口移至 sidebar 会话框下方/设置上方（会话头按钮已移除）。
-
-> **v0.1.2 更新**：仪表盘重写为 workspace 布局（固定头部 + 左侧 8 模块导航，右侧内容独立滚动，彻底对齐 client.js）；
-> P0 schema 一致性（check_conflicts 补 kind/evidenceTier，visualize_plugins/snapshot_history 不再返回 null 字段）；
-> P1 正确性（riskScore detail 回退链、archive_snapshot dryRun、scope.js 扫描 lib+src、verify_rows 支持 profile）；
-> P2 可部署性（mount-ui 自动探测部署目录、smoke13 移除硬编码路径）；新增 scripts/generate-dashboard.mjs。
->
-> **v0.1.4 更新**：P0 沙箱迁移（`!!js` 改 node:vm 隔离 + YAML 严格 fail-loud 解析）；P1 仓库与快照（data/history 忽略、npm files 收窄、src/tools 逐工具拆分、快照格式迁移链）；P2 CI 半集成（13 工具 snapshot smoke + 文档版本断言）；新增运行时验证盲区清单。
->
-> **v0.1.3 更新**：双栖 UI 决策（默认 TUI / 按需 Web / check JSON 给自动化，`W` 一键切 Web，四层证据决策引擎）；
-> 分析内存缓存（runAnalysis 上限 16 条 + clearAnalysisCache 强制刷新）；工程加固（cache-behavior 缓存守护测试、
-> doc-consistency CI 守卫、pre-commit 快速门禁、src/core 双入口职责说明、历史报告快照标注）。
->
-> **0.1.4 补丁**：`!!js` 沙箱迁移到 `node:vm`；YAML 严格解析 fail-loud；`data/history/` 入 .gitignore 且 npm 仅发布
-> `data/ecosystem.json`；`src/tools/` 每工具一文件；快照格式迁移链；新增 13 工具快照半集成 CI smoke；
-> 新增 `reports/runtime-verification-checklist.md` 与静态盲区提示。
+> **v0.1.9 正式版**：三端（Web/弹窗/TUI）融合详情补齐 `finalSeverity` / `evidenceTag` / `runtimeState` / `finding_id`（旧数据安全回退）+ 皮肤系统（light/dark CSS 变量换肤 + 主题切换记忆）+ 图表增强（运行时校准三态环形图 / 冲突类型柱图 / 快照历史折线图，零依赖 SVG）+ 端口 8080→3060 + 弹窗直连 3060 实时分析（未启动自动回退快照，明确标注「实时 · 3060 已连接」/「快照」）+ 开发者数据面板 + 报告生成与快照历史（`POST /api/report` / `GET /api/history`，写盘路径可用 `DSH_FORGE_REPORTS_DIR` / `DSH_FORGE_HISTORY_DIR` 覆盖，历史归档失败显式上报）+ API 安全加固（仅 POST 生成报告、非本机主机拒绝写盘、本地开发 CORS）+ 报告泄漏语义统一为「副作用泄漏」。现有 13 个只读工具（`simulate_combination` / `archive_snapshot` 不碰组合本体），`core/` 27 个纯逻辑模块零依赖，22 个自包含套件 + 组合契约 + doc-consistency 全部通过。
 
 ## 工具（13 个，全部只读；simulate_combination / archive_snapshot 不碰组合本体）
 
@@ -62,7 +40,7 @@ DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、�
 三层分离，详见 [ARCHITECTURE.md](./ARCHITECTURE.md)：
 
 ```
-core/          零依赖分析引擎（26 个模块，Node 内置 API only）
+core/          零依赖分析引擎（27 个模块，Node 内置 API only）
   ├─ composition.js   组合源发现 + YAML 解析 + 生态收集
   ├─ truth.js         dump-config 真相源（auto/dump-config/scan 三态）
   ├─ analyze.js       依赖图构建 + 风险评估
@@ -247,7 +225,7 @@ Web 形态采用**混合审查**：每次请求用当前分析结果新鲜渲染
 - `dsh web` 正常启动于 http://127.0.0.1:3080，浏览器无报错，**13 个工具**注册成功
 - `analyze_dependencies` 真实执行：4 层组合（profile 根 + dsh-base + dsh-web-app + patch），
   138 插件行（含 forge/forge-ui）/ 128 包 / 1226+ 依赖边
-- 自动化测试（21 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
+- 自动化测试（22 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
   - `test/ui-test.mjs` — 仪表盘 workspace 结构与交互（77 项，含 v0.1.5 混合架构页/嵌入字段/finding_id 语义与渲染断言，及 v0.1.6 引导页/名词解释/悬停提示/规范标签 + 旧模块引导条/表头详释）
   - `test/ui-plugin-test.mjs` — 客户端插件 VM 执行 + slot 注册 + 模态交互（22 项）
   - `test/semver-consistency.test.mjs` — SemVer 单一实现回归 + 防镜像回归（30 项）
@@ -302,5 +280,5 @@ harnessVersion 绑定与知识库版本门控（R2）、泄漏扫描（R3）、�
 - `prompt/` — 专家 persona 提示词（含风险预测）
 - `data/` — 生态快照（`ecosystem.json` versioned；`history/` 运行期生成，gitignored）
 - `reports/` — 生成的分析报告与图谱
-- `test/` — 自包含测试套件（21 套件 952 项，零本机依赖）
+- `test/` — 自包含测试套件（22 套件 952 项，零本机依赖）
 - `scripts/` — 生成与构建脚本（generate-dashboard / build-ui / mount-ui）

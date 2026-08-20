@@ -18,6 +18,8 @@
 //                  re-export it from core/index.js; add a tool here only
 //                  when it must be exposed to the harness as a tool.
 "use strict";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import z from "@deepseek-ai/schemastery";
 import { defineTool } from "@deepseek-ai/dsh-tools";
 import { analyzeTool, conflictsTool, visualizeTool, simulateTool, auditTool, diffTool, historyTool, archiveTool, presetTool, verifyTool, suggestTool, upgradeTool, statsTool } from "./tools/index.js";
@@ -108,5 +110,12 @@ export function apply(ctx, config = {}) {
   }
   for (const factory of ALL_TOOLS) {
     ctx.tools.register(defineTool(factory(cfg)));
+  }
+  // 启动成功提示：在 harness 终端显示，方便用户确认插件已加载
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"));
+    console.log("[dsh-forge] ✓ forge 启动成功 · v" + pkg.version + " · " + ALL_TOOLS.length + " 个工具已注册");
+  } catch {
+    console.log("[dsh-forge] ✓ forge 启动成功 · " + ALL_TOOLS.length + " 个工具已注册");
   }
 }

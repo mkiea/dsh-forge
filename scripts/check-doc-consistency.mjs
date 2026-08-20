@@ -24,7 +24,8 @@ function exists(rel) {
   return fs.existsSync(path.join(ROOT, rel));
 }
 
-const MODULE_COUNT = "26"; // core/ module count excl. index facade (see ARCHITECTURE.md)
+// core/ module count excl. index facade — computed so the docs can never drift.
+const MODULE_COUNT = String(fs.readdirSync(path.join(ROOT, "core")).filter((f) => f.endsWith(".js") && f !== "index.js").length); // core/ module count excl. index facade (see ARCHITECTURE.md)
 
 // 1. test files must carry a test suffix (.test.mjs or -test.mjs); bare names
 //    (the historical hazard) are flagged
@@ -98,7 +99,13 @@ const MODULE_COUNT = "26"; // core/ module count excl. index facade (see ARCHITE
 // 5. CHANGELOG keeps the Unreleased section
 {
   const cl = read("CHANGELOG.md");
-  check("CHANGELOG has Unreleased section", /## \[Unreleased\]/.test(cl));
+  // During release the Unreleased section is legitimately promoted to the
+  // release version. Accept Unreleased (released present) OR the first
+  // versioned section equalling this package's version (already promoted).
+  const released = /## \[Unreleased\]/.test(cl);
+  const m = /^## \[(.+?)\]/m.exec(cl);
+  const promoted = !!m && m[1] === JSON.parse(read("package.json")).version;
+  check("CHANGELOG has Unreleased or promoted release section", released || promoted);
 }
 
 console.log(failed === 0 ? "\ndoc-consistency: all checks passed" : "\ndoc-consistency: " + failed + " check(s) FAILED");

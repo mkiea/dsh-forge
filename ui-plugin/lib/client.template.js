@@ -16,7 +16,9 @@ window.__ModuleLoader__.load({
       "openShort": "仪表盘",
       "generatedAt": "生成于",
       "live": "实时",
+      "liveFull": "实时 · 3060 已连接",
       "snapshot": "快照",
+      "snapshotFull": "快照 · 请先运行 dsh-forge web（默认 127.0.0.1:3060，未启动自动回退快照）",
       "refresh": "刷新",
       "refreshing": "刷新中…",
       "refreshDone": "已刷新最新分析结果",
@@ -35,7 +37,9 @@ window.__ModuleLoader__.load({
       "openShort": "Dashboard",
       "generatedAt": "generated at",
       "live": "live",
+      "liveFull": "live · 3060 connected",
       "snapshot": "snapshot",
+      "snapshotFull": "snapshot - run dsh-forge web first (default 127.0.0.1:3060; falls back to snapshot)",
       "refresh": "Refresh",
       "refreshing": "Refreshing…",
       "refreshDone": "Latest analysis loaded",
@@ -101,8 +105,8 @@ window.__ModuleLoader__.load({
         flex: "none",
         display: "flex",
         alignItems: "center",
-        gap: 10,
-        padding: "10px 14px",
+        gap: 8,
+        padding: "8px 12px",
         borderBottom: "1px solid var(--dsw-alias-border-l2, rgba(127,127,127,.2))"
       };
     }
@@ -190,7 +194,7 @@ window.__ModuleLoader__.load({
         setBusy(props.t("reporting"));
         fetch(SERVER + "/api/report", { method: "POST" }).then(function (r) { return r.json(); }).then(function (d) {
           setBusy("");
-          if (d && d.ok) setStatus(props.t("reportDone") + " · " + d.file);
+          if (d && d.ok) setStatus(props.t("reportDone") + " · " + d.file + (d.historyError ? " · history 失败: " + d.historyError : " · history 已归档"));
           else setStatus("report failed: " + (d && d.error || "unknown"));
         }).catch(function (e) {
           setBusy("");
@@ -243,15 +247,14 @@ window.__ModuleLoader__.load({
 
       var trigger = props.renderTrigger(setOpen);
       if (!isOpen) return trigger;
-      var subtitle = props.t(live ? "live" : "snapshot") + " · " + props.t("generatedAt") + " " + GENERATED_AT;
+      var subtitle = props.t(live ? "liveFull" : "snapshotFull") + " · " + props.t("generatedAt") + " " + GENERATED_AT;
       var modal = react.createElement("div", { style: overlayStyle() },
         react.createElement("div", { style: modalStyle() },
           react.createElement("div", { style: headerStyle() },
             react.createElement("strong", null, props.t("title")),
-            react.createElement("span", { style: { fontSize: 11, color: "var(--dsw-alias-label-secondary, #888)" } }, subtitle + " " + (busy ? "· " + busy : "")),
+            react.createElement("span", { style: { fontSize: 11, color: "var(--dsw-alias-label-secondary, #888)", marginLeft: 8 } }, subtitle + (busy ? " · " + busy : "")),
             react.createElement("button", { type: "button", onClick: generateReport, style: actionBtnStyle(), "aria-label": props.t("report") }, props.t("report")),
             react.createElement("button", { type: "button", onClick: loadHistory, style: actionBtnStyle(), "aria-label": props.t("history") }, props.t("history")),
-            react.createElement("button", { type: "button", onClick: loadLive, style: actionBtnStyle(), "aria-label": props.t("refresh") }, props.t("refresh")),
             react.createElement("button", { type: "button", onClick: function () { setOpen(false); }, style: closeStyle(), "aria-label": props.t("close") }, "✕")
           ),
           status

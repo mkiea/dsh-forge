@@ -27,6 +27,27 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_WEB_PORT = Number(process.env.DSH_FORGE_PORT || 3060);
 const DEFAULT_HOST = process.env.DSH_FORGE_HOST || "127.0.0.1";
+const REPORTS_DIR = process.env.DSH_FORGE_REPORTS_DIR || null;
+const HISTORY_DIR = process.env.DSH_FORGE_HISTORY_DIR || null;
+
+function isLoopbackHost(h) {
+  h = String(h || "").toLowerCase().replace(/^\[|\]$/g, "");
+  return h === "127.0.0.1" || h === "localhost" || h === "::1";
+}
+
+function applyCors(req, res) {
+  const origin = req.headers.origin;
+  res.setHeader("access-control-allow-origin", origin || "*");
+  if (origin) res.setHeader("vary", "Origin");
+  res.setHeader("access-control-allow-methods", "GET, POST");
+  res.setHeader("access-control-allow-headers", "Content-Type");
+}
+function reportOpts() {
+  const o = { reproduce: "node cli/dsh-forge.mjs check --json" };
+  if (REPORTS_DIR) o.reportsDir = REPORTS_DIR;
+  if (HISTORY_DIR) o.historyDir = HISTORY_DIR;
+  return o;
+}
 
 // ── argument parsing ────────────────────────────────────────────────────────
 function parseArgs(argv) {
@@ -230,7 +251,7 @@ function runInteractiveTui(getAnalysis, opts, initialAnalysis) {
     try {
       clearAnalysisCache();
       analysis = runAnalysis({ profile: opts.profile, datasetPath: opts.dataset });
-      const rep = writeReport(analysis, { reproduce: "node cli/dsh-forge.mjs check --json" });
+      const rep = writeReport(analysis, reportOpts());
       reportPath = rep.reportPath;
       lastError = null;
       view = "report";
@@ -343,6 +364,9 @@ async function startWeb(initialAnalysis, opts) {
     return;
   }
   const server = http.createServer((req, res) => {
+    const method = (req.method || "GET").toUpperCase();
+    applyCors(req, res);
+    if (method === "OPTIONS") { res.writeHead(204); res.end(); return; }
     const pathname = (req.url || "/").split("?")[0];
     if (pathname === "/healthz") {
       res.writeHead(200, { "content-type": "application/json" });
@@ -350,6 +374,7 @@ async function startWeb(initialAnalysis, opts) {
       return;
     }
     if (pathname === "/api/refresh") {
+      if (method !== "GET") { res.writeHead(405, { "content-type": "application/json" }); res.end(JSON.stringify({ ok: false, error: "method not allowed (GET)" })); return; }
       // Dynamic re-analysis: skips the analysis cache, returns fresh embed data
       // so the client can re-render without a full page reload.
       clearAnalysisCache();
@@ -365,12 +390,14 @@ async function startWeb(initialAnalysis, opts) {
       return;
     }
     if (pathname === "/api/report") {
+      if (method !== "POST") { res.writeHead(405, { "content-type": "application/json" }); res.end(JSON.stringify({ ok: false, error: "method not allowed (POST)" })); return; }
+      if (!isLoopbackHost(opts.host)) { res.writeHead(403, { "content-type": "application/json" }); res.end(JSON.stringify({ ok: false, error: "report write refused: bind to a loopback host (--host 127.0.0.1)" })); return; }
       try {
         clearAnalysisCache();
         analysis = runAnalysis({ profile: opts.profile, datasetPath: opts.dataset });
-        const rep = writeReport(analysis, { reproduce: "node cli/dsh-forge.mjs check --json" });
+        const rep = writeReport(analysis, reportOpts());
         res.writeHead(200, { "content-type": "application/json" });
-        res.end(JSON.stringify({ ok: true, file: rep.reportPath, report: rep.markdown, historyFile: rep.historyFile, rows: analysis.assessment.pluginCount }));
+        res.end(JSON.stringify({ ok: true, file: rep.reportPath, report: rep.markdown, historyFile: rep.historyFile, historyError: rep.historyError, rows: analysis.assessment.pluginCount }));
       } catch (e) {
         res.writeHead(500, { "content-type": "application/json" });
         res.end(JSON.stringify({ ok: false, error: String(e.message || e) }));
@@ -378,6 +405,7 @@ async function startWeb(initialAnalysis, opts) {
       return;
     }
     if (pathname === "/api/history") {
+      if (method !== "GET") { res.writeHead(405, { "content-type": "application/json" }); res.end(JSON.stringify({ ok: false, error: "method not allowed (GET)" })); return; }
       try {
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify({ ok: true, list: listHistory() }));
@@ -398,6 +426,7 @@ async function startWeb(initialAnalysis, opts) {
   server.listen(requested, opts.host, () => {
     const actualPort = server.address().port;
     const url = "http://" + opts.host + ":" + actualPort + "/";
+    if (!isLoopbackHost(opts.host)) console.log("[dsh-forge] WARNING: bound to non-loopback host; /api/report (write) is REFUSED here.");
     console.log("[dsh-forge] web panel listening at " + url);
     if (opts.open && openBrowser(url)) console.log("[dsh-forge] browser opened: " + url);
     console.log("[dsh-forge] press Ctrl+C to stop");

@@ -2,28 +2,11 @@
 
 > [English](./README.en.md) | [中文](./README.md)
 
-> Version: 0.1.9-beta (beta) · harnessVersion: 0.1.0-rc.6
+> Version: 0.1.9 (official) · harnessVersion: 0.1.0-rc.6
 
 A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency analysis, conflict detection, risk assessment (with prediction), visualization and combination simulation.
 
-> **v0.1.6 changes (official)**: default-path fusion wiring (P0-1/P0-2) — runAnalysis fuses conflicts/leaks via an offline honest not-executed baseline, so each finding carries finalSeverity / evidenceTag / runtimeState. CI gate (P0-4) — a `composition-gate` job now runs a read-only composition-contract audit on combination PRs (`check --json --dataset data/ecosystem.json` offline snapshot, reproducible without a harness); a failed `gate.pass` blocks the PR and uploads the report artifact. **Version-locked reproduction report (P0-5)** — the `check --json` report now carries `version` (tool version), `reproduce` (exact reproduction command, includes `--dataset`), and `inputs.dataset` (dataset fingerprint), together with schemaVersion / inputs.rows / truthSource / harnessVersion to freeze the full triggering input environment; CI additionally asserts report `version === package.json` to prevent drift between archived reports and the source that produced them.
->> **v0.1.6 changes**: TUI enhancement (audit F1/F2) — R-key refresh failure no longer exits the process (keeps the last frame, inline red `refresh failed:...` at the bottom, aligning with the dashboard /api/refresh stale-state behavior); `renderTui` adds a hybrid-validation metadata line (uppercase truthSource + confidenceCap + leaks count + findingsValid ok / N violation(s)). **Added a "Getting Started" default page + glossary** for beginners: a 3-step reading guide, site-wide severity color legend, and hover-tooltip plain-language explanations for terms (health / truthSource / confidenceCap / findingsValid / leaks KPIs all wired), plus unified error/severity Chinese labels across surfaces. Each legacy module gained a top "About this page" guide banner and hoverable column headers.
->
-> **v0.1.5 changes**: static+runtime hybrid validation — runtime calibration (`core/runtime-calibration.js` subscribes Cordis lifecycle events, finding_id binding, A-4 sliding window) plus an evidence-fusion engine (static + runtime unobserved three-state; alerts are never cleared without runtime observation, INV-3) closing the "static first-pass + runtime calibration" loop; truth-source three-state degradation (dump-config/auto/scan/snapshot, scan caps confidence at ≤medium); node:vm sandbox hardening (null-prototype isolation + frozen process + configurable timeout); dashboard adds "Hybrid Validation" (INV-1~6) and "Side-effect Leaks" pages, module nav 8→10, findingsValid render fix; self-contained suites 13→16, total cases 832→883.
->
-> **v0.1.1 changes**: unified error feedback (FORGE-001~014 codes, fatal/error/warning/info severities, dashboard "Errors & Feedback" panel, startup-preflight terminal diagnostics); scope-aware collision detection (per-agent variants are legal); runtime event calibration (tool/call · tool/result · turn/end behavior baseline); apply-path leak slicing; the dashboard entry moved to the sidebar below the session list / above Settings (the conversation-header button was removed).
-
-> **v0.1.2 changes**: dashboard rewritten to a workspace layout (fixed header + left 8-module navigation, the right column scrolls independently, fully aligned with client.js); P0 schema consistency (check_conflicts adds kind/evidenceTier; visualize_plugins/snapshot_history no longer return null fields); P1 correctness (riskScore detail fallback chain, archive_snapshot dryRun, scope.js scans lib+src, verify_rows supports profile); P2 deployability (mount-ui auto-detects the deployment node_modules, smoke13 drops hardcoded paths); new scripts/generate-dashboard.mjs.
->
-> **v0.1.4 changes**: P0 sandbox migration (`!!js` -> node:vm isolation + strict fail-loud YAML); P1 repo & snapshots (data/history ignored, npm files narrowed, src/tools one file per tool, snapshot format migration chain); P2 CI semi-integration (13-tool snapshot smoke + doc version asserts); runtime verification blind-spot checklist.
->
-> **v0.1.3 changes**: dual-shell UI decision (default TUI / on-demand Web / check JSON for automation, `W` switches to Web; four-layer evidence decision engine);
-> in-memory analysis cache (runAnalysis 16-entry cap + clearAnalysisCache); engineering hardening (cache-behavior guard tests,
-> doc-consistency CI guard, pre-commit fast gate, src/core dual-entry responsibility note, snapshot banners on historical reports).
->
-> **0.1.4 patch**: `!!js` sandbox migrated to `node:vm`; strict fail-loud YAML parsing; `data/history/` gitignored with npm
-> publishing only `data/ecosystem.json`; one file per tool under `src/tools/`; snapshot format migration chain; 13-tool
-> snapshot semi-integration CI smoke; `reports/runtime-verification-checklist.md` + static blind-spot hints.
+> **v0.1.9 (official)**: full cross-surface detail parity (Web / popup / TUI) exposing `finalSeverity` / `evidenceTag` / `runtimeState` / `finding_id` with safe fallbacks for legacy data; a skin system (light/dark CSS-variable theming with a remembered toggle); zero-dependency SVG charts (runtime-calibration tri-state ring, conflict-type bars, snapshot-history line); default web port moved 8080→3060; the popup now streams live analysis over the 3060 channel (auto-falls back to a snapshot, showing an explicit "live · 3060 connected" / "snapshot" label); a developer data panel; report generation and snapshot history (`POST /api/report` / `GET /api/history`) with overridable paths via `DSH_FORGE_REPORTS_DIR` / `DSH_FORGE_HISTORY_DIR` and explicit history-failure reporting; API hardening (`/api/report` POST-only, writes refused on non-loopback hosts, local-dev CORS); and report "leak" semantics normalized to side-effect leaks. 13 read-only tools (`simulate_combination` / `archive_snapshot` never touch the composition), 27 zero-dependency core modules, and 22 self-contained suites + composition gate + doc-consistency all pass.
 
 ## Tools (13, all read-only; simulate_combination / archive_snapshot never touch the composition)
 
@@ -57,7 +40,7 @@ A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency an
 Three layers, see [ARCHITECTURE.md](./ARCHITECTURE.md):
 
 ```
-core/          dependency-free engine (26 modules, Node built-ins only)
+core/          dependency-free engine (27 modules, Node built-ins only)
   ├─ composition.js   composition discovery + YAML parsing + ecosystem collection
   ├─ truth.js         dump-config ground truth (auto/dump-config/scan)
   ├─ analyze.js       dependency graph + risk scoring
@@ -216,7 +199,7 @@ the dashboard always reflects the real combination without a page reload.
 
 - `dsh web` runs at http://127.0.0.1:3080, no browser errors, **13 tools** registered
 - `analyze_dependencies` live: 4 layers (profile root + dsh-base + dsh-web-app + patch), 138 rows (incl. forge/forge-ui) / 128 packages / 1226+ edges
-- Automated tests (21 self-contained suites; smoke13 13/13 depends on the local harness, not in CI):
+- Automated tests (22 self-contained suites; smoke13 13/13 depends on the local harness, not in CI):
   - `test/ui-test.mjs` — dashboard workspace structure & interaction (77)
   - `test/ui-plugin-test.mjs` — client plugin VM execution + slot registration + modal interaction (22)
   - `test/semver-consistency.test.mjs` — single-source SemVer regression + anti-mirror guard (30)
@@ -269,5 +252,5 @@ The third-party PM review acceptance criteria are implemented item by item: dump
 - `prompt/` — expert persona prompt (with risk prediction)
 - `data/` — ecosystem snapshots (`ecosystem.json` versioned; `history/` runtime-generated and gitignored)
 - `reports/` — generated reports and graphs
-- `test/` — self-contained test suites (21 suites, 952 items, no machine dependency)
+- `test/` — self-contained test suites (22 suites, 952 items, no machine dependency)
 - `scripts/` — build and mount scripts

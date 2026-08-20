@@ -620,7 +620,7 @@ export function dashboard(analysis, extra = {}) {
   L.push(TIP_STYLE);
   L.push("</head><body>");
   // fixed header (title + meta), centered inner container
-  L.push("<header class='ws-header'><div class='ws-header-inner'><div class='head-row'><div><h1>DeepSeek Harness 插件组合仪表盘</h1><div class='sub' id='metaLine'>dsh-forge v" + esc(pkgVersion()) + " · 生成于 " + esc(embed.generatedAt) + " · " + esc(embed.sourceLabel) + " · 只读，模拟不落盘</div></div>");
+  L.push("<header class='ws-header'><div class='ws-header-inner'><div class='head-row'><div><h1>DeepSeek Harness 插件组合仪表盘</h1><div class='sub' id='metaLine'>dsh-forge v" + esc(pkgVersion()) + " · 生成于 " + esc(embed.generatedAt) + " · " + esc(embed.sourceLabel) + " · 分析只读 · 报告/历史可选落盘</div></div>");
   L.push("<div class='head-tools'><button type='button' id='skinBtn' onclick=\"window.__DSH_APP__ && window.__DSH_APP__.toggleSkin()\" title=\"切换明暗主题\">◐ 主题</button>");
   if (embed.live) {
     L.push("<span class='live-badge' id='liveBadge'>● 实时</span><button type='button' id='refreshBtn' onclick=\"window.__DSH_APP__ && window.__DSH_APP__.refresh()\">↻ 刷新</button>");

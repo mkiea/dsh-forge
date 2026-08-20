@@ -1,5 +1,16 @@
 # Changelog
-## [Unreleased]
+## [0.1.9] - 2026-08-20
+
+### v0.1.9 正式版 — 文案纠偏 / 实时依赖明示 / 构建与文档同步 / 写盘 API 收紧
+
+- **P0 泄漏文案纠偏**（`core/report.js`）：统一为「副作用泄漏（非可逆副作用）」，移除「Token / 密钥」误导标题；空态改为「未检出可疑的非可逆副作用泄漏」。
+- **history 失败可见**（`core/report.js` `writeReport`）：历史归档 catch 由静默改显式，返回 `historyError`，由 `POST /api/report` 透出并在弹窗提示（history 已归档 / history 失败: <原因>）。
+- **报告/历史路径可配置**：新增 `DSH_FORGE_REPORTS_DIR` / `DSH_FORGE_HISTORY_DIR` 环境变量覆盖 `reports/` 与 `data/history/` 落盘位置。
+- **API 方法校验 + 非本机写保护**（`cli/dsh-forge.mjs`）：`/api/report` 仅允许 POST（否则 405），`/api/refresh`、`/api/history` 仅允许 GET；绑定非 loopback 主机时拒绝写盘（403）并启动大字警告。
+- **本地开发 CORS**（`cli/dsh-forge.mjs`）：`/api/*` 与首页回显 `Access-Control-Allow-Origin` + `Vary: Origin`，消除 harness 源跨域拉取 3060 的拦截。
+- **弹窗实时/快照状态明示**（`ui-plugin/lib/client.template.js`）：副标题固定展示「实时 · 3060 已连接」/「快照 · 请先运行 dsh-forge web」，避免把快照误当实时。
+- **文档同步**：ARCHITECTURE 设计原则改为「分析只读；报告/历史为可选落盘」；核心模块表纳入 `core/report.js`（26→27，doc-consistency MODULE_COUNT 改为按 `core/` 目录程序化计数）；src 流程 `createCalibration` → `createRuntimeCalibration`。
+
 
 ## [0.1.9-beta] - 2026-08-20
 

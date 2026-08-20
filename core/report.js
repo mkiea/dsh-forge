@@ -68,7 +68,7 @@ export function buildMarkdownReport(analysis, opts = {}) {
   L.push("| 平均风险 | " + escMd(s.avgScore) + " |");
   L.push("| 最大风险 | " + escMd(s.maxScore) + " |");
   L.push("| 冲突数 | " + escMd(c.summary.total) + "（" + escMd(Object.entries(c.summary.bySeverity || {}).map((kv) => kv[0] + "=" + kv[1]).join(" ")) + "）|");
-  L.push("| 泄露数 | " + escMd((analysis.leaks && analysis.leaks.summary && analysis.leaks.summary.total) || 0) + " |");
+  L.push("| 副作用泄漏数 | " + escMd((analysis.leaks && analysis.leaks.summary && analysis.leaks.summary.total) || 0) + " |");
   L.push("| 配置层 | " + escMd((analysis.ecosystem.layers || []).map((l) => l.layer).join(" → ") || "—") + " |");
   L.push("| GATE | " + escMd(gate.pass ? "PASS" : "BLOCKED (critical " + gate.blocked.critical + " / high " + gate.blocked.high + ")") + " |");
   L.push("");
@@ -85,9 +85,9 @@ export function buildMarkdownReport(analysis, opts = {}) {
     L.push("");
   }
 
-  L.push("## 泄露明细（Token / 密钥）");
+  L.push("## 泄露明细（副作用泄漏）");
   L.push("");
-  if (!leaks.length) { L.push("未检出密钥或敏感信息泄露。"); L.push(""); }
+  if (!leaks.length) { L.push("未检出可疑的非可逆副作用泄漏。"); L.push(""); }
   else {
     L.push("| finding_id | 级别 | 证据标签 | 运行时 | 置信度 | 包 | 说明 |");
     L.push("| --- | --- | --- | --- | --- | --- | --- |");
@@ -143,6 +143,7 @@ export function writeReport(analysis, opts = {}) {
 
   const histDir = historyDir(opts);
   let historyFile = null;
+  let historyError = null;
   try {
     fs.mkdirSync(histDir, { recursive: true });
     const histStamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -151,12 +152,21 @@ export function writeReport(analysis, opts = {}) {
     fs.writeFileSync(historyFile, JSON.stringify({
       format: "dsh-forge-ecosystem@1",
       collectedAt: new Date().toISOString(),
+      nmRoot: snap.nmRoot || null,
+      harnessVersion: snap.harnessVersion || null,
+      toolNames: snap.toolNames || null,
+      services: snap.services || null,
       rows: snap.rows || [],
-      layers: snap.layers || [],
-      packages: snap.packages || {}
+      layers: (snap.layers || []).map((l) => ({ layer: l.layer, rows: l.rows || [] })),
+      packages: Object.fromEntries(Object.entries(snap.packages || {}).map(([p, m]) => [
+        p,
+        { version: m.version, description: m.description || "", dependencies: m.dependencies, peerDependencies: m.peerDependencies, deprecated: m.deprecated || null }
+      ])),
+      installed: { ...(snap.installed || {}) },
+      nested: snap.nested ? JSON.parse(JSON.stringify(snap.nested)) : undefined
     }, null, 2), "utf8");
-  } catch { historyFile = null; }
+  } catch (e) { historyFile = null; historyError = String((e && e.message) || e); }
 
   fs.writeFileSync(file, markdown, "utf8");
-  return { file, markdown, reportPath: file, historyFile };
+  return { file, markdown, reportPath: file, historyFile, historyError };
 }

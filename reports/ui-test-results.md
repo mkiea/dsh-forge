@@ -3,12 +3,12 @@
 - 被测对象：reports/dashboard.html（交互仪表盘）、reports/plugin-graph.html（图谱）、web/dashboard-client.js（客户端脚本）
 - 数据来源：data/ecosystem.json（真实装载：web profile + preset:standard，136 行 / 131 插件）
 - 方法：HTML 结构校验 + Node DOM-mock 全交互路径执行（无浏览器环境）
-- 时间：2026-08-20T08:40:14.902Z
+- 时间：2026-08-20T10:45:31.978Z
 
 ## 结果：77 通过 / 0 失败
 
 ---
-PASS  dashboard.html exists and non-trivial  [401744B]
+PASS  dashboard.html exists and non-trivial  [401804B]
 PASS  graph html exists  [83338B]
 PASS  balanced script tags
 PASS  has closing html/body
