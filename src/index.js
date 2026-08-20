@@ -21,7 +21,7 @@
 import z from "@deepseek-ai/schemastery";
 import { defineTool } from "@deepseek-ai/dsh-tools";
 import { analyzeTool, conflictsTool, visualizeTool, simulateTool, auditTool, diffTool, historyTool, archiveTool, presetTool, verifyTool, suggestTool, upgradeTool, statsTool } from "./tools/index.js";
-import { createCalibration, staticCalibration, createRuntimeCalibration, preflight, collectEcosystem } from "../core/index.js";
+import { connectHarnessEvents, createRuntimeCalibration, preflight, collectEcosystem } from "../core/index.js";
 
 export const name = "dsh-forge";
 export const inject = ["tools"];
@@ -58,42 +58,31 @@ function probeRuntime(ctx) {
   return { found, missing };
 }
 
-// Bridge the harness "session/event" bus onto the top-level event names the
-// runtime calibrator subscribes to, so a mounted plugin consumes real
-// lifecycle/activity as live fuse evidence. Degrades honestly to offline
-// (returns null) when no bus can be bound — caller falls back to the stub.
+// Bridge the real harness ctx onto the runtime calibrator via connectHarnessEvents
+// (core): builds a virtual event bus, subscribes the top-level lifecycle events
+// (windowed/deduped) and starts the calibrator. Returns null when no bus can be
+// bound so the caller degrades honestly to the offline stub (not-executed).
 function buildHarnessRuntimeCalibration(ctx) {
-  if (!ctx || typeof ctx.on !== "function") return null;
-  const bus = Object.create(null);
-  const virtualCtx = {
-    on(evt, handler) { bus[evt] = handler; return () => { if (bus[evt] === handler) delete bus[evt]; }; },
-    off(evt, handler) { if (bus[evt] === handler) delete bus[evt]; }
-  };
-  let busOff = null;
-  try {
-    busOff = ctx.on("session/event", (payload) => {
-      const e = payload && payload.event ? payload.event : payload;
-      if (!e || typeof e.type !== "string") return;
-      const h = bus[e.type];
-      if (!h) return;
-      try { h(e.data && typeof e.data === "object" ? e.data : e.data === undefined ? payload : e); } catch { /* calibration must not break the bus */ }
-    });
-  } catch { busOff = null; }
-  const cal = createRuntimeCalibration(virtualCtx, {});
-  if (!busOff) { try { cal.dispose(); } catch { /* ignore */ } return null; }
+  const conn = connectHarnessEvents(ctx);
+  if (!conn) return null;
+  const cal = createRuntimeCalibration(conn.virtualCtx, {});
   try { cal.start(); } catch { /* ignore */ }
+  const prevDispose = cal.dispose;
+  cal.dispose = function disposeRuntime() {
+    try { prevDispose.call(cal); } catch { /* ignore */ }
+    try { conn.dispose(); } catch { /* ignore */ }
+  };
   return cal;
 }
 
+
 export function apply(ctx, config = {}) {
-  const calibration = (ctx && typeof ctx.on === "function") ? createCalibration(ctx) : staticCalibration();
   const cfg = {
     profile: config.profile || "web",
     root: config.root,
     compositionSources: config.compositionSources,
     datasetPath: config.datasetPath,
     runtimeProbe: probeRuntime(ctx),
-    calibration,
     runtimeCalibration: buildHarnessRuntimeCalibration(ctx) || undefined
   };
   // startup preflight: fatal issues go to the terminal that launched the

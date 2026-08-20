@@ -2,7 +2,7 @@
 
 > [English](./README.en.md) | 中文
 
-> 版本：0.1.8（预览）· harnessVersion: 0.1.0-rc.6
+> 版本：0.1.8（正式版）· harnessVersion: 0.1.0-rc.6
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
 
@@ -247,7 +247,7 @@ Web 形态采用**混合审查**：每次请求用当前分析结果新鲜渲染
 - `dsh web` 正常启动于 http://127.0.0.1:3080，浏览器无报错，**13 个工具**注册成功
 - `analyze_dependencies` 真实执行：4 层组合（profile 根 + dsh-base + dsh-web-app + patch），
   138 插件行（含 forge/forge-ui）/ 128 包 / 1226+ 依赖边
-- 自动化测试（19 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
+- 自动化测试（21 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
   - `test/ui-test.mjs` — 仪表盘 workspace 结构与交互（77 项，含 v0.1.5 混合架构页/嵌入字段/finding_id 语义与渲染断言，及 v0.1.6 引导页/名词解释/悬停提示/规范标签 + 旧模块引导条/表头详释）
   - `test/ui-plugin-test.mjs` — 客户端插件 VM 执行 + slot 注册 + 模态交互（22 项）
   - `test/semver-consistency.test.mjs` — SemVer 单一实现回归 + 防镜像回归（30 项）
@@ -267,6 +267,8 @@ Web 形态采用**混合审查**：每次请求用当前分析结果新鲜渲染
   - `test/check-report-schema.test.mjs` — P0-3 冻结 check --json 报告 schema 与 gate 门禁（10 项）
   - `test/finding-id-uniqueness.test.mjs` — finding_id 唯一性消重回归（服务/行/包维度区分 + A-2 稳定，6 项）
   - `test/main-path-fusion.test.mjs` — 主默认路径融合接线（runAnalysis 对 conflicts/leaks 调 fuse + 离线 not-executed 基线；finalSeverity/evidenceTag/runtimeState + INV-3，8 项）
+  - `test/heuristic-detect.test.mjs` — 启发式检测收敛（句柄捕获感知泄漏 + 已知安全降级 + leak-context + 全部 BARE 规则；动态工具名按包追踪 + 显式扫描局限，16 项）
+  - `test/live-cal-unify.test.mjs` — live 校准统一（RUNTIME_LIFECYCLE_EVENTS 事件名契约 + 双通道桥接去重 + 离线诚实降级，12 项）
 
 ## 错误反馈体系
 
@@ -300,5 +302,5 @@ harnessVersion 绑定与知识库版本门控（R2）、泄漏扫描（R3）、�
 - `prompt/` — 专家 persona 提示词（含风险预测）
 - `data/` — 生态快照（`ecosystem.json` versioned；`history/` 运行期生成，gitignored）
 - `reports/` — 生成的分析报告与图谱
-- `test/` — 自包含测试套件（19 套件 921 项，零本机依赖）
+- `test/` — 自包含测试套件（21 套件 952 项，零本机依赖）
 - `scripts/` — 生成与构建脚本（generate-dashboard / build-ui / mount-ui）

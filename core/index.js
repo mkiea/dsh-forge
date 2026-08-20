@@ -23,7 +23,7 @@ import { historyStats } from "./stats.js";
 import { scanLeaks } from "./leaks.js";
 import { attachFindingIds, capConfidence, validateFindings, makeFindingId } from "./evidence.js";
 import { fuse } from "./evidence-fusion.js";
-import { createRuntimeCalibration, staticRuntimeCalibration } from "./runtime-calibration.js";
+import { createRuntimeCalibration, staticRuntimeCalibration, RUNTIME_LIFECYCLE_EVENTS, connectHarnessEvents } from "./runtime-calibration.js";
 import { createCalibration, staticCalibration } from "./calibration.js";
 import { buildFeedback, normalizeFeedback, preflight, renderFeedback, SEVERITY_ORDER } from "./errors.js";
 
@@ -47,7 +47,7 @@ export { historyStats };
 export { scanLeaks, createCalibration, staticCalibration };
 export { attachFindingIds, capConfidence, validateFindings, makeFindingId };
 export { fuse };
-export { createRuntimeCalibration, staticRuntimeCalibration };
+export { createRuntimeCalibration, staticRuntimeCalibration, RUNTIME_LIFECYCLE_EVENTS, connectHarnessEvents };
 export { buildFeedback, normalizeFeedback, preflight, renderFeedback, SEVERITY_ORDER };
 
 export { knownPatterns, scanDeprecations, KNOWN_LIBS, CLIENT_PLANE_SERVICES, runtimeVerified, RUNTIME_VERIFICATION_CHECKS };

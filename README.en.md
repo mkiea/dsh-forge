@@ -2,7 +2,7 @@
 
 > [English](./README.en.md) | [中文](./README.md)
 
-> Version: 0.1.8 (preview) · harnessVersion: 0.1.0-rc.6
+> Version: 0.1.8 (official) · harnessVersion: 0.1.0-rc.6
 
 A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency analysis, conflict detection, risk assessment (with prediction), visualization and combination simulation.
 
@@ -216,7 +216,7 @@ the dashboard always reflects the real combination without a page reload.
 
 - `dsh web` runs at http://127.0.0.1:3080, no browser errors, **13 tools** registered
 - `analyze_dependencies` live: 4 layers (profile root + dsh-base + dsh-web-app + patch), 138 rows (incl. forge/forge-ui) / 128 packages / 1226+ edges
-- Automated tests (19 self-contained suites; smoke13 13/13 depends on the local harness, not in CI):
+- Automated tests (21 self-contained suites; smoke13 13/13 depends on the local harness, not in CI):
   - `test/ui-test.mjs` — dashboard workspace structure & interaction (77)
   - `test/ui-plugin-test.mjs` — client plugin VM execution + slot registration + modal interaction (22)
   - `test/semver-consistency.test.mjs` — single-source SemVer regression + anti-mirror guard (30)
@@ -236,6 +236,8 @@ the dashboard always reflects the real combination without a page reload.
   - `test/check-report-schema.test.mjs` — P0-3 frozen check --json report schema + gate (10)
   - `test/finding-id-uniqueness.test.mjs` — finding_id uniqueness regression (service/row/package dims + A-2 stability, 6)
   - `test/main-path-fusion.test.mjs` — default-path fusion wiring (runAnalysis fuses conflicts/leaks with an offline not-executed baseline; finalSeverity/evidenceTag/runtimeState + INV-3, 8)
+  - `test/heuristic-detect.test.mjs` — heuristic-detection convergence (handle-aware leak scan + known-safe downgrade + leak-context + all BARE rules; per-package dynamic tool-name tracking + explicit scan limitation, 16)
+  - `test/live-cal-unify.test.mjs` — live-calibration unification (RUNTIME_LIFECYCLE_EVENTS event-name contract + dual-channel bridge dedup + honest offline degrade, 12)
 
 ## Error feedback
 
@@ -267,5 +269,5 @@ The third-party PM review acceptance criteria are implemented item by item: dump
 - `prompt/` — expert persona prompt (with risk prediction)
 - `data/` — ecosystem snapshots (`ecosystem.json` versioned; `history/` runtime-generated and gitignored)
 - `reports/` — generated reports and graphs
-- `test/` — self-contained test suites (19 suites, 921 items, no machine dependency)
+- `test/` — self-contained test suites (21 suites, 952 items, no machine dependency)
 - `scripts/` — build and mount scripts

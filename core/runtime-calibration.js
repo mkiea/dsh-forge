@@ -21,6 +21,13 @@ import { attachFindingIds } from "./evidence.js";
 export const UNOBSERVED_STATE = "not-executed";
 export const OBSERVED_STATES = Object.freeze(["not-executed", "executed-clean", "executed-residual"]);
 
+// The top-level lifecycle/activity events this calibrator subscribes to.
+// Exported as a contract so a harness bridge (src/index.js / connectHarnessEvents)
+// subscribes to the exact same names — no guessing, no silent not-executed.
+export const RUNTIME_LIFECYCLE_EVENTS = Object.freeze([
+  "plugin/apply", "plugin/dispose", "tool/call", "tool/result", "turn/end"
+]);
+
 export function createRuntimeCalibration(ctx, opts = {}) {
   // Monotonic tick source (F-2): Date.now() is non-monotonic, so a clock/NTP
   // rollback could make observed events look like they pre-date the start
@@ -106,13 +113,28 @@ export function createRuntimeCalibration(ctx, opts = {}) {
 
     counters: () => ({ ...counters, cardinality: { distinct, cap: cfg.cardinalityCap, dropped: overflowDropped }, window: { size: cfg.windowSize, filled } }),
 
-    // A-1: derive the three-state observation for a single finding (bound to a
-    // package via f.package / f.scope). Absence of activation => NOT healthy.
+    // A-1: derive the three-state observation for a single finding. Candidate
+    // keys come from singular (f.package / f.scope) AND plural (f.packages)
+    // carriers — conflicts findings carry `packages: [...]`, leaks carry
+    // `package:`. A multi-plugin finding is observed when ANY involved package
+    // was activated (its concern actually ran); residual when any involved
+    // package left a residual signal; otherwise clean. Absence of activation
+    // => NOT healthy (honest UNOBSERVED).
     observeState(f) {
-      const k = f && (f.package || f.scope);
-      if (!k) return UNOBSERVED_STATE;
-      if (!lifecycle.activated[k]) return UNOBSERVED_STATE;
-      if (lifecycle.residual[k]) return "executed-residual";
+      if (!f || typeof f !== "object") return UNOBSERVED_STATE;
+      const keys = [];
+      if (typeof f.package === "string" && f.package) keys.push(f.package);
+      if (typeof f.scope === "string" && f.scope) keys.push(f.scope);
+      if (Array.isArray(f.packages)) { for (const p of f.packages) if (p) keys.push(String(p)); }
+      if (!keys.length) return UNOBSERVED_STATE;
+      let observed = false;
+      let residual = false;
+      for (const k of keys) {
+        if (lifecycle.activated[k]) observed = true;
+        if (lifecycle.residual[k]) residual = true;
+      }
+      if (!observed) return UNOBSERVED_STATE;
+      if (residual) return "executed-residual";
       return "executed-clean";
     },
 
@@ -159,6 +181,58 @@ export function createRuntimeCalibration(ctx, opts = {}) {
     }
   };
   return api;
+}
+
+// Bridge a real harness ctx onto a virtual event bus consumed by
+// createRuntimeCalibration, forwarding exactly the RUNTIME_LIFECYCLE_EVENTS the
+// calibrator subscribes to. Dual-channel, no double count:
+//   1) direct top-level binding per event — authoritative when the host emits
+//      lifecycle events as named events (e.g. plugin/apply, plugin/dispose);
+//   2) generic "session/event" wrap fallback for hosts that wrap everything —
+//      a wrapped type already served by a direct binding is skipped.
+// Returns null when ctx is unusable (caller degrades to the static stub).
+// Zero dependencies; offline-testable with a fake ctx.
+export function connectHarnessEvents(ctx, { events = RUNTIME_LIFECYCLE_EVENTS } = {}) {
+  if (!ctx || typeof ctx.on !== "function") return null;
+  const bus = Object.create(null);
+  const virtualCtx = {
+    on(evt, handler) { bus[evt] = handler; return () => { if (bus[evt] === handler) delete bus[evt]; }; },
+    off(evt, handler) { if (bus[evt] === handler) delete bus[evt]; }
+  };
+  const offs = [];
+  const directSeen = new Set(); // event types actually DELIVERED via the direct channel
+  for (const evt of events) {
+    let off = null;
+    try {
+      off = ctx.on(evt, (payload) => {
+        const h = bus[evt];
+        if (!h) return;
+        directSeen.add(evt); // a real top-level event arrived -> prefer this channel
+        try { h(payload); } catch { /* calibration must not break the bus */ }
+      });
+    } catch { off = null; }
+    if (typeof off === "function") offs.push(off);
+  }
+  let sessOff = null;
+  try {
+    sessOff = ctx.on("session/event", (payload) => {
+      const e = payload && payload.event ? payload.event : payload;
+      if (!e || typeof e.type !== "string") return;
+      // Only dedupe when the direct channel has ACTUALLY delivered this type;
+      // a merely bindable (but never-firing) direct listener must not suppress
+      // the wrapped fallback — a wrapped-only host would otherwise be silenced.
+      if (directSeen.has(e.type)) return;
+      const h = bus[e.type];
+      if (!h) return;
+      try { h(e); } catch { /* calibration must not break the bus */ }
+    });
+  } catch { sessOff = null; }
+  if (typeof sessOff === "function") offs.push(sessOff);
+  return {
+    virtualCtx,
+    bound: offs.length,
+    dispose() { for (const off of offs) { try { off(); } catch { /* ignore */ } } offs.length = 0; }
+  };
 }
 
 // Offline/static stub: no event stream -> honest UNOBSERVED baseline.

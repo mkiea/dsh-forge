@@ -1,6 +1,6 @@
 # dsh-forge 架构文档
 
-> 版本：0.1.8（预览）· 最后更新：2026-08-20
+> 版本：0.1.8（正式版）· 最后更新：2026-08-20
 
 ## 1. 总览
 
@@ -213,6 +213,7 @@ check_upgrades execute(args)
 | TUI/Web/check 决策 | `test/mode-decision.test.mjs` | 19 | 四层证据决策（命令/环境/场景/复杂度）/ env 一致性 / 端口占用降级 / 场景启发 |
 | 分析缓存守护 | `test/cache-behavior.test.mjs` | 7 | 同参命中 / clear 失效 / 文件变更 / live profile patch 变更 / 淘汰 / 快照 stamp |
 | 主链路融合回归 | `test/main-path-fusion.test.mjs` | 8 | P0 主路径真正 fuse：runAnalysis 项带 runtimeState/finalSeverity/evidenceTag（离线 not-executed）+ INV-3 不清除 + severity 秩有效 |
+| 启发式检测收敛 | `test/heuristic-detect.test.mjs` | 16 | 句柄捕获感知泄漏（已知安全降级 / leak-context / 全部 BARE 规则）+ 动态工具名按包追踪与显式扫描局限 |
 | check --json schema 冻结 | `test/check-report-schema.test.mjs` | 10 | P0-3 冻结 check report schema（schemaVersion/inputs/findings[]/gate）+ gate 门禁（high/blocking 拦截）|
 | finding_id 唯一性消重 | `test/finding-id-uniqueness.test.mjs` | 6 | makeFindingId 纳入 involved packages/service/row，区分同类别多条 finding；A-2 message 不变 id（0 碰撞回归）|
 | 13 工具快照半集成 | `test/tools-snapshot-smoke.test.mjs` | 13 | 快照驱动调用 13 个工具 + output.schema 最小校验（防 schema/output 漂移），CI 可运行 |

@@ -3,11 +3,13 @@
 
 ## [0.1.8] - 2026-08-20
 
-### v0.1.8 预览：live 混合验证打通（harness 内真实生命周期 → 融合）
+### v0.1.8 正式版：live 混合验证打通 + 复数感知校准统一
 
 - **引擎注入点**（`core/index.js` `runAnalysis`）：新增可选 `opts.runtimeCalibration`；live 注入时绕缓存（观测依赖挂载期事件窗，非复现基线），缺省仍 `staticRuntimeCalibration()`（诚实 not-executed），CLI/离线/CI 零变化且可复现。
+- **live 校准统一（v0.1.8 续）**：插件壳 src/index.js 移除旧 createCalibration，仅保留 createRuntimeCalibration 单一路径；桥接下沉为 core/runtime-calibration.js 的 `connectHarnessEvents`（可离线纯函数）——按 RUNTIME_LIFECYCLE_EVENTS 事件名契约精确订阅，direct 顶层事件 + session/event 包装回退，按实际送达去重（仅收到过 direct 才压制 wrapped，wrapped-only 主机仍能喂入）；无总线时 honest 降级 not-executed。新增 test/live-cal-unify.test.mjs（15 用例；套件 20→21，总用例 937→952）。
 - **壳总线适配**（`src/index.js`）：新增 `buildHarnessRuntimeCalibration`，把 harness 的 `session/event` 总线经虚拟 ctx 转发为运行时校准器订阅的 top-level 事件并 `start()`；无总线可绑定时 `dispose()` 返回 `null`，回退离线源。
 - **工具层 fuse 接线**（`src/tools/conflicts.js`）：`check_conflicts` 先 `fuse` 再输出，findings 携带 `finalSeverity`/`evidenceTag`/`runtimeState`/`finding_id`，顶层附 `runtimeCalibration` 快照；schema 补齐声明。无 live 时 fuse static 基线，输出与 CLI 引擎一致（not-executed，诚实未观测，不视为干净）。
+- **复数感知校准（正式版收口）**：`core/runtime-calibration.js` `observeState` 现支持 plural 载体 `f.packages[]`（conflicts finding 携带数组而非 `package`），多包 finding 任一包被真实生命周期事件激活即观测（executed-clean），任一包残留信号即 executed-residual；离线 stub 仍诚实 not-executed。live-cal-unify 补 3 条（12→15）；文中证据：裸 timer/listener、动态工具名仍是可疑级，非形式化证明。
 - 说明：harness 壳真机执行依赖 harness 运行时（本环境不可直测），总线→top-level 适配语义经等价单测验证。启发式检测（裸 timer/listener、动态工具名）仍止于可疑级，非形式化证明。
 
 ## [0.1.7] - 2026-08-19

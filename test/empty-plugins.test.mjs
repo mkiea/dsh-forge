@@ -66,7 +66,7 @@ const rowsFor = (...ids) => ids.map((id) => "- id: " + id + "\n  name: " + id).j
 
   check("empty: composition discovers 2 rows", eco.rows.length === 2, "rows=" + eco.rows.length);
   check("empty: both manifests resolved", Object.keys(eco.packages).sort().join(",") === "pkg-empty-a,pkg-empty-b", Object.keys(eco.packages).sort().join(","));
-  check("empty: no tool registrations", Object.keys(scanToolNames(eco.packages)).filter((k) => k !== "__dynamicRegistrationHint").length === 0, JSON.stringify(scanToolNames(eco.packages)));
+  check("empty: no tool registrations", Object.keys(scanToolNames(eco.packages)).filter((k) => k !== "__dynamicRegistrationHint" && k !== "__dynamicPackages").length === 0, JSON.stringify(scanToolNames(eco.packages)));
   check("empty: no scope markers", Object.values(scanScopeHints(eco.packages)).every((h) => h.hint === "global"), JSON.stringify(scanScopeHints(eco.packages)));
 
   const conf = checkConflicts(eco).conflicts;

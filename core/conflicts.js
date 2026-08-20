@@ -29,9 +29,10 @@ const IDENT_RE = /^[a-zA-Z][a-zA-Z0-9]*$/;
 // Collect registered tool names per package by scanning shipped sources.
 export function scanToolNames(packages) {
   const perPackage = {};
-  let dynamicHint = false;
+  const dynamicPackages = [];
   for (const [p, m] of Object.entries(packages)) {
     const names = new Set();
+    let pkgDynamic = false;
     for (const f of sourceFiles(m.dir)) {
       let text;
       try { text = fs.readFileSync(f, "utf8"); } catch { continue; }
@@ -41,12 +42,14 @@ export function scanToolNames(packages) {
         let mm;
         while ((mm = re.exec(text))) names.add(mm[1]);
       }
-      // dynamic registration hint (name not a string literal)
-      if (/defineTool\(\s*\{[\s\S]*?name:\s*[A-Za-z_$]/.test(text)) dynamicHint = true;
+      // dynamic registration hint (name not a string literal), tracked per package
+      if (/defineTool\(\s*\{[\s\S]*?name:\s*[A-Za-z_$]/.test(text)) pkgDynamic = true;
     }
     if (names.size) perPackage[p] = [...names];
+    if (pkgDynamic && !dynamicPackages.includes(p)) dynamicPackages.push(p);
   }
-  perPackage.__dynamicRegistrationHint = dynamicHint;
+  perPackage.__dynamicRegistrationHint = dynamicPackages.length > 0;
+  perPackage.__dynamicPackages = dynamicPackages;
   return perPackage;
 }
 
@@ -179,6 +182,23 @@ export function checkConflicts(eco, { graph } = {}) {
         packages: pkgs
       });
     }
+  }
+
+  // 2b) dynamic tool-name registrations (explicit scan limitation)
+  const dynamicPackages = toolNames.__dynamicPackages || [];
+  if (dynamicPackages.length) {
+    conflicts.push({
+      type: "tool-name-dynamic-scan-limitation",
+      kind: "heuristic",
+      evidenceTier: "static-suspect",
+      severity: "info",
+      message: "动态工具名无法静态解析：" + dynamicPackages.join(", ") + " 通过变量/表达式注册工具名，此类注册的潜在重名碰撞无法被静态扫描覆盖",
+      evidence: "defineTool(name) 中 name 为运行时变量/表达式（非字符串字面量）",
+      impact: "此扫描保持诚实：明确标注盲区，不自称已覆盖。若这些动态名与其他插件的静态名冲突，仍可能漏报。",
+      advice: "在运行时 / 快照中人工核对动态注册的工具名；或改为字符串字面量注册以便静态校验。",
+      confidence: "low",
+      packages: dynamicPackages
+    });
   }
 
   // 3) service provider collisions + 4) missing providers

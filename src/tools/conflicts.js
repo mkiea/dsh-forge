@@ -89,7 +89,8 @@ export function conflictsTool(config) {
       const fusionCal = liveCal || staticRuntimeCalibration();
       const conflicts = fuse(result.conflicts, fusionCal.evidence(result.conflicts)).findings;
       const fusedLeaks = fuse(leaks.findings, fusionCal.evidence(leaks.findings)).findings;
-      const calibration = config.calibration ? config.calibration.snapshot() : null;
+      // v0.1.8: single unified live calibration -> the runtime snapshot is the
+      // sole calibration carrier; legacy config.calibration (createCalibration) removed.
       const runtimeSnapshot = (typeof fusionCal.snapshot === "function") ? fusionCal.snapshot() : null;
       return {
         summary: result.summary,
@@ -98,7 +99,6 @@ export function conflictsTool(config) {
         leaks: fusedLeaks,
         inputScope: { rows: eco.rows.length, packages: Object.keys(eco.packages).length, layers: eco.layers.map((l) => l.layer), disabledRows: eco.rows.filter((r) => r.disabled === true).length, truthSource: eco.truthSource || "scan" },
         feedback: buildFeedback({ conflicts: result, leaks: fusedLeaks, assessment: null, patterns: [], verified: [] }),
-        ...(calibration ? { calibration } : {}),
         ...(runtimeSnapshot ? { runtimeCalibration: runtimeSnapshot } : {}),
         truthSource: eco.truthSource || "scan",
         disclaimer: "静态扫描为疑似清单（static-suspect），非 harness 实际拒绝的确认；kind=contract 表示 harness 契约确定行为。fused finalSeverity/runtimeState：无 live 事件流时为 not-executed（诚实未观测，不视为干净）。"
