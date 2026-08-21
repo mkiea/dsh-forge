@@ -220,6 +220,7 @@ the dashboard always reflects the real combination without a page reload.
   - `test/main-path-fusion.test.mjs` — default-path fusion wiring (runAnalysis fuses conflicts/leaks with an offline not-executed baseline; finalSeverity/evidenceTag/runtimeState + INV-3, 8)
   - `test/heuristic-detect.test.mjs` — heuristic-detection convergence (handle-aware leak scan + known-safe downgrade + leak-context + all BARE rules; per-package dynamic tool-name tracking + explicit scan limitation, 16)
   - `test/live-cal-unify.test.mjs` — live-calibration unification (RUNTIME_LIFECYCLE_EVENTS event-name contract + dual-channel bridge dedup + honest offline degrade, 12)
+  - `test/graph-test.mjs` — dependency-graph suite (overview-filtered rendering / node-click pre/post details / synthetic edge connectivity / graph update after addRow, 23)
 
 ## Error feedback
 

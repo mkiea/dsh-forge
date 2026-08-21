@@ -246,6 +246,7 @@ Web 形态采用**混合审查**：每次请求用当前分析结果新鲜渲染
   - `test/main-path-fusion.test.mjs` — 主默认路径融合接线（runAnalysis 对 conflicts/leaks 调 fuse + 离线 not-executed 基线；finalSeverity/evidenceTag/runtimeState + INV-3，8 项）
   - `test/heuristic-detect.test.mjs` — 启发式检测收敛（句柄捕获感知泄漏 + 已知安全降级 + leak-context + 全部 BARE 规则；动态工具名按包追踪 + 显式扫描局限，16 项）
   - `test/live-cal-unify.test.mjs` — live 校准统一（RUNTIME_LIFECYCLE_EVENTS 事件名契约 + 双通道桥接去重 + 离线诚实降级，12 项）
+  - `test/graph-test.mjs` — 依赖图谱专项（总览过滤渲染 / 节点点击前置后置详情 / 合成边连通 / 添加组件后图谱正确显示，23 项）
 
 ## 错误反馈体系
 
