@@ -2,11 +2,11 @@
 
 > [English](./README.en.md) | [中文](./README.md)
 
-> Version: 0.1.11 (official) · harnessVersion: 0.1.1-rc.2
+> Version: 0.1.12 (official) · harnessVersion: 0.1.1-rc.2
 
 A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency analysis, conflict detection, risk assessment (with prediction), visualization and combination simulation.
 
-> **v0.1.11 patch**: harness baseline bumped to the latest `0.1.1-rc.2` — `@deepseek-ai/dsh-tools` `^0.1.0-rc.6` → `^0.1.1-rc.2` (`defineTool` API compatible), 13 `minimumReleaseAgeExclude` entries in `pnpm-workspace.yaml` synced; the knowledge-graph verification baseline `PATTERNS_HARNESS_VERSION` updated, removing the false `knowledge-version-drift` warning on the newest deployment. 13 read-only tools, `core/` 28 zero-dependency modules, 22 self-contained suites all pass.
+> **v0.1.11 patch**: harness baseline bumped to the latest `0.1.1-rc.2` — `@deepseek-ai/dsh-tools` `^0.1.0-rc.6` → `^0.1.1-rc.2` (`defineTool` API compatible), 13 `minimumReleaseAgeExclude` entries in `pnpm-workspace.yaml` synced; the knowledge-graph verification baseline `PATTERNS_HARNESS_VERSION` updated, removing the false `knowledge-version-drift` warning on the newest deployment. 13 read-only tools, `core/` 28 zero-dependency modules, 23 self-contained suites all pass.
 ## Tools (13, all read-only; simulate_combination / archive_snapshot never touch the composition)
 
 ### Analysis
@@ -198,7 +198,7 @@ the dashboard always reflects the real combination without a page reload.
 
 - `dsh web` runs at http://127.0.0.1:3080, no browser errors, **13 tools** registered
 - `analyze_dependencies` live: 4 layers (profile root + dsh-base + dsh-web-app + patch), 138 rows (incl. forge/forge-ui) / 128 packages / 1226+ edges
-- Automated tests (22 self-contained suites; smoke13 13/13 depends on the local harness, not in CI):
+- Automated tests (23 self-contained suites; smoke13 13/13 depends on the local harness, not in CI):
   - `test/ui-test.mjs` — dashboard workspace structure & interaction (77)
   - `test/ui-plugin-test.mjs` — client plugin VM execution + slot registration + modal interaction (22)
   - `test/semver-consistency.test.mjs` — single-source SemVer regression + anti-mirror guard (30)
@@ -251,5 +251,5 @@ The third-party PM review acceptance criteria are implemented item by item: dump
 - `prompt/` — expert persona prompt (with risk prediction)
 - `data/` — ecosystem snapshots (`ecosystem.json` versioned; `history/` runtime-generated and gitignored)
 - `reports/` — generated reports and graphs
-- `test/` — self-contained test suites (22 suites, 952 items, no machine dependency)
+- `test/` — self-contained test suites (23 suites, 975 items, no machine dependency)
 - `scripts/` — build and mount scripts

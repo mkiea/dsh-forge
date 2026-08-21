@@ -73,7 +73,7 @@ const MODULE_COUNT = String(fs.readdirSync(path.join(ROOT, "core")).filter((f) =
   check("README.en.md references " + n + " self-contained suites", read("README.en.md").includes(n + " self-contained suites"));
   check("README.md references cache-behavior suite", read("README.md").includes("test/cache-behavior.test.mjs"));
   check("README.en.md references cache-behavior suite", read("README.en.md").includes("test/cache-behavior.test.mjs"));
-  const TOTAL_CASES = "952";
+  const TOTAL_CASES = "975";
   check("README.md total case count is current (" + TOTAL_CASES + ")", read("README.md").includes(TOTAL_CASES + " 项"));
   check("README.en.md total case count is current (" + TOTAL_CASES + ")", read("README.en.md").includes(TOTAL_CASES + " items"));
 }

@@ -2,11 +2,11 @@
 
 > [English](./README.en.md) | 中文
 
-> 版本：0.1.11（正式版）· harnessVersion: 0.1.1-rc.2
+> 版本：0.1.12（正式版）· harnessVersion: 0.1.1-rc.2
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
 
-> **v0.1.11 补丁**：harness 基线同步到最新 `0.1.1-rc.2` —— `@deepseek-ai/dsh-tools` `^0.1.0-rc.6` → `^0.1.1-rc.2`（`defineTool` API 兼容），`pnpm-workspace.yaml` 13 条 `minimumReleaseAgeExclude` 同步；知识图谱验证基线 `PATTERNS_HARNESS_VERSION` 同步更新，消除对最新部署的 `knowledge-version-drift` 误告警。现有 13 个只读工具，`core/` 28 个纯逻辑模块零依赖，22 个自包含套件全部通过。
+> **v0.1.11 补丁**：harness 基线同步到最新 `0.1.1-rc.2` —— `@deepseek-ai/dsh-tools` `^0.1.0-rc.6` → `^0.1.1-rc.2`（`defineTool` API 兼容），`pnpm-workspace.yaml` 13 条 `minimumReleaseAgeExclude` 同步；知识图谱验证基线 `PATTERNS_HARNESS_VERSION` 同步更新，消除对最新部署的 `knowledge-version-drift` 误告警。现有 13 个只读工具，`core/` 28 个纯逻辑模块零依赖，23 个自包含套件全部通过。
 ## 工具（13 个，全部只读；simulate_combination / archive_snapshot 不碰组合本体）
 
 ### 分析
@@ -224,7 +224,7 @@ Web 形态采用**混合审查**：每次请求用当前分析结果新鲜渲染
 - `dsh web` 正常启动于 http://127.0.0.1:3080，浏览器无报错，**13 个工具**注册成功
 - `analyze_dependencies` 真实执行：4 层组合（profile 根 + dsh-base + dsh-web-app + patch），
   138 插件行（含 forge/forge-ui）/ 128 包 / 1226+ 依赖边
-- 自动化测试（22 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
+- 自动化测试（23 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
   - `test/ui-test.mjs` — 仪表盘 workspace 结构与交互（77 项，含 v0.1.5 混合架构页/嵌入字段/finding_id 语义与渲染断言，及 v0.1.6 引导页/名词解释/悬停提示/规范标签 + 旧模块引导条/表头详释）
   - `test/ui-plugin-test.mjs` — 客户端插件 VM 执行 + slot 注册 + 模态交互（22 项）
   - `test/semver-consistency.test.mjs` — SemVer 单一实现回归 + 防镜像回归（30 项）
@@ -279,5 +279,5 @@ harnessVersion 绑定与知识库版本门控（R2）、泄漏扫描（R3）、�
 - `prompt/` — 专家 persona 提示词（含风险预测）
 - `data/` — 生态快照（`ecosystem.json` versioned；`history/` 运行期生成，gitignored）
 - `reports/` — 生成的分析报告与图谱
-- `test/` — 自包含测试套件（22 套件 952 项，零本机依赖）
+- `test/` — 自包含测试套件（23 套件 975 项，零本机依赖）
 - `scripts/` — 生成与构建脚本（generate-dashboard / build-ui / mount-ui）
