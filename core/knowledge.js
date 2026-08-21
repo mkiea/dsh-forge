@@ -69,7 +69,7 @@ export const RUNTIME_VERIFICATION_CHECKS = [
 // Encodes the shipped bundle comments (telemetry, sqlite search, pi-ai,
 // hmr, subagent toolName rows, platform-switched rows).
 // The harness version these pattern facts were verified against.
-export const PATTERNS_HARNESS_VERSION = "0.1.0-rc.6";
+export const PATTERNS_HARNESS_VERSION = "0.1.1-rc.2";
 
 export function knownPatterns(ctx) {
   const { rows } = ctx;

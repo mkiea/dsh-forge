@@ -1,4 +1,12 @@
 # Changelog
+## [0.1.11] - 2026-08-21
+
+### v0.1.11 补丁 — harness 基线同步到 0.1.1-rc.2（依赖升级 + 知识图谱更新）
+
+- **依赖基线升级**（`package.json`）：`@deepseek-ai/dsh-tools` `^0.1.0-rc.6` → `^0.1.1-rc.2`，`defineTool` API 兼容；`pnpm-workspace.yaml` `minimumReleaseAgeExclude` 13 条排除同步升到 `0.1.1-rc.2`。
+- **知识图谱版本门控更新**（`core/knowledge.js`）：`PATTERNS_HARNESS_VERSION` `0.1.0-rc.6` → `0.1.1-rc.2`，消除 `knowledge-version-drift` 对最新部署的误告警，知识库模式结论以此版本为验证基线。
+- **文档同步**：README / README.en 顶行 `harnessVersion`、ARCHITECTURE「harnessVersion 绑定」同步为 `0.1.1-rc.2`。
+
 ## [0.1.10] - 2026-08-20
 
 ### v0.1.10 补丁 — Web 面板共享化 + 后端自动拉起 + 弹窗新窗口

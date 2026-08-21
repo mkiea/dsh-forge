@@ -2,11 +2,11 @@
 
 > [English](./README.en.md) | 中文
 
-> 版本：0.1.10（正式版）· harnessVersion: 0.1.0-rc.6
+> 版本：0.1.11（正式版）· harnessVersion: 0.1.1-rc.2
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
 
-> **v0.1.10 补丁**：Web 面板共享化（CLI 与 harness 壳复用同一 `core/web-server.js`，核心模块 27→28）+ 后端启动时自动拉起 3060 web 面板（无需手动 `dsh-forge web`，弹窗仪表盘即开即实时）+ 弹窗「新窗口」按钮（`window.open` 独立打开仪表盘）。现有 13 个只读工具，`core/` 28 个纯逻辑模块零依赖，22 个自包含套件全部通过。
+> **v0.1.11 补丁**：harness 基线同步到最新 `0.1.1-rc.2` —— `@deepseek-ai/dsh-tools` `^0.1.0-rc.6` → `^0.1.1-rc.2`（`defineTool` API 兼容），`pnpm-workspace.yaml` 13 条 `minimumReleaseAgeExclude` 同步；知识图谱验证基线 `PATTERNS_HARNESS_VERSION` 同步更新，消除对最新部署的 `knowledge-version-drift` 误告警。现有 13 个只读工具，`core/` 28 个纯逻辑模块零依赖，22 个自包含套件全部通过。
 ## 工具（13 个，全部只读；simulate_combination / archive_snapshot 不碰组合本体）
 
 ### 分析
