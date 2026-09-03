@@ -8,6 +8,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { computeGate } from "./gate.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -34,12 +35,13 @@ const escMd = (v) => String(v == null ? "—" : v).replace(/\|/g, "\\|").replace
 
 export function gates(analysis) {
   const findings = [...(analysis.conflicts.conflicts || []), ...((analysis.leaks && analysis.leaks.findings) || [])];
-  const blocked = { critical: 0, high: 0 };
-  for (const f of findings) {
-    if (f.finalSeverity === "blocking") blocked.critical++;
-    else if (f.finalSeverity === "high") blocked.high++;
-  }
-  return { pass: blocked.critical === 0 && blocked.high === 0, blocked };
+  // Frozen pass contract stays severity-only (any blocking/high fails); computeGate
+  // additionally exposes blockedBy / degraded / lever for transparency (方向 4).
+  const d = computeGate(findings);
+  const gate = { pass: d.blocked.critical === 0 && d.blocked.high === 0, blocked: d.blocked, lever: d.lever };
+  if (d.blockedBy.length) gate.blockedBy = d.blockedBy;
+  if (d.degraded.length) gate.degraded = d.degraded;
+  return gate;
 }
 
 // Build a Markdown report string from a runAnalysis() result. Pure.
@@ -70,8 +72,24 @@ export function buildMarkdownReport(analysis, opts = {}) {
   L.push("| 冲突数 | " + escMd(c.summary.total) + "（" + escMd(Object.entries(c.summary.bySeverity || {}).map((kv) => kv[0] + "=" + kv[1]).join(" ")) + "）|");
   L.push("| 副作用泄漏数 | " + escMd((analysis.leaks && analysis.leaks.summary && analysis.leaks.summary.total) || 0) + " |");
   L.push("| 配置层 | " + escMd((analysis.ecosystem.layers || []).map((l) => l.layer).join(" → ") || "—") + " |");
-  L.push("| GATE | " + escMd(gate.pass ? "PASS" : "BLOCKED (critical " + gate.blocked.critical + " / high " + gate.blocked.high + ")") + " |");
+  L.push("| GATE | " + escMd(gate.pass ? "PASS" : "BLOCKED (critical " + gate.blocked.critical + " / high " + gate.blocked.high + ")") + (gate.lever && gate.lever !== "advisory" ? " · lever `" + gate.lever + "`" : "") + " |");
   L.push("");
+
+  // 方向 4: 闸门明细 —— 因哪条规则拦了谁、置信/证据分层。仅在闸被触发时出现。
+  if (gate.blockedBy && gate.blockedBy.length) {
+    L.push("## 闸门明细（blockedBy）");
+    L.push("");
+    L.push("| finding_id | 规则 | 级别 | 置信度 | 证据层 | 降级(capped) |");
+    L.push("| --- | --- | --- | --- | --- | --- |");
+    for (const b of gate.blockedBy) {
+      L.push("| " + escMd(b.finding_id || "—") + " | " + escMd(b.rule || "—") + " | " + escMd(b.finalSeverity) + " | " + escMd(b.confidence) + " | " + escMd(b.evidenceTier || "—") + " | " + (b.capped ? "是" : "—") + " |");
+    }
+    if (gate.degraded && gate.degraded.length) {
+      L.push("");
+      L.push("> 以上 " + gate.degraded.length + " 条为置信被降级（scan cap 或低/中置信）却达到阻断级别：建议用 `dump-config` 复核后再 enforce。");
+    }
+    L.push("");
+  }
 
   L.push("## 冲突明细");
   L.push("");

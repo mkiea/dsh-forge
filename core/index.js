@@ -20,6 +20,7 @@ import { archiveSnapshot, listHistory, loadHistory } from "./history.js";
 import { comparePresets, readPreset } from "./presets.js";
 import { verifyRows } from "./verify.js";
 import { suggestPatch } from "./suggest.js";
+import { computeGate, gateFromFindings, severityBlocks } from "./gate.js";
 import { checkUpgrades } from "./upgrade.js";
 import { proposeUpgrade, proposeUpgradeCandidates, simulateUpgrade, cloneWithVersion } from "./plan.js";
 import { historyStats } from "./stats.js";
@@ -59,6 +60,7 @@ export { buildFeedback, normalizeFeedback, preflight, renderFeedback, SEVERITY_O
 export { knownPatterns, scanDeprecations, KNOWN_LIBS, CLIENT_PLANE_SERVICES, runtimeVerified, RUNTIME_VERIFICATION_CHECKS };
 export { satisfies, compareVersions, parseVersion, maxSatisfying };
 export { UI_MODE, hasDesktop, scenarioHints, decideUiMode, decideAfterPortProbe, COMPLEXITY_LIGHT, COMPLEXITY_HEAVY };
+export { computeGate, gateFromFindings, severityBlocks };
 
 
 // P0-3 frozen check report schema (dsh-forge/report@1). findings[] come from
@@ -77,6 +79,8 @@ function projectFinding(f) {
     runtimeState: f.runtimeState,
     evidenceTag: f.evidenceTag
   };
+  if (f.capped) out.capped = true;
+  if (f.type || f.kind || f.rule) out.rule = f.rule || f.type || f.kind;
   if (f.next_action) out.next_action = f.next_action;
   if (f.reproduce_hint) out.reproduce_hint = f.reproduce_hint;
   return out;
@@ -87,12 +91,14 @@ export function buildCheckReport(analysis, opts = {}) {
   const conflicts = analysis.conflicts.conflicts || [];
   const leaks = (analysis.leaks && analysis.leaks.findings) || [];
   const findings = [...conflicts, ...leaks].map(projectFinding);
-  const blocked = { critical: 0, high: 0 };
-  for (const f of findings) {
-    if (f.finalSeverity === "blocking") blocked.critical++;
-    else if (f.finalSeverity === "high") blocked.high++;
-  }
-  const gate = { pass: blocked.critical === 0 && blocked.high === 0, blocked };
+  // Frozen pass contract: any blocking/high finalSeverity fails (severity-only).
+  // computeGate adds the advisory blockedBy/degraded/lever transparency layer
+  // without changing gate.pass/blocked.
+  const gateDetail = computeGate(findings);
+  const gate = { pass: gateDetail.blocked.critical === 0 && gateDetail.blocked.high === 0, blocked: gateDetail.blocked };
+  if (gateDetail.blockedBy.length) gate.blockedBy = gateDetail.blockedBy;
+  if (gateDetail.degraded.length) gate.degraded = gateDetail.degraded;
+  gate.lever = gateDetail.lever;
   return {
     schemaVersion: CHECK_REPORT_SCHEMA,
     version: opts.version || pkgVersion(),

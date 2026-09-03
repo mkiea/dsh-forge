@@ -24,6 +24,18 @@
 
 - **文档同步**：README / README.en / ARCHITECTURE 工具数 13→14；工具表新增 `plan_upgrade` 行。
 
+### 未发布 — 闸门杠杆与置信分层 core/gate.js（方向 4）
+
+- **新增 `core/gate.js`**（核心模块 29→30）：`computeGate(findings)` 在冻结的 `gate.pass`/`blocked` 语义（任何 blocking/high 即 fail，与置信无关，由 check-report-schema 守护）之外追加透明层——`lever`（block/degraded/advisory）、`blockedBy[]`（「因哪条规则拦了谁」装载级明细含 finding_id/rule/finalSeverity/confidence/evidenceTier/capped）、`degraded[]`（scan cap 或低/中置信却达阻断级别，建议 dump-config 复核）；`gateFromFindings`/`severityBlocks` 一并导出。
+
+- **接线（追加式，report@1 不破）**：`buildCheckReport` 的 `gate` 增加 `blockedBy`/`degraded`/`lever`；`projectFinding` 追加 `capped`/`rule` 字段；`report.js::gates` 改委托 `computeGate`（单一实现）。
+
+- **展示**：`check` BLOCKED 时文本打印 lever 与前 8 条阻断明细（rule#id (confidence[/capped])）；report.md 在闸被触发时输出「闸门明细（blockedBy）」置信分层表与降级提示。
+
+- **新增 `test/gate-lever.test.mjs`**（自包含套件 24→25，12 项）：lever 三态、blockedBy/degraded 明细、capped 与低/中置信降级、冻结 pass 语义保持、buildCheckReport 集成、规则兜底。
+
+- **文档同步**：README / README.en / ARCHITECTURE 模块 29→30、自包含套件 24→25；ARCHITECTURE 模块表加 `gate.js` 行 + 新增 `3.5 闸门杠杆与置信分层` 小节。
+
 ### 未发布 — 方向 1 文档收口（S5）
 
 - **README**：CLI 段补 `dsh-forge plan --to <pkg@ver,...>` 示例（含 `--json`）+ 方向 1「升级路径预演」概述段（离线、只读、永不 gate-exit，`core/plan.js` 定位）。

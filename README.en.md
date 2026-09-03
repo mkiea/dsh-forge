@@ -6,7 +6,7 @@
 
 A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency analysis, conflict detection, risk assessment (with prediction), visualization and combination simulation.
 
-> **v0.1.11 patch**: harness baseline bumped to the latest `0.1.1-rc.2` — `@deepseek-ai/dsh-tools` `^0.1.0-rc.6` → `^0.1.1-rc.2` (`defineTool` API compatible), 13 `minimumReleaseAgeExclude` entries in `pnpm-workspace.yaml` synced; the knowledge-graph verification baseline `PATTERNS_HARNESS_VERSION` updated, removing the false `knowledge-version-drift` warning on the newest deployment. 14 read-only tools, `core/` 29 zero-dependency modules, 24 self-contained suites all pass.
+> **v0.1.11 patch**: harness baseline bumped to the latest `0.1.1-rc.2` — `@deepseek-ai/dsh-tools` `^0.1.0-rc.6` → `^0.1.1-rc.2` (`defineTool` API compatible), 13 `minimumReleaseAgeExclude` entries in `pnpm-workspace.yaml` synced; the knowledge-graph verification baseline `PATTERNS_HARNESS_VERSION` updated, removing the false `knowledge-version-drift` warning on the newest deployment. 14 read-only tools, `core/` 30 zero-dependency modules, 25 self-contained suites all pass.
 ## Tools (14, all read-only; simulate_combination / archive_snapshot never touch the composition)
 
 ### Analysis
@@ -40,7 +40,7 @@ A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency an
 Three layers, see [ARCHITECTURE.md](./ARCHITECTURE.md):
 
 ```
-core/          dependency-free engine (29 modules, Node built-ins only)
+core/          dependency-free engine (30 modules, Node built-ins only)
   ├─ composition.js   composition discovery + YAML parsing + ecosystem collection
   ├─ truth.js         dump-config ground truth (auto/dump-config/scan)
   ├─ analyze.js       dependency graph + risk scoring
@@ -199,7 +199,7 @@ the dashboard always reflects the real combination without a page reload.
 
 - `dsh web` runs at http://127.0.0.1:3080, no browser errors, **14 tools** registered
 - `analyze_dependencies` live: 4 layers (profile root + dsh-base + dsh-web-app + patch), 138 rows (incl. forge/forge-ui) / 128 packages / 1226+ edges
-- Automated tests (24 self-contained suites; smoke13 13/13 depends on the local harness, not in CI):
+- Automated tests (25 self-contained suites; smoke13 13/13 depends on the local harness, not in CI):
   - `test/ui-test.mjs` — dashboard workspace structure & interaction (77)
   - `test/ui-plugin-test.mjs` — client plugin VM execution + slot registration + modal interaction (22)
   - `test/semver-consistency.test.mjs` — single-source SemVer regression + anti-mirror guard (30)
@@ -217,6 +217,7 @@ the dashboard always reflects the real combination without a page reload.
   - `test/runtime-calibration.test.mjs` — runtime calibration (A-4 window/cardinality cap + INV-2 ordering + reversibility, 21)
   - `test/truth-source-degradation.test.mjs` — truth-source degradation (INV-4 confidence cap, 12)
   - `test/check-report-schema.test.mjs` — P0-3 frozen check --json report schema + gate (10)
+  - `test/gate-lever.test.mjs` — direction-4 gate lever (lever/blockedBy/degraded) + confidence tiers; frozen gate.pass preserved (12)
   - `test/finding-id-uniqueness.test.mjs` — finding_id uniqueness regression (service/row/package dims + A-2 stability, 6)
   - `test/main-path-fusion.test.mjs` — default-path fusion wiring (runAnalysis fuses conflicts/leaks with an offline not-executed baseline; finalSeverity/evidenceTag/runtimeState + INV-3, 8)
   - `test/heuristic-detect.test.mjs` — heuristic-detection convergence (handle-aware leak scan + known-safe downgrade + leak-context + all BARE rules; per-package dynamic tool-name tracking + explicit scan limitation, 16)

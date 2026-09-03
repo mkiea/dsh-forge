@@ -29,7 +29,7 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 │  │            │          │  │  └────────────────────┘  │ │
 │  │   ┌────────▼────────┐ │  └──────────────────────────┘ │
 │  │   │  core/ (引擎)   │ │                               │
-│  │   │  29 个纯逻辑模块 │ │                               │
+│  │   │  30 个纯逻辑模块 │ │                               │
 │  │   └─────────────────┘ │                               │
 │  └───────────────────────┘                               │
 └─────────────────────────────────────────────────────────┘
@@ -68,6 +68,7 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 | `errors.js` | 统一错误反馈（归一化/聚合/预检/渲染） | `buildFeedback`, `normalizeFeedback`, `preflight`, `renderFeedback` |
 | `evidence.js` | 证据元数据（INV-6/A-2）：稳定 finding_id + 置信度上限 + schema 校验 | `makeFindingId`, `attachFindingIds`, `capConfidence`, `validateFindings` |
 | `evidence-fusion.js` | 证据融合（A-1 三态 + A-3 可行动 + INV-3 只降不清除） | `fuse` |
+| `gate.js` | 闸门透明层（方向 4）：给 冻结 pass 语义 追加 lever/blockedBy/degraded 置信分层（不改 pass/blocked） | `computeGate`, `gateFromFindings`, `severityBlocks` |
 | `runtime-calibration.js` | 运行时校准（A-4 滑窗 + INV-2 时序边界 + A-2 关联键） | `createRuntimeCalibration`, `staticRuntimeCalibration` |
 | `web-server.js` | Web 面板共享服务（CLI 与 harness 壳复用的 3060 数据通道 + CORS/端口探测/浏览器打开） | `createWebHandler`, `startWebServer`, `probePort`, `openBrowser` |
 
@@ -205,6 +206,18 @@ simulateUpgrade(eco, wish)
 - `proposeUpgrade` 出升级范围与 `breaks`（consumer 声明范围拒收）；`breaks` 判定复用 `upgrade.js` 的 `satisfies(version, range)`，保证单一实现。
 - ESLint 之外的一切纯函数位于 `core/plan.js`（模块数 28→29），CLI/工具/测试三处复用。
 
+### 3.5 闸门杠杆与置信分层（方向 4）
+
+冻结契约 `gate.pass` 不变（任何 `blocking/high` 即 fail，与置信无关）。`core/gate.js` 在 `pass/blocked` 之外追加透明层：
+
+| gate 字段 | 含义 |
+| --- | --- |
+| `lever` | `block`（≥1 strict 高置信阻断）\| `degraded`（触发但全部是置信降级证据）\| `advisory`（PASS） |
+| `blockedBy[]` | 装载级明细：「因哪条规则拦了谁」——`{ finding_id, rule, finalSeverity, confidence, evidenceTier, capped }` |
+| `degraded[]` | `blockedBy` 的子集：scan cap 或低/中置信却达阻断级别，应先用 `dump-config` 复核再 enforce |
+
+`projectFinding` 追加 `capped` / `rule` 字段（schema 追加式，不破坏 report@1）。`check` BLOCKED 时文本列出前 8 条阻断明细；report.md 在闸被触发时输出「闸门明细（blockedBy）」表与降级提示。CLI/`report.js::gates` 均复用 `computeGate`（单一实现）。
+
 ## 4. 真相源三态设计（truthSource）
 
 | 模式 | 数据来源 | 精度 | 降级 |
@@ -238,6 +251,7 @@ simulateUpgrade(eco, wish)
 | 主链路融合回归 | `test/main-path-fusion.test.mjs` | 8 | P0 主路径真正 fuse：runAnalysis 项带 runtimeState/finalSeverity/evidenceTag（离线 not-executed）+ INV-3 不清除 + severity 秩有效 |
 | 启发式检测收敛 | `test/heuristic-detect.test.mjs` | 16 | 句柄捕获感知泄漏（已知安全降级 / leak-context / 全部 BARE 规则）+ 动态工具名按包追踪与显式扫描局限 |
 | check --json schema 冻结 | `test/check-report-schema.test.mjs` | 10 | P0-3 冻结 check report schema（schemaVersion/inputs/findings[]/gate）+ gate 门禁（high/blocking 拦截）|
+| 闸门杠杆/置信分层 | `test/gate-lever.test.mjs` | 12 | 方向 4：computeGate/gateFromFindings 的 lever(block/degraded/advisory)、blockedBy 明细、degraded 分层；冻结 gate.pass 语义保持 |
 | finding_id 唯一性消重 | `test/finding-id-uniqueness.test.mjs` | 6 | makeFindingId 纳入 involved packages/service/row，区分同类别多条 finding；A-2 message 不变 id（0 碰撞回归）|
 | 14 工具快照半集成 | `test/tools-snapshot-smoke.test.mjs` | 14 | 快照驱动调用 14 个工具 + output.schema 最小校验（防 schema/output 漂移），CI 可运行 |
 | YAML fail-loud / vm 沙箱 | `test/composition-strict.test.mjs` | 8 | 严格解析接受合法 patch（含 config block scalar、cordis inject 行键）/ 未知行键与顶层条目抛错 / globalThis 逃逸被拒 / dshHomePath 可用 |

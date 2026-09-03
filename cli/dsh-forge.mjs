@@ -411,7 +411,13 @@ async function main() {
     else console.log(plainSummary(analysis));
     const gate = buildCheckReport(analysis).gate;
     if (!gate.pass) {
-      console.error("[dsh-forge] gate BLOCKED: critical " + gate.blocked.critical + ", high " + gate.blocked.high + " — exiting 1 for CI");
+      console.error("[dsh-forge] gate BLOCKED: critical " + gate.blocked.critical + ", high " + gate.blocked.high + " · lever " + (gate.lever || "block") + " — exiting 1 for CI");
+      if (Array.isArray(gate.blockedBy) && gate.blockedBy.length) {
+        const top = gate.blockedBy.slice(0, 8)
+          .map((b) => (b.rule || "?") + "#" + (b.finding_id || "?") + " (" + (b.confidence || "?") + (b.capped ? "/capped" : "") + ")")
+          .join(" | ");
+        console.error("  blocked by: " + top + (gate.blockedBy.length > 8 ? " (+" + (gate.blockedBy.length - 8) + " more)" : ""));
+      }
       process.exit(1);
     }
     return;
