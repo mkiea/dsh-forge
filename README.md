@@ -6,7 +6,7 @@
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
 
-> **v0.1.11 补丁**：harness 基线同步到最新 `0.1.1-rc.2` —— `@deepseek-ai/dsh-tools` `^0.1.0-rc.6` → `^0.1.1-rc.2`（`defineTool` API 兼容），`pnpm-workspace.yaml` 13 条 `minimumReleaseAgeExclude` 同步；知识图谱验证基线 `PATTERNS_HARNESS_VERSION` 同步更新，消除对最新部署的 `knowledge-version-drift` 误告警。现有 13 个只读工具，`core/` 28 个纯逻辑模块零依赖，23 个自包含套件全部通过。
+> **v0.1.11 补丁**：harness 基线同步到最新 `0.1.1-rc.2` —— `@deepseek-ai/dsh-tools` `^0.1.0-rc.6` → `^0.1.1-rc.2`（`defineTool` API 兼容），`pnpm-workspace.yaml` 13 条 `minimumReleaseAgeExclude` 同步；知识图谱验证基线 `PATTERNS_HARNESS_VERSION` 同步更新，消除对最新部署的 `knowledge-version-drift` 误告警。现有 13 个只读工具，`core/` 29 个纯逻辑模块零依赖，24 个自包含套件全部通过。
 
 ## 工具（13 个，全部只读；simulate\_combination / archive\_snapshot 不碰组合本体）
 
@@ -43,7 +43,7 @@ DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、�
 三层分离，详见 [ARCHITECTURE.md](./ARCHITECTURE.md)：
 
 ```
-core/          零依赖分析引擎（28 个模块，Node 内置 API only）
+core/          零依赖分析引擎（29 个模块，Node 内置 API only）
   ├─ composition.js   组合源发现 + YAML 解析 + 生态收集
   ├─ truth.js         dump-config 真相源（auto/dump-config/scan 三态）
   ├─ analyze.js       依赖图构建 + 风险评估
@@ -235,7 +235,7 @@ Web 形态采用**混合审查**：每次请求用当前分析结果新鲜渲染
 - `analyze_dependencies` 真实执行：4 层组合（profile 根 + dsh-base + dsh-web-app + patch），
   138 插件行（含 forge/forge-ui）/ 128 包 / 1226+ 依赖边
 
-- 自动化测试（23 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
+- 自动化测试（24 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
 
   - `test/ui-test.mjs` — 仪表盘 workspace 结构与交互（77 项，含 v0.1.5 混合架构页/嵌入字段/finding\_id 语义与渲染断言，及 v0.1.6 引导页/名词解释/悬停提示/规范标签 + 旧模块引导条/表头详释）
 
