@@ -24,6 +24,22 @@
 
 - **文档同步**：README / README.en / ARCHITECTURE 工具数 13→14；工具表新增 `plan_upgrade` 行。
 
+### 未发布 — 可配置闸门策略 core/gate.js（方向 4 选项 C）
+
+- **`computeGate(findings, policy)` 可选 policy**：`--policy <file.json>`（或 `buildCheckReport(analysis,{policy})`）显式 opt-in 才改变裁决。无 policy 走冻结路径（逐字节兼容，`gate-lever`/`check-report-schema` 不破）。
+
+- **策略结构** `{ severity?, tier?, confidence? }`，值 `block|warn|allow`；每条 finding `baseline = severity[finalSeverity]`（缺省 blocking/high→block，否则 allow），`tier`/`confidence` 只收紧（`stricter`，block>warn>allow）——降级用 `severity`、权威证据用 `tier` 钉死。
+
+- **修复方向 4 误标**：契约冲突在 scan cap 下即使置信被压成 medium/capped，`policy.tier["contract-source":"block"]` 仍判定 block（不再被误标 degraded）。
+
+- **pass 语义**：有 policy 时 `gate.pass = 无 block 裁决`（`gate.blocked` 仍为冻结 severity 计数，报告保留原始红灯）；无 policy 时 pass 保持「任何 blocking/high 即 fail」。
+
+- **新增导出/入口**：`validatePolicy`/`resolveVerdict`/`stricter`；CLI `check --policy file.json`（校验失败 exit 2）；report `gate.policyApplied` 标记。
+
+- **新增 `test/gate-policy.test.mjs`**（自包含套件 25→26，11 项）：validatePolicy 校验、resolveVerdict baseline+tier 收紧、契约冲突 scan cap 下仍 block、severity 降级放行、policy/冻结 pass 差异、buildCheckReport 集成。
+
+- **文档同步**：README / README.en 自包含套件 25→26；ARCHITECTURE `gate.js` 行扩为「闸门裁决」、新增 `3.5.1 可配置闸门策略` 小节与 gate-policy 测试表行。
+
 ### 未发布 — 闸门杠杆与置信分层 core/gate.js（方向 4）
 
 - **新增 `core/gate.js`**（核心模块 29→30）：`computeGate(findings)` 在冻结的 `gate.pass`/`blocked` 语义（任何 blocking/high 即 fail，与置信无关，由 check-report-schema 守护）之外追加透明层——`lever`（block/degraded/advisory）、`blockedBy[]`（「因哪条规则拦了谁」装载级明细含 finding_id/rule/finalSeverity/confidence/evidenceTier/capped）、`degraded[]`（scan cap 或低/中置信却达阻断级别，建议 dump-config 复核）；`gateFromFindings`/`severityBlocks` 一并导出。

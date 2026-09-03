@@ -18,7 +18,8 @@ import {
   runAnalysis, clearAnalysisCache, buildCheckReport, simulateUpgrade,
   buildMarkdownReport, writeReport,
   UI_MODE, decideUiMode, decideAfterPortProbe,
-  hasDesktop, COMPLEXITY_LIGHT, COMPLEXITY_HEAVY
+  hasDesktop, COMPLEXITY_LIGHT, COMPLEXITY_HEAVY,
+  validatePolicy
 } from "../core/index.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -56,6 +57,7 @@ function parseArgs(argv) {
     else if (a === "--host") { out.host = argv[++i] || out.host; }
     else if (a === "--dataset") { out.dataset = argv[++i] || out.dataset; }
     else if (a === "--profile") { out.profile = argv[++i] || out.profile; }
+    else if (a === "--policy") { out.policy = argv[++i] || out.policy; }
     else if (a === "--help" || a === "-h") out.help = true;
     else if (a === "--version" || a === "-V") out.version = true;
     else if (!a.startsWith("-")) positional.push(a);
@@ -77,6 +79,7 @@ Options:
   --profile <name>         profile to analyze (default: web)
   --dataset <path>         offline ecosystem snapshot JSON
   --to <pkg@ver,...>       plan: target versions, comma-separated (offline)
+  --policy <file.json>     gate policy (severity/tier/confidence -> block|warn|allow); opt-in verdict for check; absent = frozen gate
   --port <n>               web port (default: 3060, env DSH_FORGE_PORT)
   --host <addr>            web bind address (default: 127.0.0.1)
   --json, -j               machine-readable check output
@@ -125,6 +128,7 @@ function plainSummary(a) {
 function jsonSummary(a, opts) {
   return JSON.stringify(buildCheckReport(a, {
     dataset: opts.dataset || null,
+    policy: opts.policyObj,
     reproduce: opts.dataset ? "node cli/dsh-forge.mjs check --json --dataset " + opts.dataset : "node cli/dsh-forge.mjs check --json"
   }), null, 2);
 }
@@ -370,6 +374,23 @@ async function main() {
   const argv = process.argv.slice(2);
   const opts = parseArgs(argv);
   if (opts.help) { console.log(HELP); return; }
+
+  // Opt-in gate policy: --policy <file.json>. Read + validate; invalid -> exit 2.
+  // Without it the frozen gate semantics apply (no behavior change).
+  if (opts.policy) {
+    try {
+      const raw = JSON.parse(fs.readFileSync(opts.policy, "utf8"));
+      opts.policyObj = validatePolicy(raw) || undefined;
+      if (!opts.policyObj) {
+        console.error("[dsh-forge] --policy produced an empty policy; ignoring (frozen gate applies).");
+        delete opts.policy;
+      }
+    } catch (e) {
+      console.error("[dsh-forge] invalid --policy: " + (e && e.message));
+      process.exit(2);
+    }
+  }
+
   if (opts.version) {
     try {
       const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"));
@@ -409,7 +430,7 @@ async function main() {
   if (decision.mode === UI_MODE.CHECK) {
     if (opts.json) console.log(jsonSummary(analysis, opts));
     else console.log(plainSummary(analysis));
-    const gate = buildCheckReport(analysis).gate;
+    const gate = buildCheckReport(analysis, { policy: opts.policyObj }).gate;
     if (!gate.pass) {
       console.error("[dsh-forge] gate BLOCKED: critical " + gate.blocked.critical + ", high " + gate.blocked.high + " · lever " + (gate.lever || "block") + " — exiting 1 for CI");
       if (Array.isArray(gate.blockedBy) && gate.blockedBy.length) {

@@ -20,7 +20,7 @@ import { archiveSnapshot, listHistory, loadHistory } from "./history.js";
 import { comparePresets, readPreset } from "./presets.js";
 import { verifyRows } from "./verify.js";
 import { suggestPatch } from "./suggest.js";
-import { computeGate, gateFromFindings, severityBlocks } from "./gate.js";
+import { computeGate, gateFromFindings, severityBlocks, validatePolicy, resolveVerdict, stricter, VERDICTS } from "./gate.js";
 import { checkUpgrades } from "./upgrade.js";
 import { proposeUpgrade, proposeUpgradeCandidates, simulateUpgrade, cloneWithVersion } from "./plan.js";
 import { historyStats } from "./stats.js";
@@ -60,7 +60,7 @@ export { buildFeedback, normalizeFeedback, preflight, renderFeedback, SEVERITY_O
 export { knownPatterns, scanDeprecations, KNOWN_LIBS, CLIENT_PLANE_SERVICES, runtimeVerified, RUNTIME_VERIFICATION_CHECKS };
 export { satisfies, compareVersions, parseVersion, maxSatisfying };
 export { UI_MODE, hasDesktop, scenarioHints, decideUiMode, decideAfterPortProbe, COMPLEXITY_LIGHT, COMPLEXITY_HEAVY };
-export { computeGate, gateFromFindings, severityBlocks };
+export { computeGate, gateFromFindings, severityBlocks, validatePolicy, resolveVerdict, stricter, VERDICTS };
 
 
 // P0-3 frozen check report schema (dsh-forge/report@1). findings[] come from
@@ -92,13 +92,15 @@ export function buildCheckReport(analysis, opts = {}) {
   const leaks = (analysis.leaks && analysis.leaks.findings) || [];
   const findings = [...conflicts, ...leaks].map(projectFinding);
   // Frozen pass contract: any blocking/high finalSeverity fails (severity-only).
-  // computeGate adds the advisory blockedBy/degraded/lever transparency layer
-  // without changing gate.pass/blocked.
-  const gateDetail = computeGate(findings);
-  const gate = { pass: gateDetail.blocked.critical === 0 && gateDetail.blocked.high === 0, blocked: gateDetail.blocked };
+  // computeGate adds gate.blockedBy/degraded/lever, and — when caller passes an
+  // explicit { policy } — applies the configurable verdict (option C). Without a
+  // policy this is byte-for-byte the frozen transparency layer.
+  const gateDetail = computeGate(findings, opts && opts.policy);
+  const gate = { pass: gateDetail.pass, blocked: gateDetail.blocked };
   if (gateDetail.blockedBy.length) gate.blockedBy = gateDetail.blockedBy;
   if (gateDetail.degraded.length) gate.degraded = gateDetail.degraded;
   gate.lever = gateDetail.lever;
+  if (gateDetail.policy) gate.policyApplied = true;
   return {
     schemaVersion: CHECK_REPORT_SCHEMA,
     version: opts.version || pkgVersion(),

@@ -6,9 +6,9 @@
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
 
-> **v0.1.11 补丁**：harness 基线同步到最新 `0.1.1-rc.2` —— `@deepseek-ai/dsh-tools` `^0.1.0-rc.6` → `^0.1.1-rc.2`（`defineTool` API 兼容），`pnpm-workspace.yaml` 13 条 `minimumReleaseAgeExclude` 同步；知识图谱验证基线 `PATTERNS_HARNESS_VERSION` 同步更新，消除对最新部署的 `knowledge-version-drift` 误告警。现有 14 个只读工具，`core/` 30 个纯逻辑模块零依赖，25 个自包含套件全部通过。
+> **v0.1.11 补丁**：harness 基线同步到最新 `0.1.1-rc.2` —— `@deepseek-ai/dsh-tools` `^0.1.0-rc.6` → `^0.1.1-rc.2`（`defineTool` API 兼容），`pnpm-workspace.yaml` 13 条 `minimumReleaseAgeExclude` 同步；知识图谱验证基线 `PATTERNS_HARNESS_VERSION` 同步更新，消除对最新部署的 `knowledge-version-drift` 误告警。现有 14 个只读工具，`core/` 30 个纯逻辑模块零依赖，26 个自包含套件全部通过。
 
-## 工具（14 个，全部只读；simulate\_combination / archive_snapshot 不碰组合本体）
+## 工具（14 个，全部只读；simulate\_combination / archive\_snapshot 不碰组合本体）
 
 ### 分析
 
@@ -37,7 +37,7 @@ DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、�
 | ---------------- | ---------------------------------------------------------------------- |
 | `suggest_patch`  | 冲突建议 → cordis.patch.yml 补丁文本（只输出，不写盘）                                  |
 | `check_upgrades` | npm registry 最新版本检查 + 升级阻断预测（**并发池 + 独立超时 + 镜像自动降级 + 附安装命令**，网络失败单独上报） |
-| `plan_upgrade`   | 升级路径预演：目标版本（或 latest）下 before/after 健康、风险增量、新增/解决冲突、具体下一步（只读） |
+| `plan_upgrade`   | 升级路径预演：目标版本（或 latest）下 before/after 健康、风险增量、新增/解决冲突、具体下一步（只读）          |
 
 ## 架构
 
@@ -225,7 +225,7 @@ node cli/dsh-forge.mjs plan --to @deepseek-ai/dsh-settings@0.1.1-rc.2   # 升级
 node cli/dsh-forge.mjs plan --to @deepseek-ai/lib@latest --json          # 带 --json（@latest 经注入 fetch 走仓库解析）
 ```
 
-`dsh-forge plan --to <pkg@ver,...>` 是**升级路径预演**（方向 1）：离线且确定性地预测「把指定包升到目标版本（或 `@latest`）后」，组合的 before/after 健康、风险增量、新增/解决冲突以及一句话结论与具体下一步。纯咨询命令——只读、不改组合、**永不触发 `check` 的 gate-exit**；`proposeUpgrade`（范围/阻断预判）+ `simulateUpgrade`（版本上移编排，复用 `applyOps`/`simulateCombination`/`diffCombinations`）都位于 `core/plan.js`，全离线可测。
+`dsh-forge plan --to <pkg@ver,...>` 是**升级路径预演**（方向 1）：离线且确定性地预测「把指定包升到目标版本（或 `@latest`）后」，组合的 before/after 健康、风险增量、新增/解决冲突以及一句话结论与具体下一步。纯咨询命令——只读、不改组合、**永不触发** **`check`** **的 gate-exit**；`proposeUpgrade`（范围/阻断预判）+ `simulateUpgrade`（版本上移编排，复用 `applyOps`/`simulateCombination`/`diffCombinations`）都位于 `core/plan.js`，全离线可测。
 
 TUI 与 Web 双壳复用同一套 `core/` 分析引擎；TUI 为零依赖 ANSI 渲染器，
 Web 为零依赖 `node:http` + 10 模块交互仪表盘（缺 `web/dashboard-client.js` 时
@@ -240,7 +240,7 @@ Web 形态采用**混合审查**：每次请求用当前分析结果新鲜渲染
 - `analyze_dependencies` 真实执行：4 层组合（profile 根 + dsh-base + dsh-web-app + patch），
   138 插件行（含 forge/forge-ui）/ 128 包 / 1226+ 依赖边
 
-- 自动化测试（25 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
+- 自动化测试（26 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
 
   - `test/ui-test.mjs` — 仪表盘 workspace 结构与交互（77 项，含 v0.1.5 混合架构页/嵌入字段/finding\_id 语义与渲染断言，及 v0.1.6 引导页/名词解释/悬停提示/规范标签 + 旧模块引导条/表头详释）
 
@@ -275,7 +275,10 @@ Web 形态采用**混合审查**：每次请求用当前分析结果新鲜渲染
   - `test/truth-source-degradation.test.mjs` — 真相源三态降级（INV-4 置信度上限，12 项）
 
   - `test/check-report-schema.test.mjs` — P0-3 冻结 check --json 报告 schema 与 gate 门禁（10 项）
+
 - `test/gate-lever.test.mjs` — 方向 4 闸门杠杆（lever/blockedBy/degraded）与置信分层，冻结 gate.pass 语义保持（12 项）
+
+  - `test/gate-policy.test.mjs` — 方向 4（选项 C）可配置 gate 策略（severity/tier/confidence→block|warn|allow）：契约冲突在 scan cap 下仍可 block、severity 降级放行、默认冻结路径保持（11 项）
 
   - `test/finding-id-uniqueness.test.mjs` — finding\_id 唯一性消重回归（服务/行/包维度区分 + A-2 稳定，6 项）
 
