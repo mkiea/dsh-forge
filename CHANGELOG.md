@@ -66,6 +66,14 @@
 
 - **自动探测 DSH_HOME**（`core/truth.js` / `src/tools/common.js`）：新增 `resolveDshHome()`，当 harness 未注入 `DSH_HOME`/`DSH_BIN` 时自动探测 `~/.dsh` 部署根，使 `truthSource=auto` 优先走 `dump-config` 而非静默降级 `scan`。此前插件进程缺少 `DSH_HOME` 时 `findDshBin` 返回 null，导致每次打开插件都落到 `scan`。
 
+### 修复 plan_upgrade 工具 schema 编译（harness 启动阻塞）
+
+- **修复 `plan_upgrade` 输出 schema**（`src/tools/plan.js`）：`registry`/`registrySource`/`networkFailures` 由 `required: false` 改为 `required: true`。`dsh-tools@0.1.1-rc.2` 的 `defineTool` schema 编译器要求属性一旦声明 `required` 就必须为 `true`，否则 `dsh web`/harness 加载插件树时在 `defineTool` 阶段抛 `UNSUPPORTED_SCHEMA`（`schema.properties.registry.required must be true when present`），插件无法启动。改为与其余 13 个工具一致的 `required: true` 约定后正常编译。
+
+- **离线路径 `registry` 兜底为字符串**：无 `@latest` 目标时 `registry` 不再返回 `undefined`，回退到 `args.registry || config.registry`，兜底 `"offline"`，保证必填 string 字段恒有值。
+
+- **验证**：`defineTool(planTool())` 编译通过；`plan-upgrade` 套件 39 项全过。
+
 ## [0.1.12] - 2026-08-21
 
 ### v0.1.12 补丁 — 依赖图谱交互增强 + 图谱专项测试

@@ -44,9 +44,9 @@ export function planTool(config) {
           resolvedConflicts: { type: "array", required: true },
           doSteps: { type: "array", required: true, items: { type: "string" } },
           verdict: { type: "string", required: true },
-          registry: { type: "string", required: false },
-          registrySource: { type: "string", required: false },
-          networkFailures: { type: "array", required: false, items: { type: "string" } }
+          registry: { type: "string", required: true },
+          registrySource: { type: "string", required: true },
+          networkFailures: { type: "array", required: true, items: { type: "string" } }
         }
       },
       render(_a, v) {
@@ -72,7 +72,7 @@ export function planTool(config) {
       const latest = Object.keys(wish).filter((p) => wish[p] === "latest");
 
       // 仅在有 "@latest" 目标时才碰网络；全部显式版本时完全离线、确定性。
-      let meta = { registry: undefined, registrySource: "offline", networkFailures: [] };
+      let meta = { registry: args.registry || config.registry || "offline", registrySource: "offline", networkFailures: [] };
       if (latest.length) {
         const up = await proposeUpgrade(eco, {
           packages: latest,
