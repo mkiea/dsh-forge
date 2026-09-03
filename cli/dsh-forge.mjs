@@ -15,7 +15,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isLoopbackHost, openBrowser, startWebServer } from "../core/web-server.js";
 import {
-  runAnalysis, clearAnalysisCache, buildCheckReport,
+  runAnalysis, clearAnalysisCache, buildCheckReport, simulateUpgrade,
   buildMarkdownReport, writeReport,
   UI_MODE, decideUiMode, decideAfterPortProbe,
   hasDesktop, COMPLEXITY_LIGHT, COMPLEXITY_HEAVY
@@ -43,13 +43,15 @@ function parseArgs(argv) {
     port: DEFAULT_WEB_PORT,
     host: DEFAULT_HOST,
     dataset: process.env.DSH_FORGE_DATASET || null,
-    profile: process.env.DSH_FORGE_PROFILE || "web"
+    profile: process.env.DSH_FORGE_PROFILE || "web",
+    to: null
   };
   const positional = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--json" || a === "-j") out.json = true;
     else if (a === "--no-open") out.open = false;
+    else if (a === "--to") { out.to = argv[++i] || out.to; }
     else if (a === "--port") { out.port = Number(argv[++i] || out.port); }
     else if (a === "--host") { out.host = argv[++i] || out.host; }
     else if (a === "--dataset") { out.dataset = argv[++i] || out.dataset; }
@@ -69,10 +71,12 @@ Usage:
   dsh-forge tui            force terminal UI
   dsh-forge web|serve      start web server and open browser
   dsh-forge check|ci       plain CLI output, no UI (CI/CD scripts)
+  dsh-forge plan --to X    offline upgrade-path prediction (advisory, never gates)
 
 Options:
   --profile <name>         profile to analyze (default: web)
   --dataset <path>         offline ecosystem snapshot JSON
+  --to <pkg@ver,...>       plan: target versions, comma-separated (offline)
   --port <n>               web port (default: 3060, env DSH_FORGE_PORT)
   --host <addr>            web bind address (default: 127.0.0.1)
   --json, -j               machine-readable check output
@@ -123,6 +127,34 @@ function jsonSummary(a, opts) {
     dataset: opts.dataset || null,
     reproduce: opts.dataset ? "node cli/dsh-forge.mjs check --json --dataset " + opts.dataset : "node cli/dsh-forge.mjs check --json"
   }), null, 2);
+}
+
+// ── plan: offline upgrade-path prediction (advisory, never gates) ──────────
+function parseWish(to) {
+  if (!to) return null;
+  const wish = {};
+  for (const spec of String(to).split(",")) {
+    const m = /^(.+)@(\S+)$/.exec(spec.trim());
+    if (m) wish[m[1].trim()] = m[2];
+  }
+  return wish;
+}
+function planSummary(r) {
+  const up = r.upgraded.length
+    ? r.upgraded.map((u) => u.package + "@" + u.from + " -> " + u.to + (u.safe ? " (safe)" : " (breaks " + u.breaks.length + ")")).join(", ")
+    : "(none)";
+  const lines = [
+    "dsh-forge plan",
+    "  upgraded     : " + up,
+    "  before       : " + r.before.health + " (avg " + r.before.avgScore + ", conflicts " + r.before.conflicts.total + ")",
+    "  after        : " + r.after.health + " (avg " + r.after.avgScore + ", conflicts " + r.after.conflicts.total + ")",
+    "  riskDelta    : " + (r.riskDelta > 0 ? "+" : "") + r.riskDelta,
+    "  conflicts    : +" + r.newConflicts.length + " / -" + r.resolvedConflicts.length + " (new/resolved)",
+    "  verdict      : " + r.verdict,
+    "  steps:"
+  ];
+  r.doSteps.forEach((s) => lines.push("    - " + s));
+  return lines.join("\n");
 }
 
 // ── TUI shell (zero-dependency ANSI renderer) ──────────────────────────────
@@ -349,6 +381,20 @@ async function main() {
   }
 
   const analysis = loadAnalysis(opts);
+
+  // plan: offline upgrade-path prediction — advisory only, never gate-exit.
+  if (opts.command === "plan") {
+    const wish = parseWish(opts.to);
+    if (!wish || Object.keys(wish).length === 0) {
+      console.error("[dsh-forge] plan needs --to <pkg@ver,...>");
+      process.exit(2);
+    }
+    const r = simulateUpgrade(analysis.ecosystem, wish);
+    if (opts.json) console.log(JSON.stringify(r, null, 2));
+    else console.log(planSummary(r));
+    return;
+  }
+
   const decision = decideUiMode({
     command: opts.command,
     json: opts.json,

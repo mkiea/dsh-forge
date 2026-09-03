@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+### 未发布 — CLI `plan` 命令（方向 1 S3）
+
+- **`dsh-forge plan --to <pkg@ver,...>`**（`cli/dsh-forge.mjs`）：离线升级路径预演，复用 `simulateUpgrade`/`proposeUpgradeCandidates`，平铺输出 before/after 健康、`riskDelta`、新增/解决冲突、`verdict`/`doSteps`；`--json` 机器可读；缺 `--to` 时报错并 exit 2。纯咨询，永不 gate-exit（与 `check` 区分）。
+
+- HELP 增加 `plan` 用法与 `--to` 选项。
+
 
 ### 未发布 — 组合升级推演 `core/plan.js`（方向 1 S1）
 
