@@ -8,12 +8,12 @@ import {
   auditConfiguration, diffCombinations, archiveSnapshot, listHistory, loadHistory,
   comparePresets, verifyRows, suggestPatch, checkUpgrades, historyStats, scanLeaks
 } from "../../core/index.js";
-import { loadTruthEcosystem } from "../../core/truth.js";
+import { loadTruthEcosystem, resolveDshHome } from "../../core/truth.js";
 import { buildFeedback, renderFeedback } from "../../core/errors.js";
 
 function baseOpts(config) {
   return {
-    home: process.env.DSH_HOME || undefined,
+    home: process.env.DSH_HOME || resolveDshHome() || undefined,
     profile: config.profile || "web",
     root: config.root || resolveNmRoot(config.profile || "web") || undefined,
     compositionSources: config.compositionSources || undefined,

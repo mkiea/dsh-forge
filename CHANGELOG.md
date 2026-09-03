@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### 未发布 — DSH_HOME 自动探测（truthSource 稳定性修复）
+
+- **自动探测 DSH_HOME**（`core/truth.js` / `src/tools/common.js`）：新增 `resolveDshHome()`，当 harness 未注入 `DSH_HOME`/`DSH_BIN` 时自动探测 `~/.dsh` 部署根，使 `truthSource=auto` 优先走 `dump-config` 而非静默降级 `scan`。此前插件进程缺少 `DSH_HOME` 时 `findDshBin` 返回 null，导致每次打开插件都落到 `scan`。
+
 ## [0.1.12] - 2026-08-21
 
 ### v0.1.12 补丁 — 依赖图谱交互增强 + 图谱专项测试

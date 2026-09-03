@@ -237,7 +237,7 @@ The third-party PM review acceptance criteria are implemented item by item: dump
 
 | Limitation | Why | Mitigation |
 | --- | --- | --- |
-| truthSource falls back to scan | npx install tree paths don't fully match findDshBin candidates | output `truthSource=scan` + explicit warnings |
+| truthSource falls back to scan | no `DSH_HOME` set, or npx install tree paths don't fully match findDshBin candidates | auto-detect `~/.dsh` via `resolveDshHome`; if still failing, output `truthSource=scan` + explicit warnings |
 | Static scan coverage limited | only `lib/**/*.js`, files >400KB skipped | findings marked `confidence: low` + disclaimer |
 | Live dashboard (host.call) | harness lives only in the dynamic-plugin sandbox; unreliable for static plugins | Web hybrid review: static embed + `/api/refresh` dynamic re-analysis; offline via `generate-dashboard.mjs` -> `build-ui.mjs` rebuild |
 | Live session-event stats | no runtime event channel for static client plugins | `history_stats` snapshot trends instead |

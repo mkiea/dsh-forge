@@ -10,17 +10,27 @@ import { execFile } from "node:child_process";
 import { createRequire } from "node:module";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import os from "node:os";
 
 const HEADER_RE = /^# == (.+)$/;
 
+// Resolve the dsh home directory. Prefers $DSH_HOME / $DSH_BIN; when the
+// harness does not propagate it, auto-detect the conventional ~/.dsh deploy
+// root so dump-config still works instead of silently degrading to scan.
+export function resolveDshHome() {
+  if (process.env.DSH_HOME && process.env.DSH_HOME.trim() !== "") return process.env.DSH_HOME;
+  const fallback = path.join(os.homedir(), ".dsh");
+  return fs.existsSync(fallback) ? fallback : (process.env.DSH_HOME || "");
+}
+
 // Locate the dsh CLI binary the way the deployment itself would.
-export function findDshBin(profile) {
+export function findDshBin(profile, home) {
   const candidates = [];
   if (process.env.DSH_BIN) candidates.push(process.env.DSH_BIN);
-  const home = process.env.DSH_HOME || "";
+  const h = home || resolveDshHome();
   // resolve from the profile directory: the harness install root is reliably
   // reachable from there (verified across environments)
-  const profileDir = home ? path.join(home, "profiles", profile || "web") : null;
+  const profileDir = h ? path.join(h, "profiles", profile || "web") : null;
   if (profileDir) {
     try {
       const req = createRequire(path.join(profileDir, "resolve-probe.js"));
@@ -29,7 +39,7 @@ export function findDshBin(profile) {
       if (idx >= 0) candidates.push(path.join(p.slice(0, idx + "node_modules".length), "@deepseek-ai", "dsh", "lib", "bin.js"));
     } catch { /* profile dir cannot reach the deployment root */ }
   }
-  if (home) candidates.push(path.join(home, "node_modules", "@deepseek-ai", "dsh", "lib", "bin.js"));
+  if (h) candidates.push(path.join(h, "node_modules", "@deepseek-ai", "dsh", "lib", "bin.js"));
   // walk up from cwd looking for a deployment install
   let dir = process.cwd();
   for (let i = 0; i < 8; i++) {
@@ -131,13 +141,14 @@ function parseRowBlock(text, layer) {
 // Full ecosystem from the dump-config ground truth: rows with provenance +
 // manifests (same collection as the scan path).
 export async function loadTruthEcosystem(opts = {}) {
-  const { home, profile } = opts;
+  const home = opts.home || resolveDshHome();
+  const { profile } = opts;
   const res = await runDumpConfig(profile || "web", { home });
   if (!res.ok) return { ok: false, error: res.error || "dump-config failed" };
   const parsed = parseDumpConfig(res.stdout);
   const { collectManifests } = await import("./composition.js");
   // deployment root from the located dsh bin: <root>/node_modules/@deepseek-ai/dsh/lib/bin.js
-  const bin = opts.bin || findDshBin(profile || "web");
+  const bin = opts.bin || findDshBin(profile || "web", home);
   let truthRoot = null;
   if (bin) {
     const idx = bin.indexOf("node_modules");
