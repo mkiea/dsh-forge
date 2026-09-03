@@ -22,7 +22,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import z from "@deepseek-ai/schemastery";
 import { defineTool } from "@deepseek-ai/dsh-tools";
-import { analyzeTool, conflictsTool, visualizeTool, simulateTool, auditTool, diffTool, historyTool, archiveTool, presetTool, verifyTool, suggestTool, upgradeTool, statsTool } from "./tools/index.js";
+import { analyzeTool, conflictsTool, visualizeTool, simulateTool, auditTool, diffTool, historyTool, archiveTool, presetTool, verifyTool, suggestTool, upgradeTool, statsTool, planTool } from "./tools/index.js";
 import { connectHarnessEvents, createRuntimeCalibration, preflight, collectEcosystem, runAnalysis } from "../core/index.js";
 import { startWebServer } from "../core/web-server.js";
 
@@ -36,7 +36,7 @@ export const Config = z.object({
   datasetPath: z.string().required(false)
 });
 
-const ALL_TOOLS = [analyzeTool, conflictsTool, visualizeTool, simulateTool, auditTool, diffTool, historyTool, archiveTool, presetTool, verifyTool, suggestTool, upgradeTool, statsTool];
+const ALL_TOOLS = [analyzeTool, conflictsTool, visualizeTool, simulateTool, auditTool, diffTool, historyTool, archiveTool, presetTool, verifyTool, suggestTool, upgradeTool, statsTool, planTool];
 
 // Runtime service probe: which services the live host plane actually provides.
 // Static analysis can only infer providers from source; this is ground truth.

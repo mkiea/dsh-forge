@@ -1,5 +1,5 @@
 // dsh-forge/src/tools/index.js
-// Aggregator for the per-tool modules. src/index.js imports the 13 tool
+// Aggregator for the per-tool modules. src/index.js imports the 14 tool
 // factories from here.
 "use strict";
 export { analyzeTool } from "./analyze.js";
@@ -15,3 +15,4 @@ export { verifyTool } from "./verify.js";
 export { suggestTool } from "./suggest.js";
 export { upgradeTool } from "./upgrade.js";
 export { statsTool } from "./stats.js";
+export { planTool } from "./plan.js";

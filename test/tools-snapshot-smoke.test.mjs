@@ -1,5 +1,5 @@
 // dsh-forge/test/tools-snapshot-smoke.test.mjs
-// Snapshot-driven semi-integration smoke for all 13 tools. Unlike
+// Snapshot-driven semi-integration smoke for all 14 tools. Unlike
 // smoke13.test.mjs (which needs a live harness), this suite runs in CI:
 // every tool factory is invoked against data/ecosystem.json and its returned
 // value is checked against the tool's own output.schema. This is the test that
@@ -11,7 +11,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   analyzeTool, conflictsTool, visualizeTool, simulateTool, auditTool, diffTool,
-  historyTool, archiveTool, presetTool, verifyTool, suggestTool, upgradeTool, statsTool
+  historyTool, archiveTool, presetTool, verifyTool, suggestTool, upgradeTool, statsTool, planTool
 } from "../src/tools/index.js";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -73,7 +73,8 @@ const tools = [
   ["verify_rows", verifyTool(cfg), { dataset: SNAP }],
   ["suggest_patch", suggestTool(cfg), { dataset: SNAP }],
   ["check_upgrades", upgradeTool(cfg), { dataset: SNAP, limit: 0 }],
-  ["history_stats", statsTool(cfg), {}]
+  ["history_stats", statsTool(cfg), {}],
+  ["plan_upgrade", planTool(cfg), { dataset: SNAP, targets: ["@deepseek-ai/dsh-settings@0.1.0-rc.7"] }]
 ];
 
 for (const [name, tool, args] of tools) {

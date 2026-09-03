@@ -16,6 +16,14 @@
 - **新增 `test/plan-upgrade.test.mjs`**（自包含套件 23→24；S1+S2 共用该文件，39 项）：兼容/破坏性/未移动/未知包/混合 wish/仓库解析/目标覆盖/纯克隆/破坏性与安全升级编排/未装包兜底共 11 组。
 - **文档同步**：README / README.en / ARCHITECTURE 模块数 28→29、自包含套件 23→24。
 
+### 未发布 — harness 工具 plan_upgrade（方向 1 S4）
+
+- **`plan_upgrade` 工具**（`src/tools/plan.js`，第 14 个）：harness 侧暴露升级路径预演。显式 `targets`（`pkg@ver`）完全离线，直接经 `simulateUpgrade`；含 `@latest` 目标时才经注入 fetch 的 `proposeUpgrade` 走仓库解析。只读、不改组合、不碰 harness 状态。
+
+- **注册**：`src/tools/index.js` + `src/index.js`（`ALL_TOOLS` 13→14）；纳入 `test/tools-snapshot-smoke.test.mjs` 快照半集成（pre-CI 覆盖 schema/output 漂移）。
+
+- **文档同步**：README / README.en / ARCHITECTURE 工具数 13→14；工具表新增 `plan_upgrade` 行。
+
 ### 未发布 — DSH_HOME 自动探测（truthSource 稳定性修复）
 
 - **自动探测 DSH_HOME**（`core/truth.js` / `src/tools/common.js`）：新增 `resolveDshHome()`，当 harness 未注入 `DSH_HOME`/`DSH_BIN` 时自动探测 `~/.dsh` 部署根，使 `truthSource=auto` 优先走 `dump-config` 而非静默降级 `scan`。此前插件进程缺少 `DSH_HOME` 时 `findDshBin` 返回 null，导致每次打开插件都落到 `scan`。

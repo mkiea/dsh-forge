@@ -23,7 +23,7 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 │  │   dsh-forge (host)    │  │  dsh-forge-ui (client)   │ │
 │  │   src/index.js        │  │  ui-plugin/lib/client.js │ │
 │  │   ┌─────────────────┐ │  │  ┌────────────────────┐  │ │
-│  │   │  13 tools       │ │  │  │ sidebar 入口       │  │ │
+│  │   │  14 tools       │ │  │  │ sidebar 入口       │  │ │
 │  │   │  (defineTool)   │ │  │  │ modal + iframe     │  │ │
 │  │   └────────┬────────┘ │  │  │ dashboard.html     │  │ │
 │  │            │          │  │  └────────────────────┘  │ │
@@ -76,8 +76,8 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 
 | 文件 | 职责 |
 | --- | --- |
-| `src/index.js` | cordis 插件入口：`apply(ctx, config)` → 创建 calibration → 遍历 13 个工具工厂 → `defineTool` 注册；注册后 `void startAutoWeb(cfg)` 同步拉起共享 Web 面板（3060，不自动开浏览器） |
-| `src/tools/index.js` + `src/tools/*.js` | 13 个工具定义（每工具一文件，共享 `common.js`）：name / description / parameters(JSON Schema) / output.schema / execute / render |
+| `src/index.js` | cordis 插件入口：`apply(ctx, config)` → 创建 calibration → 遍历 14 个工具工厂 → `defineTool` 注册；注册后 `void startAutoWeb(cfg)` 同步拉起共享 Web 面板（3060，不自动开浏览器） |
+| `src/tools/index.js` + `src/tools/*.js` | 14 个工具定义（每工具一文件，共享 `common.js`）：name / description / parameters(JSON Schema) / output.schema / execute / render |
 
 工具注册流程：
 ```
@@ -90,7 +90,7 @@ apply(ctx, config)
 
 每个工具的 `execute` 方法通过 `selectEco(args, config)` 获取生态数据，再委托 `core/` 对应模块计算。
 
-> **双入口职责（勿混淆）**：`src/index.js`（cordis 插件壳）只负责把 13 个工具注册进 harness，并持有运行期探测与启动预检；`core/index.js`（零依赖分析引擎门面）是 CLI 与全部测试的唯一事实源。新增分析能力一律进 `core/` 并在 `core/index.js` re-export；只有需要暴露给 harness 作为工具时才在 `src/tools/<tool>.js` 新增定义。CLI（cli/dsh-forge.mjs）与测试套件 import `core/`，不依赖 `src/`。
+> **双入口职责（勿混淆）**：`src/index.js`（cordis 插件壳）只负责把 14 个工具注册进 harness，并持有运行期探测与启动预检；`core/index.js`（零依赖分析引擎门面）是 CLI 与全部测试的唯一事实源。新增分析能力一律进 `core/` 并在 `core/index.js` re-export；只有需要暴露给 harness 作为工具时才在 `src/tools/<tool>.js` 新增定义。CLI（cli/dsh-forge.mjs）与测试套件 import `core/`，不依赖 `src/`。
 
 ### 2.3 ui-plugin/ — 客户端插件
 
@@ -219,7 +219,7 @@ check_upgrades execute(args)
 | 启发式检测收敛 | `test/heuristic-detect.test.mjs` | 16 | 句柄捕获感知泄漏（已知安全降级 / leak-context / 全部 BARE 规则）+ 动态工具名按包追踪与显式扫描局限 |
 | check --json schema 冻结 | `test/check-report-schema.test.mjs` | 10 | P0-3 冻结 check report schema（schemaVersion/inputs/findings[]/gate）+ gate 门禁（high/blocking 拦截）|
 | finding_id 唯一性消重 | `test/finding-id-uniqueness.test.mjs` | 6 | makeFindingId 纳入 involved packages/service/row，区分同类别多条 finding；A-2 message 不变 id（0 碰撞回归）|
-| 13 工具快照半集成 | `test/tools-snapshot-smoke.test.mjs` | 13 | 快照驱动调用 13 个工具 + output.schema 最小校验（防 schema/output 漂移），CI 可运行 |
+| 14 工具快照半集成 | `test/tools-snapshot-smoke.test.mjs` | 14 | 快照驱动调用 14 个工具 + output.schema 最小校验（防 schema/output 漂移），CI 可运行 |
 | YAML fail-loud / vm 沙箱 | `test/composition-strict.test.mjs` | 8 | 严格解析接受合法 patch（含 config block scalar、cordis inject 行键）/ 未知行键与顶层条目抛错 / globalThis 逃逸被拒 / dshHomePath 可用 |
 
 测试策略：

@@ -6,9 +6,9 @@
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
 
-> **v0.1.11 补丁**：harness 基线同步到最新 `0.1.1-rc.2` —— `@deepseek-ai/dsh-tools` `^0.1.0-rc.6` → `^0.1.1-rc.2`（`defineTool` API 兼容），`pnpm-workspace.yaml` 13 条 `minimumReleaseAgeExclude` 同步；知识图谱验证基线 `PATTERNS_HARNESS_VERSION` 同步更新，消除对最新部署的 `knowledge-version-drift` 误告警。现有 13 个只读工具，`core/` 29 个纯逻辑模块零依赖，24 个自包含套件全部通过。
+> **v0.1.11 补丁**：harness 基线同步到最新 `0.1.1-rc.2` —— `@deepseek-ai/dsh-tools` `^0.1.0-rc.6` → `^0.1.1-rc.2`（`defineTool` API 兼容），`pnpm-workspace.yaml` 13 条 `minimumReleaseAgeExclude` 同步；知识图谱验证基线 `PATTERNS_HARNESS_VERSION` 同步更新，消除对最新部署的 `knowledge-version-drift` 误告警。现有 14 个只读工具，`core/` 29 个纯逻辑模块零依赖，24 个自包含套件全部通过。
 
-## 工具（13 个，全部只读；simulate\_combination / archive\_snapshot 不碰组合本体）
+## 工具（14 个，全部只读；simulate\_combination / archive_snapshot 不碰组合本体）
 
 ### 分析
 
@@ -37,6 +37,7 @@ DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、�
 | ---------------- | ---------------------------------------------------------------------- |
 | `suggest_patch`  | 冲突建议 → cordis.patch.yml 补丁文本（只输出，不写盘）                                  |
 | `check_upgrades` | npm registry 最新版本检查 + 升级阻断预测（**并发池 + 独立超时 + 镜像自动降级 + 附安装命令**，网络失败单独上报） |
+| `plan_upgrade`   | 升级路径预演：目标版本（或 latest）下 before/after 健康、风险增量、新增/解决冲突、具体下一步（只读） |
 
 ## 架构
 
@@ -54,7 +55,7 @@ core/          零依赖分析引擎（29 个模块，Node 内置 API only）
   ├─ semver.js        SemVer 解析 + 区间满足性
   ├─ upgrade.js       npm registry 升级检查（并发池 + 镜像降级）
   └─ ...              audit / diff / simulate / visualize / dashboard / ...
-src/          cordis 插件壳（src/tools/ 每工具一文件，13 个工具的 schema 定义 + 注册）
+src/          cordis 插件壳（src/tools/ 每工具一文件，14 个工具的 schema 定义 + 注册）
 ui-plugin/    浏览器端客户端插件（sidebar 入口 + modal 仪表盘）
 ```
 
@@ -62,7 +63,7 @@ ui-plugin/    浏览器端客户端插件（sidebar 入口 + modal 仪表盘）
 
 本插件由两个包组成，均通过 **link 依赖** 持久化装入 dsh profile（symlink 指向源码，改代码即生效）：
 
-- **dsh-forge**（host 插件）：13 个分析工具，在 HOST 平面运行
+- **dsh-forge**（host 插件）：14 个分析工具，在 HOST 平面运行
 
 - **dsh-forge-ui**（client 插件）：GUI 右侧 sidebar 底部「▦ 插件仪表盘」入口，点击弹窗显示 `reports/dashboard.html`（iframe 内嵌）
 
@@ -89,7 +90,7 @@ dsh 的 profile 本身是一个 pnpm 工作区（`package.json` + `pnpm-workspac
 用 `link:` 依赖把插件链进 profile，`node_modules` 中出现指向源码的 symlink：
 
 ```bash
-# host 插件（13 个分析工具）
+# host 插件（14 个分析工具）
 npx @deepseek-ai/dsh plugin --profile web add "dsh-forge@link:C:/Users/<you>/DeepForge/dsh-forge"
 
 # client 插件（GUI 仪表盘入口）
@@ -158,7 +159,7 @@ npx @deepseek-ai/dsh web
 
 1. 浏览器打开 `http://127.0.0.1:3080`，控制台无报错
 2. 右侧 sidebar 底部出现「▦ 插件仪表盘」按钮（点击弹窗显示仪表盘）
-3. 对话中可调用 13 个工具（`analyze_dependencies` / `check_conflicts` / `visualize_plugins` / `simulate_combination` / ...）
+3. 对话中可调用 14 个工具（`analyze_dependencies` / `check_conflicts` / `visualize_plugins` / `simulate_combination` / ...）
 4. 离线快速自检（不依赖 harness）：
 
 ```bash
@@ -259,7 +260,7 @@ Web 形态采用**混合审查**：每次请求用当前分析结果新鲜渲染
 
     - `test/cache-behavior.test.mjs` — runAnalysis 缓存失效/淘汰/快照守护（7 项）
 
-    - `test/tools-snapshot-smoke.test.mjs` — 13 工具快照半集成 + output.schema 校验（13 项）
+    - `test/tools-snapshot-smoke.test.mjs` — 14 工具快照半集成 + output.schema 校验（14 项）
 
     - `test/composition-strict.test.mjs` — YAML fail-loud + vm 沙箱逃逸回归（8 项，含 inline comment 与 cordis inject 行键）
 
@@ -312,7 +313,7 @@ harnessVersion 绑定与知识库版本门控（R2）、泄漏扫描（R3）、�
 
 - `cli/` — 独立 TUI/Web/check 入口（四层证据决策，默认 TUI 按需 Web）
 
-- `src/` — cordis 插件壳（src/tools/ 每工具一文件，13 个工具的 schema 定义 + 注册）
+- `src/` — cordis 插件壳（src/tools/ 每工具一文件，14 个工具的 schema 定义 + 注册）
 
 - `ui-plugin/` — 浏览器端客户端插件（sidebar 入口 + modal 仪表盘）
 
