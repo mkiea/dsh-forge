@@ -1,0 +1,15 @@
+{
+  "name": "dsh-settings: 共享依赖版本不一致（^0.1.1-rc.2 无法被已装的 0.1.0-rc.7 满足）",
+  "confirmed": "2026-09-02",
+  "reproduce": "node scripts/run-cases.mjs",
+  "evidencePath": "installed[0.1.0-rc.7] vs harness+market 要求 ^0.1.1-rc.2",
+  "notes": "只读契约审计捕获跨插件共享依赖版本不一致。semver 预发布范围隔离：^0.1.1-rc.2 要求 >=0.1.1-rc.2，0.1.0-rc.7 更低 → 不满足，属硬冲突。此案例对应真实 dsh-market 请求旧版预发布范围、与 15 个插件要求的新范围冲突的场景。",
+  "expect": {
+    "conflicts": [
+      { "type": "version-conflict", "kind": "heuristic", "severity": "high" }
+    ],
+    "gate": false,
+    "offlineHonest": true,
+    "findingIds": true
+  }
+}

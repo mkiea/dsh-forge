@@ -1,0 +1,15 @@
+{
+  "name": "工具名经变量/表达式动态注册 → 明确标注 scan-limitation（诚实盲区），非静默漏报",
+  "confirmed": "2026-09-02",
+  "reproduce": "node scripts/run-cases.mjs",
+  "evidencePath": "toolNames.__dynamicPackages = [@a/svc-a]",
+  "notes": "静态扫描对动态工具名不可解析，工具选择显式标 info（不 block），避免自称已覆盖。",
+  "expect": {
+    "conflicts": [
+      { "type": "tool-name-dynamic-scan-limitation", "kind": "heuristic", "severity": "info" }
+    ],
+    "gate": true,
+    "offlineHonest": true,
+    "findingIds": true
+  }
+}

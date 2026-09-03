@@ -1,0 +1,15 @@
+{
+  "name": "工具名全局重名：两插件均注册 defineTool('search') → 硬契约冲突",
+  "confirmed": "2026-09-02",
+  "reproduce": "node scripts/run-cases.mjs",
+  "evidencePath": "toolNames: @a/svc-a + @b/svc-b 均=['search']，scopeHints 均 global",
+  "notes": "只读契约审计：harness 注册表会拒绝重复注册并大声报错，第二插件挂载失败、特性不可用。此案验证静态工具名重名的硬契约拦截。",
+  "expect": {
+    "conflicts": [
+      { "type": "tool-collision", "kind": "contract", "severity": "high" }
+    ],
+    "gate": false,
+    "offlineHonest": true,
+    "findingIds": true
+  }
+}

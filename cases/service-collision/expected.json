@@ -1,0 +1,15 @@
+{
+  "name": "service 重名 provider：@x/store 与 @y/store 均提供 kv → service-collision",
+  "confirmed": "2026-09-02",
+  "reproduce": "node scripts/run-cases.mjs",
+  "evidencePath": "provides.kv = [@x/store, @y/store]",
+  "notes": "同作用域重复 provide 的拒绝/覆盖语义源码中未见明确分支（medium 置信度），但作为契约冲突仍应被捕获。",
+  "expect": {
+    "conflicts": [
+      { "type": "service-collision", "kind": "contract", "severity": "high" }
+    ],
+    "gate": false,
+    "offlineHonest": true,
+    "findingIds": true
+  }
+}

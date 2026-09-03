@@ -203,6 +203,7 @@ export function loadSnapshot(file) {
     nested: snap.nested || {},
     toolNames: snap.toolNames || null,
     services: snap.services || null,
+    scopeHints: snap.scopeHints || null,
     nmRoot: snap.nmRoot,
     harnessVersion: snap.harnessVersion || null,
     snapshot: true,

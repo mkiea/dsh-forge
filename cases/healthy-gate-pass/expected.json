@@ -1,0 +1,15 @@
+{
+  "name": "负控制：干净组合满足依赖、无重名、无缺失 → gate 通过",
+  "confirmed": "2026-09-02",
+  "reproduce": "node scripts/run-cases.mjs",
+  "evidencePath": "依赖范围均满足安装版本；无 toolNames/services 重名",
+  "notes": "验证闸门不会误杀健康组合：无 high/blocking 时 gate.pass=true。",
+  "expect": {
+    "conflicts": [],
+    "leaks": [],
+    "absent": ["version-conflict", "tool-collision", "service-collision", "missing-provider", "leak-suspect"],
+    "gate": true,
+    "offlineHonest": true,
+    "findingIds": true
+  }
+}

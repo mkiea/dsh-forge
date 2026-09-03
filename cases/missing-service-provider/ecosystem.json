@@ -1,0 +1,18 @@
+{
+  "format": "dsh-forge-ecosystem@1",
+  "collectedAt": "2026-09-02T00:00:00.000Z",
+  "truthSource": "snapshot",
+  "layers": [{ "layer": "default", "kind": "static", "text": "offline fixture" }],
+  "rows": [
+    { "id": "plugin:svc-a", "name": "@a/svc-a", "origin": "default", "patchedBy": [], "layers": ["default"], "disabled": false, "configPresent": false }
+  ],
+  "packages": {
+    "@a/svc-a": { "version": "1.0.0", "description": "fixture", "dependencies": {}, "peerDependencies": {} }
+  },
+  "installed": { "@a/svc-a": "1.0.0" },
+  "toolNames": null,
+  "services": {
+    "provides": { "@a/svc-a": [] },
+    "consumes": { "@a/svc-a": ["storage-engine"] }
+  }
+}

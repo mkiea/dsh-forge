@@ -1,0 +1,20 @@
+{
+  "format": "dsh-forge-ecosystem@1",
+  "collectedAt": "2026-09-02T00:00:00.000Z",
+  "truthSource": "snapshot",
+  "layers": [{ "layer": "default", "kind": "static", "text": "offline fixture" }],
+  "rows": [
+    { "id": "plugin:prov-x", "name": "@x/store", "origin": "default", "patchedBy": [], "layers": ["default"], "disabled": false, "configPresent": false },
+    { "id": "plugin:prov-y", "name": "@y/store", "origin": "default", "patchedBy": [], "layers": ["default"], "disabled": false, "configPresent": false }
+  ],
+  "packages": {
+    "@x/store": { "version": "1.0.0", "description": "fixture", "dependencies": {}, "peerDependencies": {} },
+    "@y/store": { "version": "1.0.0", "description": "fixture", "dependencies": {}, "peerDependencies": {} }
+  },
+  "installed": { "@x/store": "1.0.0", "@y/store": "1.0.0" },
+  "toolNames": null,
+  "services": {
+    "provides": { "@x/store": ["kv"], "@y/store": ["kv"] },
+    "consumes": {}
+  }
+}

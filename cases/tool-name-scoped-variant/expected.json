@@ -1,0 +1,15 @@
+{
+  "name": "同名注册均带作用域标记（agent.ctx/scoped）→ 判定为合法 scoped-variant，非硬冲突",
+  "confirmed": "2026-09-02",
+  "reproduce": "node scripts/run-cases.mjs",
+  "evidencePath": "pkg-a/lib + pkg-b/lib 均含 agent.ctx 标记且 defineTool('manage-bot'); scanScopeHints -> scoped",
+  "notes": "作用域感知分类（E3）：per-agent 变体同名合法，不应 block gate —— 验证误报可控。",
+  "expect": {
+    "conflicts": [
+      { "type": "tool-name-scoped-variant", "kind": "heuristic", "severity": "info" }
+    ],
+    "gate": true,
+    "offlineHonest": true,
+    "findingIds": true
+  }
+}

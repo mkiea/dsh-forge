@@ -1,0 +1,25 @@
+{
+  "format": "dsh-forge-ecosystem@1",
+  "collectedAt": "2026-09-02T00:00:00.000Z",
+  "truthSource": "snapshot",
+  "layers": [{ "layer": "default", "kind": "static", "text": "offline fixture" }],
+  "rows": [
+    { "id": "plugin:leaky", "name": "@example/leaky-timer", "origin": "default", "patchedBy": [], "layers": ["default"], "disabled": false, "configPresent": false }
+  ],
+  "packages": {
+    "@example/leaky-timer": {
+      "version": "1.0.0",
+      "description": "fixture: captured interval never cleared",
+      "dir": ".",
+      "dependencies": { "@deepseek-ai/cordis": "^4.0.0" },
+      "peerDependencies": {}
+    },
+    "@deepseek-ai/cordis": { "version": "4.5.0", "description": "runtime", "dependencies": {}, "peerDependencies": {} }
+  },
+  "installed": {
+    "@example/leaky-timer": "1.0.0",
+    "@deepseek-ai/cordis": "4.5.0"
+  },
+  "toolNames": null,
+  "services": null
+}

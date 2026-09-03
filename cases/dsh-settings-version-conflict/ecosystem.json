@@ -1,0 +1,39 @@
+{
+  "format": "dsh-forge-ecosystem@1",
+  "collectedAt": "2026-09-02T00:00:00.000Z",
+  "truthSource": "snapshot",
+  "layers": [{ "layer": "default", "kind": "static", "text": "offline fixture" }],
+  "rows": [
+    { "id": "plugin:dsh-harness", "name": "@deepseek-ai/dsh-harness", "origin": "default", "patchedBy": [], "layers": ["default"], "disabled": false, "configPresent": false },
+    { "id": "plugin:dsh-settings", "name": "@deepseek-ai/dsh-settings", "origin": "default", "patchedBy": [], "layers": ["default"], "disabled": false, "configPresent": false },
+    { "id": "plugin:dsh-market", "name": "@deepseek-ai/dsh-market", "origin": "default", "patchedBy": [], "layers": ["default"], "disabled": false, "configPresent": false }
+  ],
+  "packages": {
+    "@deepseek-ai/dsh-harness": {
+      "version": "0.1.1-rc.2",
+      "description": "composition host",
+      "dependencies": { "@deepseek-ai/dsh-settings": "^0.1.1-rc.2" },
+      "peerDependencies": {}
+    },
+    "@deepseek-ai/dsh-settings": {
+      "version": "0.1.0-rc.7",
+      "description": "shared settings store",
+      "dependencies": {},
+      "peerDependencies": {}
+    },
+    "@deepseek-ai/dsh-market": {
+      "version": "0.1.0-rc.7",
+      "description": "third-party marketplace plugin",
+      "dependencies": { "@deepseek-ai/dsh-settings": "^0.1.1-rc.2" },
+      "peerDependencies": {}
+    }
+  },
+  "installed": {
+    "@deepseek-ai/dsh-harness": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-settings": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-market": "0.1.0-rc.7"
+  },
+  "toolNames": null,
+  "services": null,
+  "harnessVersion": "0.1.1-rc.2"
+}

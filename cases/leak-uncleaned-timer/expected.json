@@ -1,0 +1,15 @@
+{
+  "name": "捕获但从未清理的 interval（apply 路径）→ leak-suspect",
+  "confirmed": "2026-09-02",
+  "reproduce": "node scripts/run-cases.mjs",
+  "evidencePath": "src->lib/index.js: const heartbeat = setInterval(...) 永不 clearInterval",
+  "notes": "verify 句柄捕获感知切片：捕获句柄未被释放 → leak-suspect（medium）。中等严重度不 block gate。",
+  "expect": {
+    "leaks": [
+      { "kind": "leak-suspect", "severity": "medium" }
+    ],
+    "gate": true,
+    "offlineHonest": true,
+    "findingIds": true
+  }
+}

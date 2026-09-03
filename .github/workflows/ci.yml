@@ -36,6 +36,10 @@ jobs:
             esac
           done
 
+      # 案例库契约守卫：离线快照夹具跑真实 core，任何案例回归即 exit 1 拦截。
+      - name: Run offline case library (8 cases)
+        run: node scripts/run-cases.mjs
+
   # P0-4 + P0-5：组合变更 PR 自动跑只读组合契约审计，gate 未过则拦截 PR。
   # 离线快照（data/ecosystem.json）保证 CI 无 harness 时也可复现；CLI 在
   # gate.pass===false 时自行 exit 1，重定向保存报告不改写退出码。

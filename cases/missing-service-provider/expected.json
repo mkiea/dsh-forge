@@ -1,0 +1,15 @@
+{
+  "name": "缺失 provider：@a/svc-a 消费 storage-engine 但无任何组合包提供 → missing-provider",
+  "confirmed": "2026-09-02",
+  "reproduce": "node scripts/run-cases.mjs",
+  "evidencePath": "consumes.storage-engine 无 provides 匹配，且无 name-based indirection",
+  "notes": "中等严重度，不 block gate：验证静态扫描的诚实降级（missing-provider 为 heuristic/low）。",
+  "expect": {
+    "conflicts": [
+      { "type": "missing-provider", "kind": "heuristic", "severity": "medium" }
+    ],
+    "gate": true,
+    "offlineHonest": true,
+    "findingIds": true
+  }
+}
