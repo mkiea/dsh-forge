@@ -1,14 +1,16 @@
 # Changelog
 
 ## Unreleased
-### 未发布 — CLI `plan` 命令（方向 1 S3）
+
+## [0.1.13] - 2026-09-03
+### CLI `plan` 命令（方向 1 S3）
 
 - **`dsh-forge plan --to <pkg@ver,...>`**（`cli/dsh-forge.mjs`）：离线升级路径预演，复用 `simulateUpgrade`/`proposeUpgradeCandidates`，平铺输出 before/after 健康、`riskDelta`、新增/解决冲突、`verdict`/`doSteps`；`--json` 机器可读；缺 `--to` 时报错并 exit 2。纯咨询，永不 gate-exit（与 `check` 区分）。
 
 - HELP 增加 `plan` 用法与 `--to` 选项。
 
 
-### 未发布 — 组合升级推演 `core/plan.js`（方向 1 S1）
+### 组合升级推演 `core/plan.js`（方向 1 S1）
 
 - **新增 `core/plan.js`**（核心模块 28→29）：`proposeUpgradeCandidates()` 纯函数给定目标版本 wish，离线算出每个升级候选的确定性结果——哪些 consumer 的声明范围拒收新版本（`breaks`）、是否安全、建议范围；`proposeUpgrade()` 包装层可注入 `fetch`，从仓库解析「最新」目标后委托纯函数，同样确定性可测。只读、不写盘、不碰 harness 状态、不参与 gate 拦截语义（咨询而非闸门）。
 - **`core/index.js` 转发** `proposeUpgrade` / `proposeUpgradeCandidates`。
@@ -16,7 +18,7 @@
 - **新增 `test/plan-upgrade.test.mjs`**（自包含套件 23→24；S1+S2 共用该文件，39 项）：兼容/破坏性/未移动/未知包/混合 wish/仓库解析/目标覆盖/纯克隆/破坏性与安全升级编排/未装包兜底共 11 组。
 - **文档同步**：README / README.en / ARCHITECTURE 模块数 28→29、自包含套件 23→24。
 
-### 未发布 — harness 工具 plan_upgrade（方向 1 S4）
+### harness 工具 plan_upgrade（方向 1 S4）
 
 - **`plan_upgrade` 工具**（`src/tools/plan.js`，第 14 个）：harness 侧暴露升级路径预演。显式 `targets`（`pkg@ver`）完全离线，直接经 `simulateUpgrade`；含 `@latest` 目标时才经注入 fetch 的 `proposeUpgrade` 走仓库解析。只读、不改组合、不碰 harness 状态。
 
@@ -24,7 +26,7 @@
 
 - **文档同步**：README / README.en / ARCHITECTURE 工具数 13→14；工具表新增 `plan_upgrade` 行。
 
-### 未发布 — 可配置闸门策略 core/gate.js（方向 4 选项 C）
+### 可配置闸门策略 core/gate.js（方向 4 选项 C）
 
 - **`computeGate(findings, policy)` 可选 policy**：`--policy <file.json>`（或 `buildCheckReport(analysis,{policy})`）显式 opt-in 才改变裁决。无 policy 走冻结路径（逐字节兼容，`gate-lever`/`check-report-schema` 不破）。
 
@@ -40,7 +42,7 @@
 
 - **文档同步**：README / README.en 自包含套件 25→26；ARCHITECTURE `gate.js` 行扩为「闸门裁决」、新增 `3.5.1 可配置闸门策略` 小节与 gate-policy 测试表行。
 
-### 未发布 — 闸门杠杆与置信分层 core/gate.js（方向 4）
+### 闸门杠杆与置信分层 core/gate.js（方向 4）
 
 - **新增 `core/gate.js`**（核心模块 29→30）：`computeGate(findings)` 在冻结的 `gate.pass`/`blocked` 语义（任何 blocking/high 即 fail，与置信无关，由 check-report-schema 守护）之外追加透明层——`lever`（block/degraded/advisory）、`blockedBy[]`（「因哪条规则拦了谁」装载级明细含 finding_id/rule/finalSeverity/confidence/evidenceTier/capped）、`degraded[]`（scan cap 或低/中置信却达阻断级别，建议 dump-config 复核）；`gateFromFindings`/`severityBlocks` 一并导出。
 
@@ -52,7 +54,7 @@
 
 - **文档同步**：README / README.en / ARCHITECTURE 模块 29→30、自包含套件 24→25；ARCHITECTURE 模块表加 `gate.js` 行 + 新增 `3.5 闸门杠杆与置信分层` 小节。
 
-### 未发布 — 方向 1 文档收口（S5）
+### 方向 1 文档收口（S5）
 
 - **README**：CLI 段补 `dsh-forge plan --to <pkg@ver,...>` 示例（含 `--json`）+ 方向 1「升级路径预演」概述段（离线、只读、永不 gate-exit，`core/plan.js` 定位）。
 
@@ -60,7 +62,7 @@
 
 - **ARCHITECTURE**：core 模块表加 `plan.js` 行（`proposeUpgrade`/`simulateUpgrade`/`cloneWithVersion`）；新增 `3.4 升级路径预演` 小节（含调用树、@latest 网络路径、单调 `satisfies` 复用）。
 
-### 未发布 — DSH_HOME 自动探测（truthSource 稳定性修复）
+### DSH_HOME 自动探测（truthSource 稳定性修复）
 
 - **自动探测 DSH_HOME**（`core/truth.js` / `src/tools/common.js`）：新增 `resolveDshHome()`，当 harness 未注入 `DSH_HOME`/`DSH_BIN` 时自动探测 `~/.dsh` 部署根，使 `truthSource=auto` 优先走 `dump-config` 而非静默降级 `scan`。此前插件进程缺少 `DSH_HOME` 时 `findDshBin` 返回 null，导致每次打开插件都落到 `scan`。
 

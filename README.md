@@ -2,7 +2,7 @@
 
 > [English](./README.en.md) | 中文
 
-> 版本：0.1.12（正式版）· harnessVersion: 0.1.1-rc.2
+> 版本：0.1.13（正式版）· harnessVersion: 0.1.1-rc.2
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
 
@@ -240,7 +240,7 @@ Web 形态采用**混合审查**：每次请求用当前分析结果新鲜渲染
 - `analyze_dependencies` 真实执行：4 层组合（profile 根 + dsh-base + dsh-web-app + patch），
   138 插件行（含 forge/forge-ui）/ 128 包 / 1226+ 依赖边
 
-- 自动化测试（26 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
+- 自动化测试（25 个自包含套件；smoke13 13/13 依赖本机 harness，不入 CI）：
 
   - `test/ui-test.mjs` — 仪表盘 workspace 结构与交互（77 项，含 v0.1.5 混合架构页/嵌入字段/finding\_id 语义与渲染断言，及 v0.1.6 引导页/名词解释/悬停提示/规范标签 + 旧模块引导条/表头详释）
 
@@ -277,8 +277,6 @@ Web 形态采用**混合审查**：每次请求用当前分析结果新鲜渲染
   - `test/check-report-schema.test.mjs` — P0-3 冻结 check --json 报告 schema 与 gate 门禁（10 项）
 
 - `test/gate-lever.test.mjs` — 方向 4 闸门杠杆（lever/blockedBy/degraded）与置信分层，冻结 gate.pass 语义保持（12 项）
-
-  - `test/gate-policy.test.mjs` — 方向 4（选项 C）可配置 gate 策略（severity/tier/confidence→block|warn|allow）：契约冲突在 scan cap 下仍可 block、severity 降级放行、默认冻结路径保持（11 项）
 
   - `test/finding-id-uniqueness.test.mjs` — finding\_id 唯一性消重回归（服务/行/包维度区分 + A-2 稳定，6 项）
 
