@@ -6,7 +6,8 @@
 
 - **新增 `core/plan.js`**（核心模块 28→29）：`proposeUpgradeCandidates()` 纯函数给定目标版本 wish，离线算出每个升级候选的确定性结果——哪些 consumer 的声明范围拒收新版本（`breaks`）、是否安全、建议范围；`proposeUpgrade()` 包装层可注入 `fetch`，从仓库解析「最新」目标后委托纯函数，同样确定性可测。只读、不写盘、不碰 harness 状态、不参与 gate 拦截语义（咨询而非闸门）。
 - **`core/index.js` 转发** `proposeUpgrade` / `proposeUpgradeCandidates`。
-- **新增 `test/plan-upgrade.test.mjs`**（自包含套件 23→24）：离线/注入 fetch 单测，兼容/破坏性/未移动/未知包/混合 wish/仓库解析/目标覆盖共 7 组。
+- **S2 `simulateUpgrade` 编排器**（`core/plan.js`）：把版本上移表达为纯克隆覆盖（`cloneWithVersion`，`applyOps` 的 override 表达不了版本），复用 `buildGraph`/`checkConflicts`/`assess` 对基线 vs 目标各算一版，产出 before/after 健康、`riskDelta`、新增/解决的冲突、`installCmd`/`doSteps` 一句结论与可执行下一步。只读、确定性、不参与 gate。`core/index.js` 转发 `simulateUpgrade` / `cloneWithVersion`。
+- **新增 `test/plan-upgrade.test.mjs`**（自包含套件 23→24；S1+S2 共用该文件，39 项）：兼容/破坏性/未移动/未知包/混合 wish/仓库解析/目标覆盖/纯克隆/破坏性与安全升级编排/未装包兜底共 11 组。
 - **文档同步**：README / README.en / ARCHITECTURE 模块数 28→29、自包含套件 23→24。
 
 ### 未发布 — DSH_HOME 自动探测（truthSource 稳定性修复）

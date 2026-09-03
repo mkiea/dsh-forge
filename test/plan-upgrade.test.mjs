@@ -1,8 +1,9 @@
-// test/plan-upgrade.test.mjs —— core/plan.js 离线单测（方向 1 S1）
-// 只测纯函数 proposeUpgradeCandidates + 注入 fetch 的 proposeUpgrade 包装；
+// test/plan-upgrade.test.mjs —— core/plan.js 离线单测（方向 1 S1+S2）
+// S1：proposeUpgradeCandidates 纯函数 + 注入 fetch 的 proposeUpgrade 包装；
+// S2：simulateUpgrade 编排器 + cloneWithVersion 纯克隆。
 // 不碰网络、不写盘、确定性可复现。
 
-import { proposeUpgradeCandidates, proposeUpgrade } from "../core/plan.js";
+import { proposeUpgradeCandidates, proposeUpgrade, simulateUpgrade, cloneWithVersion } from "../core/plan.js";
 
 let passed = 0;
 let failed = 0;
@@ -22,8 +23,8 @@ const eq = (a, b, msg) => {
 const eco = {
   name: "bench-for-plan-upgrade",
   rows: [
-    { id: "consumer", name: "@deepseek-ai/consumer" },
-    { id: "lib", name: "@deepseek-ai/lib" },
+    { id: "consumer", name: "@deepseek-ai/consumer", layers: ["base"] },
+    { id: "lib", name: "@deepseek-ai/lib", layers: ["base"] },
   ],
   packages: {
     "@deepseek-ai/consumer": {
@@ -110,6 +111,46 @@ const eco = {
   });
   eq(r.candidates[0].to, "2.1.0", "7: explicit target wins");
   eq(r.candidates[0].safe, false, "7: 2.1.0 breaks consumer");
+}
+
+// 8) cloneWithVersion 是纯克隆：不改原 eco，新 eco 版本/installed 被覆盖
+{
+  const before = eco.packages["@deepseek-ai/lib"].version;
+  const clone = cloneWithVersion(eco, { "@deepseek-ai/lib": "2.0.0" });
+  eq(eco.packages["@deepseek-ai/lib"].version, before, "8: clone 不改原 eco");
+  eq(clone.packages["@deepseek-ai/lib"].version, "2.0.0", "8b: clone 版本覆盖");
+  eq(clone.installed["@deepseek-ai/lib"], "2.0.0", "8c: clone installed 覆盖");
+  eq(clone.rows, eco.rows, "8d: rows 引用保留(只读视图)");
+}
+
+// 9) simulateUpgrade 破坏性升级：breaks 命中、产生 version-conflict、verdict 告警、给安装命令
+{
+  const r = simulateUpgrade(eco, { "@deepseek-ai/lib": "2.0.0" });
+  eq(r.upgraded.length, 1, "9: upgraded=1");
+  eq(r.upgraded[0].safe, false, "9: safe=false");
+  eq(r.upgraded[0].breaks.length, 1, "9: 1 break");
+  eq(r.upgraded[0].installCmd, "dsh plugin add @deepseek-ai/lib@2.0.0", "9: installCmd");
+  eq(r.before.pluginCount, r.after.pluginCount, "9: pluginCount 保留");
+  eq(typeof r.riskDelta, "number", "9: riskDelta is number");
+  eq(r.newConflicts.length >= 1, true, "9: 新增了冲突");
+  eq(r.newConflicts.length ? r.newConflicts[0].type : "(none)", "version-conflict", "9b: 首个新增为 version-conflict");
+  const verdictAlerts = r.verdict.indexOf("RISK") >= 0 || r.verdict.indexOf("阻止项") >= 0;
+  eq(verdictAlerts, true, "9c: verdict 告警");
+  eq(r.doSteps.length >= 1, true, "9d: doSteps 非空");
+}
+
+// 10) simulateUpgrade 安全升级：doSteps 给安装命令
+{
+  const r = simulateUpgrade(eco, { "@deepseek-ai/lib": "1.1.0" });
+  eq(r.upgraded[0].safe, true, "10: 1.1.0 safe");
+  eq(r.doSteps[0], "执行 " + r.upgraded[0].installCmd, "10: doSteps install");
+}
+
+// 11) simulateUpgrade 不把未知/未装配的 wish 当升级（交给 suggest 层）
+{
+  const r = simulateUpgrade(eco, { "@deepseek-ai/not-installed": "2.0.0" });
+  eq(r.upgraded.length, 0, "11: 未装包不产生升级");
+  eq(r.doSteps[0], "无需升级动作", "11: doSteps 兜底");
 }
 
 console.log(`plan-upgrade: ${passed} passed, ${failed} failed`);

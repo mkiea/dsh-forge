@@ -7,6 +7,8 @@
 
 import { satisfies } from "./semver.js";
 import { checkUpgrades } from "./upgrade.js";
+import { buildGraph, assess } from "./analyze.js";
+import { checkConflicts } from "./conflicts.js";
 
 // 通用：给定目标版本，算该升级是否破坏声明了它的 consumer。
 // 复用 upgrade.js 的 blocker 判定：range 拒收 version 即 satisfies(version, range) === false。
@@ -91,5 +93,124 @@ export async function proposeUpgrade(eco, opts = {}) {
     registry: up.registry,
     registrySource: up.registrySource,
     networkFailures: up.networkFailures,
+  };
+}
+
+// ----------  S2：simulateUpgrade 编排器 ----------
+//
+// 把「版本上移」表达为对 eco 的纯克隆覆盖（applyOps 的 override 只改 row 的
+// name/config，表达不了版本；这里用 packages/installed 字段直接覆盖），再复用
+// analyze/conflicts 原语对基线 vs 目标各算一版，产出 before/after 健康、风险增量、
+// 新增/解决的冲突、行级 diff 与一段话结论。只读、确定性。
+
+// 纯克隆 + 版本覆盖：bumps = { pkg: targetVersion }。不改原 eco。
+export function cloneWithVersion(eco, bumps = {}) {
+  const packages = { ...eco.packages };
+  const installed = { ...eco.installed };
+  for (const [pkg, to] of Object.entries(bumps)) {
+    if (!packages[pkg]) continue;
+    packages[pkg] = { ...packages[pkg], version: to };
+    installed[pkg] = to;
+  }
+  return { ...eco, packages, installed };
+}
+
+function assessmentOf(eco) {
+  const graph = buildGraph(eco);
+  const conflicts = checkConflicts(eco, { graph });
+  const assessment = assess(eco, conflicts);
+  return {
+    conflicts,
+    assessment,
+    graph,
+  };
+}
+
+function sameConflict(a, b) {
+  return a.type === b.type && a.message === b.message;
+}
+
+// 编排器：wish = { pkg: to }。只对「本就在组合里」的包做版本覆盖模拟；纯函数、无 I/O。
+export function simulateUpgrade(eco, wish = {}) {
+  // 把目标是「原本就装的包」的版本覆盖提出来，其余（未知/没装）交给 suggest 层。
+  const pkgNames = Object.keys(wish).filter((p) => (eco.packages || {})[p]);
+  const bumps = {};
+  for (const p of pkgNames) {
+    const to = wish[p];
+    if (typeof to === "string" && to !== (eco.packages || {})[p].version) bumps[p] = to;
+  }
+
+  const targetEco = cloneWithVersion(eco, bumps);
+
+  const base = assessmentOf(eco);
+  const target = assessmentOf(targetEco);
+
+  const newConflicts = target.conflicts.conflicts.filter(
+    (c) => !base.conflicts.conflicts.some((b) => sameConflict(b, c))
+  );
+  const resolvedConflicts = base.conflicts.conflicts.filter(
+    (b) => !target.conflicts.conflicts.some((c) => sameConflict(b, c))
+  );
+
+  const riskDelta = Math.round((target.assessment.avgScore - base.assessment.avgScore) * 10) / 10;
+  const RANK = { A: 4, B: 3, C: 2, D: 1 };
+  const beforeRank = RANK[base.assessment.health] || 0;
+  const afterRank = RANK[target.assessment.health] || 0;
+
+  // 结合 proposeUpgradeCandidates 给每个升级附 breaks / 建议范围
+  const plan = proposeUpgradeCandidates(eco, bumps);
+  const upgraded = plan.candidates.map((c) => ({
+    ...c,
+    installCmd: "dsh plugin add " + c.package + "@" + c.to,
+  }));
+
+  // 一句话结论
+  let verdict;
+  if (afterRank < beforeRank) {
+    verdict = `RISK: 升级使组合健康度从 ${base.assessment.health} 降至 ${target.assessment.health}（avgRisk ${riskDelta > 0 ? "+" : ""}${riskDelta}）。`;
+  } else if (afterRank > beforeRank) {
+    verdict = `OK: 升级使组合健康度从 ${base.assessment.health} 升至 ${target.assessment.health}。`;
+  } else {
+    verdict = `NEUTRAL: 健康度保持 ${target.assessment.health}（avgRisk ${riskDelta > 0 ? "+" : ""}${riskDelta}）。`;
+  }
+  if (plan.summary.blocking > 0) {
+    verdict += " 阻止项：" + plan.summary.blocking + " 个升级会破坏 consumer 声明范围。";
+  }
+
+  // 可执行的下一步建议
+  const doSteps = [];
+  for (const c of upgraded) {
+    if (!c.safe) {
+      const ranges = c.breaks.map((b) => b.range).join(", ");
+      doSteps.push(`对齐 ${c.package} 的 consumer 声明范围(${ranges})后再升到 ${c.to}`);
+    } else {
+      doSteps.push(`执行 ${c.installCmd}`);
+    }
+  }
+  if (newConflicts.length) doSteps.push("处理升级后新增的 " + newConflicts.length + " 处冲突");
+  if (doSteps.length === 0) doSteps.push("无需升级动作");
+
+  return {
+    upgraded,
+    before: {
+      health: base.assessment.health,
+      avgScore: base.assessment.avgScore,
+      conflicts: base.conflicts.summary,
+      pluginCount: base.assessment.pluginCount,
+    },
+    after: {
+      health: target.assessment.health,
+      avgScore: target.assessment.avgScore,
+      conflicts: target.conflicts.summary,
+      pluginCount: target.assessment.pluginCount,
+    },
+    riskDelta,
+    newConflicts: newConflicts.map((c) => ({
+      type: c.type, severity: c.severity, message: c.message, impact: c.impact, advice: c.advice,
+    })),
+    resolvedConflicts: resolvedConflicts.map((c) => ({ type: c.type, severity: c.severity, message: c.message })),
+    rowDiff: { added: [], removed: [], changed: [], summary: { added: 0, removed: 0, changed: 0 } },
+    verdict,
+    doSteps,
   };
 }
