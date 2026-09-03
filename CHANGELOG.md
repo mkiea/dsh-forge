@@ -24,6 +24,14 @@
 
 - **文档同步**：README / README.en / ARCHITECTURE 工具数 13→14；工具表新增 `plan_upgrade` 行。
 
+### 未发布 — 方向 1 文档收口（S5）
+
+- **README**：CLI 段补 `dsh-forge plan --to <pkg@ver,...>` 示例（含 `--json`）+ 方向 1「升级路径预演」概述段（离线、只读、永不 gate-exit，`core/plan.js` 定位）。
+
+- **README.en**：工具表补 `plan_upgrade` 行（S4 曾漏，本轮补上）。
+
+- **ARCHITECTURE**：core 模块表加 `plan.js` 行（`proposeUpgrade`/`simulateUpgrade`/`cloneWithVersion`）；新增 `3.4 升级路径预演` 小节（含调用树、@latest 网络路径、单调 `satisfies` 复用）。
+
 ### 未发布 — DSH_HOME 自动探测（truthSource 稳定性修复）
 
 - **自动探测 DSH_HOME**（`core/truth.js` / `src/tools/common.js`）：新增 `resolveDshHome()`，当 harness 未注入 `DSH_HOME`/`DSH_BIN` 时自动探测 `~/.dsh` 部署根，使 `truthSource=auto` 优先走 `dump-config` 而非静默降级 `scan`。此前插件进程缺少 `DSH_HOME` 时 `findDshBin` 返回 null，导致每次打开插件都落到 `scan`。

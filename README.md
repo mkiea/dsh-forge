@@ -221,7 +221,11 @@ node cli/dsh-forge.mjs               # 自动决策（终端内默认 TUI）
 node cli/dsh-forge.mjs tui           # 强制 TUI（W=打开 Web，R=刷新，Q=退出）
 node cli/dsh-forge.mjs web           # 强制 Web（--port 3060，--no-open 不自动开浏览器）
 node cli/dsh-forge.mjs check --json  # CI/CD 机器输出
+node cli/dsh-forge.mjs plan --to @deepseek-ai/dsh-settings@0.1.1-rc.2   # 升级路径预演（纯咨询，永不 gate-exit）
+node cli/dsh-forge.mjs plan --to @deepseek-ai/lib@latest --json          # 带 --json（@latest 经注入 fetch 走仓库解析）
 ```
+
+`dsh-forge plan --to <pkg@ver,...>` 是**升级路径预演**（方向 1）：离线且确定性地预测「把指定包升到目标版本（或 `@latest`）后」，组合的 before/after 健康、风险增量、新增/解决冲突以及一句话结论与具体下一步。纯咨询命令——只读、不改组合、**永不触发 `check` 的 gate-exit**；`proposeUpgrade`（范围/阻断预判）+ `simulateUpgrade`（版本上移编排，复用 `applyOps`/`simulateCombination`/`diffCombinations`）都位于 `core/plan.js`，全离线可测。
 
 TUI 与 Web 双壳复用同一套 `core/` 分析引擎；TUI 为零依赖 ANSI 渲染器，
 Web 为零依赖 `node:http` + 10 模块交互仪表盘（缺 `web/dashboard-client.js` 时

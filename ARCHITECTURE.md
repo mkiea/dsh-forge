@@ -53,6 +53,7 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 | `audit.js` | 逐行配置审计 | `auditConfiguration` |
 | `diff.js` | 快照差异对比 | `diffCombinations` |
 | `simulate.js` | 组合模拟 | `simulateCombination`, `applyOps` |
+| `plan.js` | 升级路径预演（离线：proposeUpgrade 范围/阻断；simulateUpgrade 版本上移编排；cloneWithVersion 版本克隆） | `proposeUpgrade`, `simulateUpgrade`, `cloneWithVersion` |
 | `visualize.js` | 多格式可视化 | `html`, `mermaid`, `asciiTree` |
 | `dashboard.js` | 交互仪表盘数据构建 | `dashboard`, `buildEmbedData` |
 | `skins.js` | 仪表盘皮肤 token（light/dark 双主题，零依赖纯逻辑） | `SKINS`, `DEFAULT_SKIN`, `skinCssVars` |
@@ -184,6 +185,25 @@ check_upgrades execute(args)
        ├─ 阻断预测: satisfies(latest, consumerRange) === false → blockers
        └─ 返回 { candidates: [{ package, installed, latest, blockers, installCmd }], networkFailures, elapsedMs, ... }
 ```
+
+### 3.4 升级路径预演（plan / plan_upgrade）
+
+`dsh-forge plan --to <pkg@ver,...>`（`src/tools/plan.js` 暴露 `plan_upgrade`）是**离线且确定性**的升级推演：不做行级变更、不改组合、**永不触发 `check` 的 gate-exit**。
+
+```text
+plan(e)  [cli --to pkg@ver | plan_upgrade targets]
+└─ 全显式版本 → 纯离线：simulateUpgrade(eco, wish)              （确定性，无网络）
+└─ 含 @latest   → proposeUpgrade(eco,{fetch}) 走仓库解析后接 simulateUpgrade
+simulateUpgrade(eco, wish)
+├─ cloneWithVersion(eco, wish)       # 版本级克隆（不触碰 row）
+├─ buildGraph + checkConflicts + assess   # before（基线）
+├─ buildGraph + checkConflicts + assess   # after（目标）
+└─ 返回 { upgraded[], before, after, riskDelta, newResolved,
+          rowDiff, verdict, doSteps }
+```
+
+- `proposeUpgrade` 出升级范围与 `breaks`（consumer 声明范围拒收）；`breaks` 判定复用 `upgrade.js` 的 `satisfies(version, range)`，保证单一实现。
+- ESLint 之外的一切纯函数位于 `core/plan.js`（模块数 28→29），CLI/工具/测试三处复用。
 
 ## 4. 真相源三态设计（truthSource）
 

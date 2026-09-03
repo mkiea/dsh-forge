@@ -33,6 +33,7 @@ A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency an
 | --- | --- |
 | `suggest_patch` | Conflict advice -> cordis.patch.yml snippet (text only, never writes) |
 | `check_upgrades` | npm registry latest-version check + upgrade-blocker prediction (concurrency pool + per-request timeout + mirror fallback + install commands, per-package network failures reported) |
+| `plan_upgrade`   | Upgrade-path prediction: before/after health, risk delta, newly-introduced vs resolved conflicts and concrete next steps when selected packages move to given (or latest) versions (read-only) |
 
 ## Architecture
 
