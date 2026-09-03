@@ -23,7 +23,7 @@ import * as path from "node:path";
 import z from "@deepseek-ai/schemastery";
 import { defineTool } from "@deepseek-ai/dsh-tools";
 import { analyzeTool, conflictsTool, visualizeTool, simulateTool, auditTool, diffTool, historyTool, archiveTool, presetTool, verifyTool, suggestTool, upgradeTool, statsTool, planTool } from "./tools/index.js";
-import { connectHarnessEvents, createRuntimeCalibration, preflight, collectEcosystem, runAnalysis } from "../core/index.js";
+import { connectHarnessEvents, createRuntimeCalibration, preflight, collectEcosystem, runAnalysisAsync } from "../core/index.js";
 import { startWebServer } from "../core/web-server.js";
 
 export const name = "dsh-forge";
@@ -87,7 +87,7 @@ const AUTO_WEB_HOST = process.env.DSH_FORGE_HOST || "127.0.0.1";
 // dashboard is live without a manual `dsh-forge web`. Never auto-opens a browser.
 async function startAutoWeb(cfg) {
   try {
-    const refresh = () => runAnalysis({
+    const refresh = () => runAnalysisAsync({
       profile: cfg.profile, root: cfg.root, datasetPath: cfg.datasetPath,
       runtimeCalibration: cfg.runtimeCalibration
     });

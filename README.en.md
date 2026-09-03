@@ -2,7 +2,7 @@
 
 > [English](./README.en.md) | [中文](./README.md)
 
-> Version: 0.1.13 (official) · harnessVersion: 0.1.1-rc.2
+> Version: 0.1.14 (official) · harnessVersion: 0.1.1-rc.2
 
 A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency analysis, conflict detection, risk assessment (with prediction), visualization and combination simulation.
 
@@ -161,13 +161,17 @@ Auto-discovery from `$DSH_HOME/profiles/<profile>`: profile root `cordis.yml` ->
 
 ## CLI reproduction (no plugin runtime)
 
+CLI / plugin shell / Web all load analyses through `runAnalysisAsync()` (dump-config first, falling back to scan only when unavailable, v0.1.14):
+
 ```bash
 node --input-type=module -e "
-import { runAnalysis } from './core/index.js';
-const r = runAnalysis({ profile: 'web' });
+import { runAnalysisAsync } from './core/index.js';
+const r = await runAnalysisAsync({ profile: 'web' });   // prefers dsh --dump-config, falls back to source scan
 console.log(JSON.stringify(r.assessment, null, 1));
 "
 ```
+
+For deterministic offline reproduction use the sync `runAnalysis({ datasetPath })`; the CLI loader `loadAnalysisAsync()` keeps the same dump-config-first preference.
 
 ## Standalone CLI: TUI / Web / check (default TUI, web on demand)
 

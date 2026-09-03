@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased
+## [0.1.14] - 2026-09-03
+
+### 真相源统一走 dump-config 优先的异步路径（truthSource 稳定化）
+
+- **新增 `runAnalysisAsync()`**（`core/index.js`）：异步分析入口，优先经 `loadTruthEcosystem` 取 `dsh --dump-config` 真实快照（dump-config），不可用时才回退 `collectEcosystem` 源码扫描——与工具路径偏好一致，`check`/`plan`/`web` 不再在可取得 dump 时静默降级到 `scan`。
+- **CLI 接入**（`cli/dsh-forge.mjs`）：新增 `loadAnalysisAsync()` 装载器，`main()` 与 web `refresh` 由同步 `runAnalysis` 切换到异步入口，同样保持 dump-config 优先。
+- **插件壳接入**（`src/index.js`）：auto-web 的 `refresh` 改用 `runAnalysisAsync`，与 CLI 路径行为对齐。
+- **Web 服务端 async 化**（`core/web-server.js`）：`createWebHandler` 改 async handler，`readAnalysis()` 统一 `await` 可能返回 Promise 的分析对象；路由错误处理收敛到单一 try/catch。
+- **导出补齐**：`core/index.js` 转发 `loadTruthEcosystem` / `resolveDshHome`，供 CLI/插件壳复用同一真相源解析。
 
 ## [0.1.13] - 2026-09-03
 ### CLI `plan` 命令（方向 1 S3）

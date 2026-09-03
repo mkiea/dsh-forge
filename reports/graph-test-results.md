@@ -2,7 +2,7 @@
 
 - 被测对象：reports/dashboard.html + web/dashboard-client.js（page-graph 互动图谱）
 - 方法：DOM-mock 执行 + 模拟拖拽/点击/添加组件，无浏览器
-- 时间：2026-08-21T16:00:06.766Z
+- 时间：2026-09-03T11:31:19.125Z
 
 ## 结果：23 通过 / 0 失败
 

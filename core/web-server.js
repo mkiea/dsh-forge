@@ -80,56 +80,58 @@ function json(res, status, body) {
 // /api/report all observe the freshly re-scanned result.
 export function createWebHandler(ctx) {
   let analysis = ctx.initialAnalysis;
-  return function handler(req, res) {
+  // Freshly-resolve the current analysis, awaiting it when the producer returns
+  // a Promise (e.g. runAnalysisAsync that prefers dump-config).
+  const readAnalysis = async () => {
+    const cur = typeof analysis === "function" ? analysis() : analysis;
+    return (cur && typeof cur.then === "function") ? await cur : cur;
+  };
+  return async function handler(req, res) {
     const method = (req.method || "GET").toUpperCase();
     applyCors(req, res);
     if (method === "OPTIONS") { res.writeHead(204); res.end(); return; }
     const pathname = (req.url || "/").split("?")[0];
-    if (pathname === "/healthz") {
-      json(res, 200, { ok: true, rows: analysis.assessment.pluginCount });
-      return;
-    }
-    if (pathname === "/api/refresh") {
-      if (method !== "GET") { json(res, 405, { ok: false, error: "method not allowed (GET)" }); return; }
-      try {
-        analysis = ctx.refresh();
+    try {
+      if (pathname === "/healthz") {
+        const a = await readAnalysis();
+        json(res, 200, { ok: true, rows: a.assessment.pluginCount });
+        return;
+      }
+      if (pathname === "/api/refresh") {
+        if (method !== "GET") { json(res, 405, { ok: false, error: "method not allowed (GET)" }); return; }
+        analysis = await ctx.refresh();
+        const a = analysis;
         json(res, 200, {
           ok: true,
-          data: buildEmbedData(analysis, { live: true }),
-          report: buildMarkdownReport(analysis, ctx.reportOpts())
+          data: buildEmbedData(a, { live: true }),
+          report: buildMarkdownReport(a, ctx.reportOpts())
         });
-      } catch (e) {
-        json(res, 500, { ok: false, error: String(e.message || e).split("\n")[0] });
+        return;
       }
-      return;
-    }
-    if (pathname === "/api/report") {
-      if (method !== "POST") { json(res, 405, { ok: false, error: "method not allowed (POST)" }); return; }
-      if (!isLoopbackHost(ctx.host)) { json(res, 403, { ok: false, error: "report write refused: bind to a loopback host (--host 127.0.0.1)" }); return; }
-      try {
-        analysis = ctx.refresh();
-        const rep = writeReport(analysis, ctx.reportOpts());
+      if (pathname === "/api/report") {
+        if (method !== "POST") { json(res, 405, { ok: false, error: "method not allowed (POST)" }); return; }
+        if (!isLoopbackHost(ctx.host)) { json(res, 403, { ok: false, error: "report write refused: bind to a loopback host (--host 127.0.0.1)" }); return; }
+        analysis = await ctx.refresh();
+        const a = analysis;
+        const rep = writeReport(a, ctx.reportOpts());
         json(res, 200, {
           ok: true, file: rep.reportPath, report: rep.markdown,
           historyFile: rep.historyFile, historyError: rep.historyError,
-          rows: analysis.assessment.pluginCount
+          rows: a.assessment.pluginCount
         });
-      } catch (e) {
-        json(res, 500, { ok: false, error: String(e.message || e) });
+        return;
       }
-      return;
-    }
-    if (pathname === "/api/history") {
-      if (method !== "GET") { json(res, 405, { ok: false, error: "method not allowed (GET)" }); return; }
-      try {
+      if (pathname === "/api/history") {
+        if (method !== "GET") { json(res, 405, { ok: false, error: "method not allowed (GET)" }); return; }
         json(res, 200, { ok: true, list: listHistory() });
-      } catch (e) {
-        json(res, 500, { ok: false, error: String(e.message || e) });
+        return;
       }
-      return;
+      const a = await readAnalysis();
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.end(renderPage(a));
+    } catch (e) {
+      json(res, 500, { ok: false, error: String((e && e.message) || e) });
     }
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(renderPage(analysis));
   };
 }
 

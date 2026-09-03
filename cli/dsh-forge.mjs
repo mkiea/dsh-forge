@@ -15,7 +15,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isLoopbackHost, openBrowser, startWebServer } from "../core/web-server.js";
 import {
-  runAnalysis, clearAnalysisCache, buildCheckReport, simulateUpgrade,
+  runAnalysis, runAnalysisAsync, clearAnalysisCache, buildCheckReport, simulateUpgrade,
   buildMarkdownReport, writeReport,
   UI_MODE, decideUiMode, decideAfterPortProbe,
   hasDesktop, COMPLEXITY_LIGHT, COMPLEXITY_HEAVY,
@@ -100,6 +100,21 @@ Mode decision evidence:
 function loadAnalysis(opts) {
   try {
     return runAnalysis({
+      profile: opts.profile,
+      datasetPath: opts.dataset
+    });
+  } catch (e) {
+    console.error("[dsh-forge] analysis failed: " + String(e.message || e).split("\n")[0]);
+    process.exit(1);
+  }
+}
+
+// Entry loader: prefers dump-config ground truth (dsh --dump-config), falling
+// back to the source scan when the dump is unavailable — same preference as the
+// tool path, so `check`/`plan`/`web` no longer silently degrade to scan.
+async function loadAnalysisAsync(opts) {
+  try {
+    return await runAnalysisAsync({
       profile: opts.profile,
       datasetPath: opts.dataset
     });
@@ -348,7 +363,7 @@ async function startWeb(initialAnalysis, opts) {
     port: requested,
     open: opts.open,
     initialAnalysis,
-    refresh: () => { clearAnalysisCache(); return runAnalysis({ profile: opts.profile, datasetPath: opts.dataset }); },
+    refresh: () => { clearAnalysisCache(); return runAnalysisAsync({ profile: opts.profile, datasetPath: opts.dataset }); },
     reportOpts,
     onOccupied: () => {
       console.error("[dsh-forge] port " + requested + " is occupied \u2192 degrade");
@@ -401,7 +416,7 @@ async function main() {
     return;
   }
 
-  const analysis = loadAnalysis(opts);
+  const analysis = await loadAnalysisAsync(opts);
 
   // plan: offline upgrade-path prediction — advisory only, never gate-exit.
   if (opts.command === "plan") {

@@ -7,6 +7,7 @@ import * as os from "node:os";
 import { createRequire } from "node:module";
 
 import { parseCompositionText, parseCompositionTextStrict, mergeRows, discoverSources, collectEcosystem, evalJsExpr, packageOf, rangeOk, resolveInstalled, defaultHome } from "./composition.js";
+import { loadTruthEcosystem, resolveDshHome } from "./truth.js";
 import { buildGraph, assess, baselineVersion, riskScore } from "./analyze.js";
 import { checkConflicts, scanToolNames, scanServices } from "./conflicts.js";
 import { simulateCombination, applyOps } from "./simulate.js";
@@ -58,6 +59,7 @@ export { createRuntimeCalibration, staticRuntimeCalibration, RUNTIME_LIFECYCLE_E
 export { buildFeedback, normalizeFeedback, preflight, renderFeedback, SEVERITY_ORDER };
 
 export { knownPatterns, scanDeprecations, KNOWN_LIBS, CLIENT_PLANE_SERVICES, runtimeVerified, RUNTIME_VERIFICATION_CHECKS };
+export { loadTruthEcosystem, resolveDshHome };
 export { satisfies, compareVersions, parseVersion, maxSatisfying };
 export { UI_MODE, hasDesktop, scenarioHints, decideUiMode, decideAfterPortProbe, COMPLEXITY_LIGHT, COMPLEXITY_HEAVY };
 export { computeGate, gateFromFindings, severityBlocks, validatePolicy, resolveVerdict, stricter, VERDICTS };
@@ -280,7 +282,7 @@ export function runAnalysis(opts = {}) {
   const key = live ? null : analysisKey(opts);
   const hit = !live && analysisCache.get(key);
   if (hit) return hit;
-  const eco = opts.datasetPath ? loadSnapshot(opts.datasetPath) : collectEcosystem(opts);
+  const eco = opts.eco || (opts.datasetPath ? loadSnapshot(opts.datasetPath) : collectEcosystem(opts));
   const graph = buildGraph(eco);
   const conflicts = checkConflicts(eco, { graph });
   const assessment = assess(eco, conflicts);
@@ -311,6 +313,25 @@ export function runAnalysis(opts = {}) {
     analysisCache.set(key, result);
   }
   return result;
+}
+
+// Async variant used by the web panel and CLI entry: prefers the harness's own
+// `dsh --dump-config` ground truth (dump-config), falling back to the source
+// scan when the dump is unavailable — matching the tool path (selectEco) so the
+// dashboard/CLI no longer silently degrade to scan when a dump is obtainable.
+export async function runAnalysisAsync(opts = {}) {
+  let eco;
+  if (opts.eco) eco = opts.eco;
+  else if (opts.datasetPath) eco = loadSnapshot(opts.datasetPath);
+  else {
+    const { profile, home } = opts;
+    try {
+      const lt = await loadTruthEcosystem({ home: home || undefined, profile });
+      if (lt.ok) eco = lt.ecosystem;
+    } catch { /* dump-config failed -> use scan below */ }
+    if (!eco) eco = collectEcosystem(opts);
+  }
+  return runAnalysis({ ...opts, eco });
 }
 
 // Default node_modules root discovery for live runs.

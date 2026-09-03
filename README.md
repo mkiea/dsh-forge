@@ -2,7 +2,7 @@
 
 > [English](./README.en.md) | 中文
 
-> 版本：0.1.13（正式版）· harnessVersion: 0.1.1-rc.2
+> 版本：0.1.14（正式版）· harnessVersion: 0.1.1-rc.2
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
 
@@ -198,13 +198,17 @@ profile 根 `cordis.yml` → **bundle 补丁（dsh-base / dsh-web-app，自动�
 
 ## 命令行复现（无插件运行时）
 
+CLI / 插件壳 / Web 统一经 `runAnalysisAsync()` 装载分析（dump-config 优先，取不到才回退 scan，v0.1.14）：
+
 ```bash
 node --input-type=module -e "
-import { runAnalysis } from './core/index.js';
-const r = runAnalysis({ profile: 'web' });
+import { runAnalysisAsync } from './core/index.js';
+const r = await runAnalysisAsync({ profile: 'web' });   // 优先 dsh --dump-config，回退源码扫描
 console.log(JSON.stringify(r.assessment, null, 1));
 "
 ```
+
+离线快照复现（确定性、无 harness）用同步 `runAnalysis({ datasetPath })`；CLI 层 `loadAnalysisAsync()` 保持同一 dump-config 优先偏好。
 
 ## 独立 CLI：TUI / Web / check 三态（默认 TUI，按需 Web）
 

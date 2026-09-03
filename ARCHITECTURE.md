@@ -1,6 +1,6 @@
 # dsh-forge 架构文档
 
-> 版本：0.1.13（正式版）· 最后更新：2026-09-03
+> 版本：0.1.14（正式版）· 最后更新：2026-09-03
 
 ## 1. 总览
 
@@ -72,7 +72,10 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 | `runtime-calibration.js` | 运行时校准（A-4 滑窗 + INV-2 时序边界 + A-2 关联键） | `createRuntimeCalibration`, `staticRuntimeCalibration` |
 | `web-server.js` | Web 面板共享服务（CLI 与 harness 壳复用的 3060 数据通道 + CORS/端口探测/浏览器打开） | `createWebHandler`, `startWebServer`, `probePort`, `openBrowser` |
 
-`core/index.js` 是门面模块，统一 re-export 全部公共 API，并提供 `runAnalysis()` 一站式管线和 `saveSnapshot()` / `loadSnapshot()` 快照序列化。
+`core/index.js` 是门面模块，统一 re-export 全部公共 API，并提供两条分析管线与 `saveSnapshot()` / `loadSnapshot()` 快照序列化：
+
+- **`runAnalysis(opts)`（同步）**：一站式管线 `collectEcosystem → buildGraph → checkConflicts → assess → scanLeaks → attachFindingIds → capConfidence → fuse → buildFeedback`；数据来自 `datasetPath` 快照或即时扫描，供测试与离线脚本使用。
+- **`runAnalysisAsync(opts)`（异步，CLI/插件壳/Web 统一入口）**：与工具路径（`selectEco`）同一真相源偏好——优先经 `loadTruthEcosystem` 取 `dsh --dump-config` 真实快照（dump-config），取不到才回退 `collectEcosystem` 扫描（scan）；`check` / `plan` / `web` 与 auto-web 面板均经它装载，避免在可取得 dump 时静默降级。
 
 ### 2.2 src/ — 插件壳
 
@@ -151,6 +154,8 @@ Web 形态为混合审查：每次请求用当前分析结果新鲜渲染（静�
             → 扫描 node_modules 包清单
             → 返回 ecosystem + truthSource="scan" + warnings
 ```
+
+> **CLI / 插件壳 / Web 统一入口（v0.1.14）**：工具走 `selectEco()`（上图），而独立 CLI（`cli/dsh-forge.mjs` 的 `loadAnalysisAsync`）、harness 插件壳 auto-web 与 Web 面板 `refresh` 统一经 `runAnalysisAsync()` 装载分析——与上图**同一真相源偏好**：优先 `dump-config`，不可用才回退 `scan`。三处不再各自退化为 scan；`core/web-server.js` 的 `createWebHandler` 已 async 化，`readAnalysis()` 统一 `await` 可能返回 Promise 的分析对象。
 
 ### 3.2 冲突检测（check_conflicts）
 
