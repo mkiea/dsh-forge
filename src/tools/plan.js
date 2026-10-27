@@ -25,7 +25,7 @@ export function planTool(config) {
       ...SOURCES_PARAMS,
       targets: {
         type: "array",
-        items: { type: "string", description: "e.g. '@deepseek-ai/dsh-settings@0.1.1-rc.2' or '@deepseek-ai/lib@latest'." },
+        items: { type: "string", description: "e.g. '@deepseek-ai/dsh-settings@0.1.7-rc.2' or '@deepseek-ai/lib@latest'." },
         description: "Upgrade wishes as 'pkg@version'. Offline when all versions are explicit."
       },
       registry: { type: "string", description: "Primary npm registry (only used when a target is '@latest')." },

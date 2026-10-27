@@ -2,11 +2,11 @@
 
 > [English](./README.en.md) | [中文](./README.md)
 
-> Version: 0.1.14 (official) · harnessVersion: 0.1.1-rc.2
+> Version: 0.1.15 (official) · harnessVersion: 0.1.7-rc.2
 
 A **plugin-composition analysis** plugin for the DeepSeek Harness: dependency analysis, conflict detection, risk assessment (with prediction), visualization and combination simulation.
 
-> **v0.1.11 patch**: harness baseline bumped to the latest `0.1.1-rc.2` — `@deepseek-ai/dsh-tools` `^0.1.0-rc.6` → `^0.1.1-rc.2` (`defineTool` API compatible), 13 `minimumReleaseAgeExclude` entries in `pnpm-workspace.yaml` synced; the knowledge-graph verification baseline `PATTERNS_HARNESS_VERSION` updated, removing the false `knowledge-version-drift` warning on the newest deployment. 14 read-only tools, `core/` 30 zero-dependency modules, 26 self-contained suites all pass.
+> **v0.1.15 patch**: harness baseline bumped to `0.1.7-rc.2` — `@deepseek-ai/dsh-tools` `^0.1.1-rc.2` → `^0.1.7-rc.2`, fixing the `failed to import` crash where `dsh-tools@0.1.1-rc.2` imported the removed `CallId` export from the newer `dsh-llm` (forge could not load in `dsh web`); `pnpm-workspace.yaml` excludes and the knowledge-graph baseline `PATTERNS_HARNESS_VERSION` synced. 14 read-only tools, `core/` 30 zero-dependency modules, 26 self-contained suites all pass.
 ## Tools (14, all read-only; simulate_combination / archive_snapshot never touch the composition)
 
 ### Analysis

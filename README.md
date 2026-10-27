@@ -2,11 +2,11 @@
 
 > [English](./README.en.md) | 中文
 
-> 版本：0.1.14（正式版）· harnessVersion: 0.1.1-rc.2
+> 版本：0.1.15（正式版）· harnessVersion: 0.1.7-rc.2
 
 DeepSeek Harness **插件组合分析**插件：依赖分析、冲突检测、风险评估（含预测）、可视化与组合模拟。
 
-> **v0.1.11 补丁**：harness 基线同步到最新 `0.1.1-rc.2` —— `@deepseek-ai/dsh-tools` `^0.1.0-rc.6` → `^0.1.1-rc.2`（`defineTool` API 兼容），`pnpm-workspace.yaml` 13 条 `minimumReleaseAgeExclude` 同步；知识图谱验证基线 `PATTERNS_HARNESS_VERSION` 同步更新，消除对最新部署的 `knowledge-version-drift` 误告警。现有 14 个只读工具，`core/` 30 个纯逻辑模块零依赖，26 个自包含套件全部通过。
+> **v0.1.15 补丁**：harness 基线同步到 `0.1.7-rc.2` —— `@deepseek-ai/dsh-tools` `^0.1.1-rc.2` → `^0.1.7-rc.2`，修复 `dsh-tools@0.1.1-rc.2` 从新版 `dsh-llm` 导入已移除的 `CallId` 导致插件 `failed to import`（`dsh web` 无法加载 forge）；`pnpm-workspace.yaml` 排除项与知识图谱验证基线 `PATTERNS_HARNESS_VERSION` 同步。现有 14 个只读工具，`core/` 30 个纯逻辑模块零依赖，26 个自包含套件全部通过。
 
 ## 工具（14 个，全部只读；simulate\_combination / archive\_snapshot 不碰组合本体）
 
@@ -225,7 +225,7 @@ node cli/dsh-forge.mjs               # 自动决策（终端内默认 TUI）
 node cli/dsh-forge.mjs tui           # 强制 TUI（W=打开 Web，R=刷新，Q=退出）
 node cli/dsh-forge.mjs web           # 强制 Web（--port 3060，--no-open 不自动开浏览器）
 node cli/dsh-forge.mjs check --json  # CI/CD 机器输出
-node cli/dsh-forge.mjs plan --to @deepseek-ai/dsh-settings@0.1.1-rc.2   # 升级路径预演（纯咨询，永不 gate-exit）
+node cli/dsh-forge.mjs plan --to @deepseek-ai/dsh-settings@0.1.7-rc.2   # 升级路径预演（纯咨询，永不 gate-exit）
 node cli/dsh-forge.mjs plan --to @deepseek-ai/lib@latest --json          # 带 --json（@latest 经注入 fetch 走仓库解析）
 ```
 
