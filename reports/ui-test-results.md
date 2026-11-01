@@ -3,12 +3,12 @@
 - 被测对象：reports/dashboard.html（交互仪表盘）、reports/plugin-graph.html（图谱）、web/dashboard-client.js（客户端脚本）
 - 数据来源：data/ecosystem.json（真实装载：web profile + preset:standard，136 行 / 131 插件）
 - 方法：HTML 结构校验 + Node DOM-mock 全交互路径执行（无浏览器环境）
-- 时间：2026-09-03T11:31:22.138Z
+- 时间：2026-11-01T14:15:49.966Z
 
-## 结果：77 通过 / 0 失败
+## 结果：79 通过 / 0 失败
 
 ---
-PASS  dashboard.html exists and non-trivial  [390828B]
+PASS  dashboard.html exists and non-trivial  [965577B]
 PASS  graph html exists  [83338B]
 PASS  balanced script tags
 PASS  has closing html/body
@@ -42,7 +42,9 @@ PASS  graph has svg
 PASS  graph has health badge
 PASS  client script executes without error
 PASS  client app exposed (__DSH_APP__)
-PASS  workspace has module tabs  [11 tabs]
+PASS  workspace has module tabs  [13 tabs]
+PASS  online-operations page present
+PASS  web × desktop bridge page present
 PASS  default page is guide  [page-guide]
 PASS  guide page active by default
 PASS  guide nav tab present
@@ -72,8 +74,8 @@ PASS  sim shows baseline health A
 PASS  search tool- filters rows  [22 rows]
 PASS  status=disabled shows 7 rows  [7 rows]
 PASS  layer=preset:standard filters  [24 rows]
-PASS  sort risk asc puts 0-risk row first  [<tr><td><input type="checkbox" class="toggle" data-id="timer" checked>timer</td><td>@deepseek-ai/cor]
-PASS  sort risk desc puts directory-picker first  [<tr><td><input type="checkbox" class="toggle" data-id="directory-picker" checked>directory-picker</td><td>@deepseek-ai/d]
+PASS  sort risk asc puts 0-risk row first  [<tr><td class="sc-low"><label class="idwrap"><input type=checkbox class=toggle data-id=timer checked]
+PASS  sort risk desc puts directory-picker first  [<tr><td class="sc-low"><label class="idwrap"><input type=checkbox class=toggle data-id=directory-picker checked><span>di]
 PASS  toggle updates sim result
 PASS  addRow adds candidate  [@deepseek-ai/dsh-attachment]
 PASS  reset clears sim state

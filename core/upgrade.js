@@ -37,6 +37,20 @@ async function latestVersion(pkg, registry, timeoutMs, fetchImpl) {
   }
 }
 
+// Resolve one package's registry latest version with the same mirror failover
+// used by checkUpgrades (shared by the web auto-update channel).
+export async function latestFromRegistry(pkg, opts = {}) {
+  const fetchImpl = opts.fetch || globalThis.fetch;
+  const primary = opts.registry || DEFAULT_REGISTRY;
+  const list = [primary, ...(opts.registries || [DEFAULT_FALLBACK_REGISTRY]).filter((r) => r && r !== primary)];
+  const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  for (let i = 0; i < list.length; i++) {
+    const r = await latestVersion(pkg, list[i], timeoutMs, fetchImpl);
+    if (!r.error) return { latest: r.version, registry: list[i], registrySource: i === 0 ? "primary" : "fallback", networkError: false };
+  }
+  return { latest: null, registry: list[list.length - 1], registrySource: list.length > 1 ? "fallback" : "primary", networkError: true };
+}
+
 // Compare installed version vs registry latest; predict what breaks among
 // consumers whose declared ranges would reject the newer version.
 export async function checkUpgrades(eco, opts = {}) {

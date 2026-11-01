@@ -7,7 +7,7 @@ import * as os from "node:os";
 import { createRequire } from "node:module";
 
 import { parseCompositionText, parseCompositionTextStrict, mergeRows, discoverSources, collectEcosystem, evalJsExpr, packageOf, rangeOk, resolveInstalled, defaultHome } from "./composition.js";
-import { loadTruthEcosystem, resolveDshHome } from "./truth.js";
+import { loadTruthEcosystem, resolveDshHome, findDshBin } from "./truth.js";
 import { buildGraph, assess, baselineVersion, riskScore } from "./analyze.js";
 import { checkConflicts, scanToolNames, scanServices } from "./conflicts.js";
 import { simulateCombination, applyOps } from "./simulate.js";
@@ -17,12 +17,16 @@ import { buildMarkdownReport, writeReport, reportsDir, historyDir, gates as repo
 import { skinCssVars, SKINS, DEFAULT_SKIN, SKIN_LIST } from "./skins.js";
 import { auditConfiguration } from "./audit.js";
 import { diffCombinations } from "./diff.js";
-import { archiveSnapshot, listHistory, loadHistory } from "./history.js";
-import { comparePresets, readPreset } from "./presets.js";
+import { archiveSnapshot, listHistory, loadHistory, historySeries, snapshotPath } from "./history.js";
+import { comparePresets, readPreset, discoverPresetSources, detectPresetSource, listPresets, readPatchPresetText } from "./presets.js";
 import { verifyRows } from "./verify.js";
+import { buildProbeList, classifyProbeError, parseProbeOutput, dynamicFindings, mergeDynamicFindings, probeEcosystem, probeSummary, packageEntry, DEFAULT_PROBE_TIMEOUT_MS } from "./dynamic.js";
 import { suggestPatch } from "./suggest.js";
 import { computeGate, gateFromFindings, severityBlocks, validatePolicy, resolveVerdict, stricter, VERDICTS } from "./gate.js";
-import { checkUpgrades } from "./upgrade.js";
+import { checkUpgrades, latestFromRegistry } from "./upgrade.js";
+import { buildWatchSet, watchSignature, diffSignature, assessVersion, checkVersionUpdates, updateCommands, runUpdate, SELF_PACKAGE, HARNESS_PACKAGE, PROFILE_WATCH_FILES } from "./auto-update.js";
+import { discoverProfiles, profileSummary, collectUniverse, compareProfiles, buildBridge, DEFAULT_BRIDGE_PROFILES } from "./bridge.js";
+import { planSync, applySync, verifySync, preflightSync, pluginCommand, SYNC_SCHEMA, SYNC_BACKUP_FILES, SYNC_BATCH_SIZE, DEFAULT_SYNC_TIMEOUT_MS } from "./sync.js";
 import { proposeUpgrade, proposeUpgradeCandidates, simulateUpgrade, cloneWithVersion } from "./plan.js";
 import { historyStats } from "./stats.js";
 import { scanLeaks } from "./leaks.js";
@@ -45,11 +49,15 @@ export { buildMarkdownReport, writeReport, reportsDir, historyDir, reportGates }
 export { skinCssVars, SKINS, DEFAULT_SKIN, SKIN_LIST };
 export { auditConfiguration };
 export { diffCombinations };
-export { archiveSnapshot, listHistory, loadHistory };
-export { comparePresets, readPreset };
+export { archiveSnapshot, listHistory, loadHistory, historySeries, snapshotPath };
+export { comparePresets, readPreset, discoverPresetSources, detectPresetSource, listPresets, readPatchPresetText };
 export { verifyRows };
+export { buildProbeList, classifyProbeError, parseProbeOutput, dynamicFindings, mergeDynamicFindings, probeEcosystem, probeSummary, packageEntry, DEFAULT_PROBE_TIMEOUT_MS };
 export { suggestPatch };
-export { checkUpgrades };
+export { checkUpgrades, latestFromRegistry };
+export { buildWatchSet, watchSignature, diffSignature, assessVersion, checkVersionUpdates, updateCommands, runUpdate, SELF_PACKAGE, HARNESS_PACKAGE, PROFILE_WATCH_FILES };
+export { discoverProfiles, profileSummary, collectUniverse, compareProfiles, buildBridge, DEFAULT_BRIDGE_PROFILES };
+export { planSync, applySync, verifySync, preflightSync, pluginCommand, SYNC_SCHEMA, SYNC_BACKUP_FILES, SYNC_BATCH_SIZE, DEFAULT_SYNC_TIMEOUT_MS };
 export { proposeUpgrade, proposeUpgradeCandidates, simulateUpgrade, cloneWithVersion };
 export { historyStats };
 export { scanLeaks, createCalibration, staticCalibration };
@@ -113,6 +121,7 @@ export function buildCheckReport(analysis, opts = {}) {
       rows: s.pluginCount,
       truthSource: analysis.ecosystem.truthSource || "scan",
       harnessVersion: analysis.ecosystem.harnessVersion || null,
+      layout: analysis.ecosystem.layout || "node_modules",
       dataset: opts.dataset || null
     },
     findings,
@@ -130,7 +139,8 @@ export function buildCheckReport(analysis, opts = {}) {
     conflicts: analysis.conflicts.summary,
     leaks: (analysis.leaks && analysis.leaks.summary) || { total: 0 },
     truthSource: analysis.ecosystem.truthSource || "scan",
-    harnessVersion: analysis.ecosystem.harnessVersion || null
+    harnessVersion: analysis.ecosystem.harnessVersion || null,
+    layout: analysis.ecosystem.layout || "node_modules"
   };
 }
 
@@ -257,6 +267,16 @@ function liveSourceStamps(opts) {
   }
 }
 
+// A caller may hand in a prebuilt ecosystem (CLI --eco, runAnalysisAsync,
+// tests). Those calls share no opts to key on, so stamp the data itself:
+// otherwise a web-profile result could be served for a desktop-profile eco.
+function ecoStamp(eco) {
+  if (!eco) return null;
+  const rows = (eco.rows || []).map((r) => r.id + ":" + r.name + ":" + r.disabled).join(",");
+  const pkgs = Object.keys(eco.packages || {}).sort().map((p) => p + "@" + eco.packages[p].version).join(",");
+  return [eco.truthSource || "", eco.layout || "", eco.harnessVersion || "", rows, pkgs].join("|");
+}
+
 function analysisKey(opts) {
   const files = (opts.compositionFiles || []).slice().sort().map((f) => f + "@" + fileStamp(f));
   const base = {
@@ -264,7 +284,8 @@ function analysisKey(opts) {
     root: opts.root || null,
     home: opts.home || null,
     compositionFiles: files,
-    liveSources: liveSourceStamps(opts)
+    liveSources: liveSourceStamps(opts),
+    eco: ecoStamp(opts.eco)
   };
   if (opts.datasetPath) base.dataset = opts.datasetPath + "@" + fileStamp(opts.datasetPath);
   return JSON.stringify(base);
@@ -347,12 +368,30 @@ export function resolveNmRoot(profile) {
   if (home) {
     candidates.push(path.join(profileDir, "node_modules"));
     candidates.push(path.join(home, "node_modules"));
+    // harness 0.1.7+ vendored layout: plugins live inside the dsh package
+    candidates.push(path.join(profileDir, "node_modules", "@deepseek-ai", "dsh", "node_modules"));
+    candidates.push(path.join(home, "node_modules", "@deepseek-ai", "dsh", "node_modules"));
   }
+  // locate the deployment through the dsh binary, whose install root hosts the
+  // vendored plugin tree in 0.1.7+ (global npm prefix when DSH_HOME is unset)
+  try {
+    const bin = findDshBin(profileName, home);
+    if (bin) {
+      const idx = bin.indexOf("node_modules");
+      if (idx >= 0) {
+        const nm = bin.slice(0, idx + "node_modules".length);
+        candidates.push(nm);
+        candidates.push(path.join(nm, "@deepseek-ai", "dsh", "node_modules"));
+      }
+    }
+  } catch { /* dsh bin not locatable */ }
   // walk up from cwd
   let dir = process.cwd();
   for (let i = 0; i < 8; i++) {
     const probe = path.join(dir, "node_modules");
     if (fs.existsSync(path.join(probe, "@deepseek-ai", "dsh-base", "package.json"))) candidates.push(probe);
+    const vendored = path.join(probe, "@deepseek-ai", "dsh", "node_modules");
+    if (fs.existsSync(path.join(vendored, "@deepseek-ai", "dsh-base", "package.json"))) candidates.push(vendored);
     const parent = path.dirname(dir);
     if (parent === dir) break;
     dir = parent;

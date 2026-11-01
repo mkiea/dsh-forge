@@ -93,5 +93,35 @@ test("strict parser accepts inline inject list form", () => {
   assert.strictEqual(rows[0].inject, true);
 });
 
+test("strict parser accepts cordis:group structural keys (group / isolate)", () => {
+  const text = `- insert:
+    - id: planning
+      name: cordis:group
+      group: true
+      isolate:
+        planMode: true
+      config:
+        - id: plan-mode
+          name: '@deepseek-ai/dsh-plan-mode'
+    - id: next
+      name: pkg
+`;
+  const rows = parseCompositionTextStrict(text, "fixture");
+  assert.strictEqual(rows.length, 2);
+  assert.strictEqual(rows[0].id, "planning");
+  assert.strictEqual(rows[0].group, true);
+  assert.strictEqual(rows[0].isolate, true);
+  assert.ok(rows[0].raw.some((l) => l.trim() === "planMode: true"), "isolate block is kept raw");
+  // `config` may hold a list of plugin specs (group / preset definitions):
+  // those are config data, not composition rows. Parsing them as rows used to
+  // double-count preset internals and invent unscoped duplicate ids.
+  assert.ok(rows[0].configText.includes("plan-mode"), "nested config entries stay in config");
+  assert.strictEqual(rows[1].id, "next", "the row after the config block still parses");
+});
+
+test("strict parser rejects a non-boolean group flag", () => {
+  assert.throws(() => parseCompositionTextStrict("- id: a\n  name: pkg\n  group: yes\n", "fixture"), /unsupported group value/);
+});
+
 console.log("\ncomposition-strict: " + pass + " pass / " + fail + " fail");
 process.exit(fail ? 1 : 0);

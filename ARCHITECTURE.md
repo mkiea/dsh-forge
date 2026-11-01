@@ -1,6 +1,6 @@
 # dsh-forge 架构文档
 
-> 版本：0.1.15（正式版）· 最后更新：2026-10-27
+> 版本：0.1.16（正式版）· 最后更新：2026-10-27
 
 ## 1. 总览
 
@@ -29,7 +29,7 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 │  │            │          │  │  └────────────────────┘  │ │
 │  │   ┌────────▼────────┐ │  └──────────────────────────┘ │
 │  │   │  core/ (引擎)   │ │                               │
-│  │   │  30 个纯逻辑模块 │ │                               │
+│  │   │  36 个纯逻辑模块 │ │                               │
 │  │   └─────────────────┘ │                               │
 │  └───────────────────────┘                               │
 └─────────────────────────────────────────────────────────┘
@@ -42,6 +42,7 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 | 模块 | 职责 | 关键导出 |
 | --- | --- | --- |
 | `composition.js` | 组合源发现 + YAML 解析 + 生态收集 | `collectEcosystem`, `discoverSources`, `mergeRows` |
+| `asar.js` | 桌面版 Electron `app.asar` 只读解析（清单 / 组合补丁 / 源码 / harness 版本；profile 不可 dump 时的唯一真相源） | `findDesktopAsar`, `readAsarManifest`, `readAsarSources`, `listAsarPackages` |
 | `truth.js` | dump-config 真相源（三态降级） | `loadTruthEcosystem` |
 | `analyze.js` | 依赖图构建 + 风险评估 | `buildGraph`, `assess`, `riskScore` |
 | `conflicts.js` | 冲突检测引擎 | `checkConflicts`, `scanToolNames`, `scanServices` |
@@ -52,7 +53,8 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 | `upgrade.js` | npm registry 升级检查 | `checkUpgrades` |
 | `audit.js` | 逐行配置审计 | `auditConfiguration` |
 | `diff.js` | 快照差异对比 | `diffCombinations` |
-| `simulate.js` | 组合模拟 | `simulateCombination`, `applyOps` |
+| `simulate.js` | 组合模拟（假设推演：健康度/风险增量 + 结构性影响 removedPackages / dependents / lostProviders / brokenServices / disappearedSignals；`mode: "hypothetical"` 明示未执行） | `simulateCombination`, `applyOps` |
+| `causal.js` | 因果投影：只读复用既有 graph/conflicts，投影 plugin / service / outcome 节点与 depends_on / provides_service / requires_service / influences 边；每条边带证据层级、来源、置信度、`observed` 与 why/caveat（依赖≠因果） | `buildCausalModel`, `explainEdge` |
 | `plan.js` | 升级路径预演（离线：proposeUpgrade 范围/阻断；simulateUpgrade 版本上移编排；cloneWithVersion 版本克隆） | `proposeUpgrade`, `simulateUpgrade`, `cloneWithVersion` |
 | `visualize.js` | 多格式可视化 | `html`, `mermaid`, `asciiTree` |
 | `dashboard.js` | 交互仪表盘数据构建 | `dashboard`, `buildEmbedData` |
@@ -60,8 +62,9 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 | `history.js` | 快照存档与加载 | `archiveSnapshot`, `listHistory`, `loadHistory` |
 | `report.js` | Markdown 报告生成 + 写入归档（报告/history 路径可配置，history 失败可见） | `buildMarkdownReport`, `writeReport`, `gates`, `reportsDir`, `historyDir`, `pkgVersion` |
 | `stats.js` | 历史趋势统计 | `historyStats` |
-| `presets.js` | 预设对比 | `comparePresets`, `readPreset` |
+| `presets.js` | 预设对比（0.2.x `<id>.patch.yml` / 旧版 `<id>/agent.cordis.yml` / 桌面 app.asar 三种源） | `comparePresets`, `readPreset`, `readPatchPresetText`, `discoverPresetSources` |
 | `verify.js` | 行级装载预检 | `verifyRows` |
+| `dynamic.js` | 运行期导入探测（子进程真实 `import()` 每个包入口；缺失导出/模块无法解析/超时分类；结果以 runtime-probe 证据并入分析，不污染缓存） | `probeEcosystem`, `buildProbeList`, `classifyProbeError`, `parseProbeOutput`, `dynamicFindings`, `mergeDynamicFindings` |
 | `mode.js` | TUI/Web/check 四层证据决策（启动入口/环境/场景/复杂度） | `decideUiMode`, `hasDesktop`, `decideAfterPortProbe` |
 | `suggest.js` | 补丁建议生成 | `suggestPatch` |
 | `knowledge.js` | 知识库 + 已知模式 + 废弃扫描 | `knownPatterns`, `scanDeprecations` |
@@ -70,12 +73,19 @@ dsh-forge 是 DeepSeek Harness（dsh）的**插件组合分析**插件。它以�
 | `evidence-fusion.js` | 证据融合（A-1 三态 + A-3 可行动 + INV-3 只降不清除） | `fuse` |
 | `gate.js` | 闸门裁决（方向 4）：冻结 pass 语义（severity-only）+ 追加 lever/blockedBy/degraded；可配置策略（severity/tier/confidence→block\|warn\|allow），tier 只收紧、无 policy 时逐字节兼容冻结路径 | `computeGate`, `gateFromFindings`, `severityBlocks`, `validatePolicy`, `resolveVerdict`, `stricter` |
 | `runtime-calibration.js` | 运行时校准（A-4 滑窗 + INV-2 时序边界 + A-2 关联键） | `createRuntimeCalibration`, `staticRuntimeCalibration` |
-| `web-server.js` | Web 面板共享服务（CLI 与 harness 壳复用的 3060 数据通道 + CORS/端口探测/浏览器打开） | `createWebHandler`, `startWebServer`, `probePort`, `openBrowser` |
+| `web-server.js` | Web 面板共享服务（CLI 与 harness 壳复用的 3060 数据通道 + CORS/端口探测/浏览器打开；SSE `/api/events` 推送组合变更，另有 `/api/state`、`/api/history`、`/api/snapshot`、`/api/simulate`、`/api/conflicts`、`/api/upgrade`、`/api/plan`、`/api/update`、`/api/bridge`、`/api/sync`；请求体上限 256KB、单飞刷新、SSE 客户端上限与回收） | `createWebHandler`, `startWebServer`, `probePort`, `openBrowser` |
+| `auto-update.js` | Web 自动更新：组合文件 stat 签名（FNV-1a）+ 差异比对、forge/harness 版本评估与升级命令、受控执行（版本正则/包管理器/`package.json` 备份） | `buildWatchSet`, `watchSignature`, `diffSignature`, `assessVersion`, `checkVersionUpdates`, `updateCommands`, `runUpdate` |
+| `bridge.js` | Web × 桌面连通器：发现本机 profile 与桌面 `app.asar`，同引擎采集两端组合并输出差异（仅 Web / 仅桌面 / 版本漂移 / harness 漂移 / 相似度），单端失败只记录 `error` 不拖垮整体 | `discoverProfiles`, `profileSummary`, `collectUniverse`, `compareProfiles`, `buildBridge` |
+| `sync.js` | 跨端对齐：以桌面端为基线生成 web 插件/版本对齐计划（`link:`/`git+`/区间依赖不替换，`@deepseek-ai/*` 运行时不镜像，桌面只读操作标 blocked），执行前 registry 预检、执行后重新采集+精确版本校验+动态导入探测，失败回滚 profile 文件 | `planSync`, `applySync`, `verifySync`, `preflightSync`, `pluginCommand`, `SYNC_SCHEMA` |
 
 `core/index.js` 是门面模块，统一 re-export 全部公共 API，并提供两条分析管线与 `saveSnapshot()` / `loadSnapshot()` 快照序列化：
 
 - **`runAnalysis(opts)`（同步）**：一站式管线 `collectEcosystem → buildGraph → checkConflicts → assess → scanLeaks → attachFindingIds → capConfidence → fuse → buildFeedback`；数据来自 `datasetPath` 快照或即时扫描，供测试与离线脚本使用。
 - **`runAnalysisAsync(opts)`（异步，CLI/插件壳/Web 统一入口）**：与工具路径（`selectEco`）同一真相源偏好——优先经 `loadTruthEcosystem` 取 `dsh --dump-config` 真实快照（dump-config），取不到才回退 `collectEcosystem` 扫描（scan）；`check` / `plan` / `web` 与 auto-web 面板均经它装载，避免在可取得 dump 时静默降级。
+
+> **因果投影与反事实（只读投影层）**：`core/causal.js` 不新开扫描器，只把 `runAnalysis` 已产出的 graph/conflicts 投影为 plugin / service / outcome 三类节点与 depends_on / provides_service / requires_service / influences 四类边；每条边携带证据层级（contract-source / static-suspect / heuristic / runtime-probe）、来源文本、置信度、`observed` 与 why/caveat。`depends_on` 只证明清单声明，**依赖不等于因果**；`influences` 只说明参与某条发现，不宣称归因；外部库不算因果节点。`simulate.js` 的移除推演同步输出结构性影响（失去依赖 / 消失 Service / 中断调用链 / 消失风险信号），并始终带 `mode: "hypothetical"`，区分静态推演与真实执行验证。仪表盘图谱页把该投影作为既有分析数据的交互视图：点节点看前置/后置依赖，点连杆看该关系的证据与来源，不做第二套数据真相源。
+
+> **图谱页＝节点编辑器（交互投影）**：`core/dashboard.js` 只生成工具栏 / 调色板 / 画布 / 检查器骨架，全部交互在 `web/dashboard-client.js` 内完成，不新增数据源。节点位置存 `localStorage['dsh-graph-pos']`（无 storage 时降级为内存），`layoutGraph` 用「层网格默认坐标 + 用户覆盖坐标」；`hiddenRow`（`disabled || removed`）同时过滤节点与边。调色板添加写入假设模拟的 `state.added`，拖出回收区 / Delete 写入 `state.removed`，两者都只触发既有风险重算与重渲染；连线不可手工创建，外部库节点不可移除。拖动时只更新该 `g-node` 的 `transform` 与相关 `data-edge` 的 `d`，鼠标抬起后再做一次完整布局。
 
 ### 2.2 src/ — 插件壳
 
@@ -123,6 +133,8 @@ apply(ctx, config)
 | `dsh-forge tui` | 强制 TUI（零依赖 ANSI；`W` 一键开 Web，`R` 刷新，`Q` 退出） |
 | `dsh-forge web` / `serve` | 强制 Web（`node:http` + 10 模块交互仪表盘；缺 client.js 回退自包含 SVG 拓扑；端口占用自动降级） |
 | `dsh-forge check` / `ci` | 纯日志或 `--json`，无界面，面向脚本消费 |
+| `dsh-forge bridge` | 对比 Web 与桌面两端组合（只读） |
+| `dsh-forge sync` | 把 web 插件/版本对齐到桌面基线；默认只读计划，`--apply --confirm sync-<profile>` 安装并验证，失败回滚 |
 
 TUI 壳与 Web 壳不引入第三方依赖：TUI 用 ANSI 渲染，Web 用 `node:http`
 serve `core/dashboard.js` 生成的 10 模块交互仪表盘（缺 `web/dashboard-client.js`
@@ -276,7 +288,7 @@ simulateUpgrade(eco, wish)
 | 可配置闸门策略 | `test/gate-policy.test.mjs` | 11 | 方向 4（选项 C）：validatePolicy/resolveVerdict 的 severity→baseline + tier 只收紧；契约冲突在 scan cap 下仍 block；severity 降级放行；无 policy 冻结路径逐字节兼容 |
 | finding_id 唯一性消重 | `test/finding-id-uniqueness.test.mjs` | 6 | makeFindingId 纳入 involved packages/service/row，区分同类别多条 finding；A-2 message 不变 id（0 碰撞回归）|
 | 14 工具快照半集成 | `test/tools-snapshot-smoke.test.mjs` | 14 | 快照驱动调用 14 个工具 + output.schema 最小校验（防 schema/output 漂移），CI 可运行 |
-| YAML fail-loud / vm 沙箱 | `test/composition-strict.test.mjs` | 8 | 严格解析接受合法 patch（含 config block scalar、cordis inject 行键）/ 未知行键与顶层条目抛错 / globalThis 逃逸被拒 / dshHomePath 可用 |
+| YAML fail-loud / vm 沙箱 | `test/composition-strict.test.mjs` | 10 | 严格解析接受合法 patch（含 config block scalar、cordis inject 与 `group`/`isolate` 行键）/ 未知行键与顶层条目抛错 / globalThis 逃逸被拒 / dshHomePath 可用 |
 
 测试策略：
 - **单一实现回归**：semver-consistency 固定断言 core/semver.js 行为，并守护 dashboard.js 不再内嵌镜像副本

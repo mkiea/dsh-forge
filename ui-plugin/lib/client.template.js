@@ -174,6 +174,12 @@ window.__ModuleLoader__.load({
       var busyState = react.useState("");
       var busy = busyState[0];
       var setBusy = busyState[1];
+      var autoState = react.useState(true);
+      var auto = autoState[0];
+      var setAuto = autoState[1];
+      var sigState = react.useState("");
+      var sig = sigState[0];
+      var setSig = sigState[1];
 
       var loadLive = function () {
         if (typeof fetch === "undefined") { setLive(false); return; }
@@ -225,6 +231,38 @@ window.__ModuleLoader__.load({
         setStatus(props.t("newWindowDone") + SERVER + "/");
       };
 
+      // Auto-update: poll the cheap /api/state signature; re-fetch the page only
+      // when the composition actually changed, and surface newer forge/dsh
+      // releases without interrupting the user.
+      var tick = function () {
+        if (typeof fetch === "undefined") return;
+        fetch(SERVER + "/api/state?versions=1").then(function (r) { return r.json(); }).then(function (d) {
+          if (!d || !d.ok) return;
+          var changed = sig && d.signature && sig !== d.signature;
+          if (d.signature && d.signature !== sig) setSig(d.signature);
+          var v = d.versions || {};
+          var f = v.forge || {};
+          var h = v.harness || {};
+          var notes = [];
+          if (f.newer) notes.push("forge " + (f.current || "?") + " → " + f.latest);
+          if (h.newer) notes.push("dsh " + (h.current || "?") + " → " + h.latest);
+          if (notes.length) setStatus("有可用更新 · " + notes.join(" · "));
+          if (changed) {
+            fetch(SERVER + "/").then(function (r) { return r.text(); }).then(function (html) {
+              setIframeHtml(html);
+              setLive(true);
+            }).catch(function () { /* keep previous html */ });
+          }
+        }).catch(function () { /* offline: snapshot stays */ });
+      };
+
+      react.useEffect(function () {
+        if (!isOpen || !auto) return;
+        var timer = null;
+        try { timer = setInterval(tick, 15000); } catch (e) { timer = null; }
+        return function () { if (timer) clearInterval(timer); };
+      }, [isOpen, auto, sig]);
+
       react.useEffect(function () {
         if (!isOpen) return;
         function onKey(e) { if (e.key === "Escape") setOpen(false); }
@@ -264,6 +302,7 @@ window.__ModuleLoader__.load({
             react.createElement("strong", null, props.t("title")),
             react.createElement("span", { style: { fontSize: 11, color: "var(--dsw-alias-label-secondary, #888)", marginLeft: 8 } }, subtitle + (busy ? " · " + busy : "")),
             react.createElement("button", { type: "button", onClick: generateReport, style: actionBtnStyle(), "aria-label": props.t("report") }, props.t("report")),
+            react.createElement("button", { type: "button", onClick: function () { setAuto(!auto); setStatus(auto ? "自动更新已关闭" : "自动更新已开启（15s 轮询 /api/state）"); }, style: actionBtnStyle(), "aria-label": "auto" }, "自动更新：" + (auto ? "开" : "关")),
             react.createElement("button", { type: "button", onClick: loadHistory, style: actionBtnStyle(), "aria-label": props.t("history") }, props.t("history")),
             react.createElement("button", { type: "button", onClick: openInNewWindow, style: actionBtnStyle(), "aria-label": props.t("openInNewWindow"), title: SERVER + "/" }, "⧉ " + props.t("openInNewWindow")), react.createElement("button", { type: "button", onClick: function () { setOpen(false); }, style: closeStyle(), "aria-label": props.t("close") }, "✕")
           ),

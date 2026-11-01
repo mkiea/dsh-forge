@@ -72,6 +72,7 @@ export function buildMarkdownReport(analysis, opts = {}) {
   L.push("| 冲突数 | " + escMd(c.summary.total) + "（" + escMd(Object.entries(c.summary.bySeverity || {}).map((kv) => kv[0] + "=" + kv[1]).join(" ")) + "）|");
   L.push("| 副作用泄漏数 | " + escMd((analysis.leaks && analysis.leaks.summary && analysis.leaks.summary.total) || 0) + " |");
   L.push("| 配置层 | " + escMd((analysis.ecosystem.layers || []).map((l) => l.layer).join(" → ") || "—") + " |");
+  if (analysis.ecosystem.layout === "desktop-asar") L.push("| 布局 | desktop-asar（resources/app.asar；profile 不可 dump）|");
   L.push("| GATE | " + escMd(gate.pass ? "PASS" : "BLOCKED (critical " + gate.blocked.critical + " / high " + gate.blocked.high + ")") + (gate.lever && gate.lever !== "advisory" ? " · lever `" + gate.lever + "`" : "") + " |");
   L.push("");
 

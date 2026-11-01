@@ -23,7 +23,7 @@ import * as path from "node:path";
 import z from "@deepseek-ai/schemastery";
 import { defineTool } from "@deepseek-ai/dsh-tools";
 import { analyzeTool, conflictsTool, visualizeTool, simulateTool, auditTool, diffTool, historyTool, archiveTool, presetTool, verifyTool, suggestTool, upgradeTool, statsTool, planTool } from "./tools/index.js";
-import { connectHarnessEvents, createRuntimeCalibration, preflight, collectEcosystem, runAnalysisAsync } from "../core/index.js";
+import { connectHarnessEvents, createRuntimeCalibration, preflight, collectEcosystem, runAnalysisAsync, resolveDshHome } from "../core/index.js";
 import { startWebServer } from "../core/web-server.js";
 
 export const name = "dsh-forge";
@@ -91,8 +91,17 @@ async function startAutoWeb(cfg) {
       profile: cfg.profile, root: cfg.root, datasetPath: cfg.datasetPath,
       runtimeCalibration: cfg.runtimeCalibration
     });
+    const home = resolveDshHome() || process.env.DSH_HOME;
+    const profileDir = home && cfg.profile ? path.join(home, "profiles", cfg.profile) : undefined;
     const server = await startWebServer({
       host: AUTO_WEB_HOST, port: AUTO_WEB_PORT, open: false,
+      profile: cfg.profile,
+      profileDir,
+      home: home || undefined,
+      bridgeProfiles: [cfg.profile, "desktop"],
+      datasetPath: cfg.datasetPath,
+      historyDir: process.env.DSH_FORGE_HISTORY_DIR || undefined,
+      autoArchive: process.env.DSH_FORGE_AUTO_ARCHIVE !== "0",
       initialAnalysis: refresh(),
       refresh,
       reportOpts: () => ({ reproduce: "node cli/dsh-forge.mjs check --json" }),

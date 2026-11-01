@@ -10,6 +10,7 @@ import * as os from "node:os";
 import { createRequire } from "node:module";
 import * as vm from "node:vm";
 import { satisfies } from "./semver.js";
+import { findDesktopAsar, isDesktopProfile, readAsarManifest, readAsarJson, readAsarText } from "./asar.js";
 
 // Harness home resolution: $DSH_HOME overrides the default ~/.dsh the
 // harness itself falls back to (dsh-app-boot: "Harness home (~/.dsh)").
@@ -42,6 +43,31 @@ export function evalJsExpr(expr, { home, root, strict = false, timeoutMs = 1000 
   }
 }
 
+// A `!!js` value may be a YAML block scalar (`>-` / `|-`): the expression
+// lives on the following indented lines. Folded scalars join with spaces.
+function readJsBlockScalar(lines, start, keyIndent, fold) {
+  let i = start;
+  let contentIndent = null;
+  const parts = [];
+  while (i < lines.length) {
+    const raw = lines[i];
+    if (/^\s*$/.test(raw)) { parts.push(""); i++; continue; }
+    const ind = raw.length - raw.trimStart().length;
+    if (contentIndent === null) {
+      if (ind <= keyIndent) break;
+      contentIndent = ind;
+    }
+    if (ind < contentIndent) break;
+    parts.push(raw.slice(contentIndent));
+    i++;
+  }
+  return { expr: parts.join(fold ? " " : "\n").trim(), next: i };
+}
+
+function isBlockScalarToken(s) {
+  return /^[>|][+-]?$/.test(s);
+}
+
 // Parse the rows of one cordis patch document.
 // Row keys handled: id, name, disabled (bool or !!js expr), config (presence
 // and raw text). Unknown keys are preserved in raw for reporting.
@@ -72,7 +98,19 @@ export function parseCompositionText(text, layer) {
         if (rest === "true") row.disabled = true;
         else if (rest === "false") row.disabled = false;
         else if (rest.startsWith("!!js")) {
-          row.disabled = evalJsExpr(rest.slice(4).trim());
+          let expr = rest.slice(4).trim();
+          let consumed = null;
+          if (isBlockScalarToken(expr)) {
+            const block = readJsBlockScalar(lines, i + 1, (l.length - l.trimStart().length), expr.startsWith(">"));
+            expr = block.expr;
+            consumed = block.next;
+          }
+          row.disabledExpr = expr;
+          // Expressions may depend on loader/entry context, so a static scan
+          // records the expression and only applies an evaluable boolean.
+          const v = evalJsExpr(expr);
+          row.disabled = typeof v === "boolean" ? v : null;
+          if (consumed !== null) { i = consumed; continue; }
         } else row.disabled = rest;
       } else if (key === "config") {
         row.configPresent = true;
@@ -80,10 +118,16 @@ export function parseCompositionText(text, layer) {
         i++;
         while (i < lines.length) {
           const cl = lines[i];
-          if (/^\s*$/.test(cl)) { cfgLines.push(cl); i++; continue; }
-          if (/^\s*-\s*id:/.test(cl)) break;
+          const clTrim = cl.trim();
+          // Blank lines and comments do not end a YAML block: hand-written
+          // configs interleave zero-indent comments between keys. Only a real
+          // dedented key or the next row starts a new entry.
+          if (!clTrim || clTrim.startsWith("#")) { cfgLines.push(cl); i++; continue; }
+          // Config may legitimately contain lists of `- id: ...` maps (local
+          // model / preset definitions), which must stay inside the config
+          // text instead of being parsed as composition rows.
           const cli = cl.length - cl.trimStart().length;
-          if (cli <= indent) break;
+          if (cli <= li) break;
           cfgLines.push(cl);
           i++;
         }
@@ -162,7 +206,19 @@ export function parseCompositionTextStrict(text, layer, opts = {}) {
         if (rest === "true") row.disabled = true;
         else if (rest === "false") row.disabled = false;
         else if (rest.startsWith("!!js")) {
-          row.disabled = evalJsExpr(rest.slice(4).trim(), { home: opts.home, root: opts.root, strict: true });
+          let expr = rest.slice(4).trim();
+          let consumed = null;
+          if (isBlockScalarToken(expr)) {
+            const block = readJsBlockScalar(lines, i + 1, li, expr.startsWith(">"));
+            expr = block.expr;
+            consumed = block.next;
+          }
+          row.disabledExpr = expr;
+          // Loader-context expressions are valid YAML but not statically
+          // evaluable; record them instead of failing the whole scan.
+          const v = evalJsExpr(expr, { home: opts.home, root: opts.root });
+          row.disabled = typeof v === "boolean" ? v : null;
+          if (consumed !== null) { i = consumed; continue; }
         } else {
           fail(i + 1, "unsupported disabled value: " + t);
         }
@@ -173,10 +229,16 @@ export function parseCompositionTextStrict(text, layer, opts = {}) {
         i++;
         while (i < lines.length) {
           const cl = lines[i];
-          if (/^\s*$/.test(cl)) { cfgLines.push(cl); i++; continue; }
-          if (/^\s*-\s*id:/.test(cl)) break;
+          const clTrim = cl.trim();
+          // Blank lines and comments do not end a YAML block: hand-written
+          // configs interleave zero-indent comments between keys. Only a real
+          // dedented key or the next row starts a new entry.
+          if (!clTrim || clTrim.startsWith("#")) { cfgLines.push(cl); i++; continue; }
+          // Config may legitimately contain lists of `- id: ...` maps (local
+          // model / preset definitions), which must stay inside the config
+          // text instead of being parsed as composition rows.
           const cli = cl.length - cl.trimStart().length;
-          if (cli <= indent) break;
+          if (cli <= li) break;
           cfgLines.push(cl);
           i++;
         }
@@ -187,6 +249,30 @@ export function parseCompositionTextStrict(text, layer, opts = {}) {
         // nested '- id:' entries sit at a deeper indent and parse as their
         // own rows via the row-boundary break above.
         row.inject = true;
+      } else if (key === "group") {
+        // cordis:group structural flag (desktop harness >= 0.2.1 presets).
+        if (rest === "true") row.group = true;
+        else if (rest === "false") row.group = false;
+        else fail(i + 1, "unsupported group value: " + t);
+      } else if (key === "isolate") {
+        // group isolation flags (planMode:, compaction:, workflowEngine: ...).
+        // The nested mapping is structural, not a row key: skip it so its
+        // children are not mistaken for composition keys.
+        row.isolate = true;
+        if (!rest) {
+          const keyIndent = li;
+          i++;
+          while (i < lines.length) {
+            const il = lines[i];
+            if (/^\s*$/.test(il)) { row.raw.push(il); i++; continue; }
+            if (/^\s*-\s*id:/.test(il)) break;
+            const ili = il.length - il.trimStart().length;
+            if (ili <= keyIndent) break; // sibling key of the same row (config:, ...)
+            row.raw.push(il);
+            i++;
+          }
+        }
+        continue;
       } else {
         fail(i + 1, "unsupported row key: " + key);
       }
@@ -217,17 +303,29 @@ function resolvePkgDir(root, name) {
   return path.join(root, ...p.split("/"));
 }
 
+// Patch files a bundle declares (dsh.bundle.patch: string | string[]), with the
+// conventional ./cordis.patch.yml fallback.
+function bundlePatchPaths(manifest) {
+  const patch = manifest && manifest.dsh && manifest.dsh.bundle && manifest.dsh.bundle.patch;
+  const list = Array.isArray(patch) ? patch : (patch ? [patch] : ["./cordis.patch.yml"]);
+  return list.map((p) => String(p).replace(/^\.\//, ""));
+}
+
 // Discover composition sources the way the profile loader does:
 // profile root cordis.yml -> bundle patches (in package.json dsh.profile.bundles
 // order) -> profile cordis.patch.yml. Returns layer descriptors.
-export function discoverSources({ home, profile, root } = {}) {
+export function discoverSources({ home, profile, root, asar } = {}) {
   const layers = [];
+  const missingBundles = [];
   const homeDir = home || defaultHome();
   const profileDir = profile ? path.join(homeDir, "profiles", profile) : null;
   const nmRoot = root || (profileDir ? path.join(profileDir, "node_modules") : null);
+  // Desktop app: bundle patches live inside resources/app.asar, not on disk.
+  const desktopAsar = asar || (isDesktopProfile(profile) ? findDesktopAsar() : null);
   let rootText = "[]";
   let bundles = [];
   let patchText = null;
+  let declared = {};
 
   if (profileDir && fs.existsSync(path.join(profileDir, "cordis.yml"))) {
     rootText = fs.readFileSync(path.join(profileDir, "cordis.yml"), "utf8");
@@ -235,6 +333,7 @@ export function discoverSources({ home, profile, root } = {}) {
     if (pkg && pkg.dsh && pkg.dsh.profile && Array.isArray(pkg.dsh.profile.bundles)) {
       bundles = pkg.dsh.profile.bundles;
     }
+    if (pkg && pkg.dependencies && typeof pkg.dependencies === "object") declared = { ...pkg.dependencies };
     if (fs.existsSync(path.join(profileDir, "cordis.patch.yml"))) {
       patchText = fs.readFileSync(path.join(profileDir, "cordis.patch.yml"), "utf8");
     }
@@ -256,13 +355,42 @@ export function discoverSources({ home, profile, root } = {}) {
         dir = path.dirname(resolved);
       } catch (e) { /* bundle not resolvable from profile dir */ }
     }
-    if (!dir) continue;
+    if (!dir) {
+      // Desktop bundle: read its patch files from the app archive.
+      if (desktopAsar) {
+        const am = readAsarManifest(desktopAsar, b);
+        if (am) {
+          const rels = bundlePatchPaths(am.manifest);
+          for (const rel of rels) {
+            const text = readAsarText(desktopAsar, am.entry + "/" + rel);
+            if (text == null) continue;
+            layers.push({
+              layer: rels.length > 1 ? b + ":" + path.basename(rel) : b,
+              text,
+              kind: "bundle",
+              dir: null,
+              asar: { path: desktopAsar, entry: am.entry, package: b },
+              path: desktopAsar
+            });
+          }
+          continue;
+        }
+      }
+      // The profile declares this bundle but its deployment is not reachable
+      // from here (harness installed elsewhere, or not installed at all). The
+      // row set is then partial; report it instead of pretending the profile
+      // only has its own patch rows.
+      missingBundles.push(b);
+      continue;
+    }
     const p = path.join(dir, "cordis.patch.yml");
     if (fs.existsSync(p)) {
       layers.push({ layer: b, text: fs.readFileSync(p, "utf8"), kind: "bundle", dir, path: p });
     }
   }
   if (patchText !== null) layers.push({ layer: "profile-patch", text: patchText, kind: "patch", path: profileDir ? path.join(profileDir, "cordis.patch.yml") : null });
+  layers.missingBundles = missingBundles;
+  layers.declared = declared;
   return layers;
 }
 
@@ -274,6 +402,10 @@ export function collectManifests(rows, opts = {}) {
   const { home, profile, root, layers } = opts;
   const packages = {};
   const order = [];
+  // Desktop app: harness packages live inside resources/app.asar, which the
+  // CLI cannot dump. Read manifests straight from the archive as a fallback
+  // when no on-disk copy exists.
+  const asar = opts.asar || (isDesktopProfile(profile) ? findDesktopAsar() : null);
   let nmRoot = root || null;
   if (!nmRoot && layers) {
     const bd = layers.find((l) => l.kind === "bundle" && l.dir);
@@ -287,9 +419,38 @@ export function collectManifests(rows, opts = {}) {
   const roots = [];
   if (nmRoot) roots.push(nmRoot);
   if (profileNm && profileNm !== nmRoot && fs.existsSync(profileNm)) roots.push(profileNm);
+  // harness 0.1.7+ installs its plugin packages INSIDE the dsh package
+  // (<nm>/@deepseek-ai/dsh/node_modules/@deepseek-ai/*). Probe that vendored
+  // root too, otherwise only the profile's own link: packages are collected
+  // and every harness row resolves as "missing manifest".
+  for (const r of roots.slice()) {
+    const vendored = path.join(r, "@deepseek-ai", "dsh", "node_modules");
+    if (vendored !== r && fs.existsSync(path.join(vendored, "@deepseek-ai", "dsh-base", "package.json")) && !roots.includes(vendored)) {
+      roots.push(vendored);
+    }
+  }
   for (const row of rows) {
     const p = packageOf(row.name);
     if (!p || packages[p]) continue;
+    // Desktop: the app archive is the authoritative deployment for harness
+    // packages. On-disk copies from other installs (e.g. the CLI's ~/.dsh
+    // node_modules) must not shadow the versions the desktop actually loads.
+    if (asar) {
+      const am = readAsarManifest(asar, p);
+      if (am) {
+        packages[p] = {
+          version: am.manifest.version,
+          description: am.manifest.description || "",
+          dependencies: am.manifest.dependencies || {},
+          peerDependencies: am.manifest.peerDependencies || {},
+          deprecated: am.manifest.deprecated || null,
+          dir: null,
+          asar: { path: asar, entry: am.entry, package: p }
+        };
+        order.push(p);
+        continue;
+      }
+    }
     let dir = null;
     for (const r of roots) {
       const probe = path.join(r, ...p.split("/"), "package.json");
@@ -304,11 +465,11 @@ export function collectManifests(rows, opts = {}) {
         peerDependencies: manifest.peerDependencies || {},
         deprecated: manifest.deprecated || null,
         dir
-    };
+      };
       order.push(p);
     }
   }
-  return { packages, order, nmRoot };
+  return { packages, order, nmRoot, roots, asar };
 }
 
 // Merge rows across layers: later layers win per row id (last write wins).
@@ -321,6 +482,7 @@ export function mergeRows(layers, opts = {}) {
         id: row.id,
         name: row.name || (prev && prev.name),
         disabled: row.disabled !== null ? row.disabled : (prev && prev.disabled),
+        disabledExpr: row.disabledExpr || (prev && prev.disabledExpr) || null,
         configPresent: row.configPresent || (prev && prev.configPresent),
         configText: row.configText || (prev && prev.configText),
         layers: [...(prev ? prev.layers : []), layer.layer]
@@ -343,10 +505,10 @@ export function collectEcosystem(opts = {}) {
       kind: "file"
     }));
   } else {
-    layers = discoverSources({ home: homeDir, profile, root });
+    layers = discoverSources({ home: homeDir, profile, root, asar: opts.asar });
   }
   const rows = mergeRows(layers, { home: homeDir, root, strict: opts.strict !== false });
-  const { packages, order, nmRoot } = collectManifests(rows, { home: homeDir, profile, root, layers });  // installed versions: top-level + per-consumer nested resolution.
+  const { packages, order, nmRoot, roots, asar } = collectManifests(rows, { home: homeDir, profile, root, layers, asar: opts.asar });  // installed versions: top-level + per-consumer nested resolution.
   // Node semantics: a consumer's own node_modules wins, then walk up.
   const installed = {};
   const nested = {}; // dep -> { consumerPkg -> version }
@@ -366,12 +528,17 @@ export function collectEcosystem(opts = {}) {
   }
   for (const d of wanted) {
     if (packages[d]) { installed[d] = packages[d].version; continue; }
-    if (nmRoot) {
-      const dir = resolvePkgDir(nmRoot, d);
-      if (dir) {
-        const m = readJson(path.join(dir, "package.json"));
-        if (m) installed[d] = m.version;
-      }
+    // desktop: the app archive wins over unrelated on-disk installs
+    if (asar) {
+      const am = readAsarManifest(asar, d);
+      if (am && am.manifest.version) installed[d] = am.manifest.version;
+    }
+    if (installed[d]) continue;
+    for (const r of roots) {
+      const dir = resolvePkgDir(r, d);
+      if (!dir) continue;
+      const m = readJson(path.join(dir, "package.json"));
+      if (m) { installed[d] = m.version; break; }
     }
     const versions = new Map();
     for (const p of order) {
@@ -383,16 +550,26 @@ export function collectEcosystem(opts = {}) {
     if (versions.size) nested[d] = Object.fromEntries(versions);
   }
 
-  // harness version: dsh package version from any resolved root (drift detection)
+  // harness version: the desktop archive is authoritative; otherwise the dsh
+  // package version from any resolved root (drift detection). In the 0.1.7
+  // vendored layout nmRoot IS the dsh package's node_modules, so also check its
+  // parent(s) for the dsh manifest itself.
   let harnessVersion = null;
-  for (const r of [nmRoot, homeDir ? path.join(homeDir, "profiles", profile || "web", "node_modules") : null]) {
-    if (!r) continue;
-    try {
-      const m = readJson(path.join(r, "@deepseek-ai", "dsh", "package.json"));
-      if (m && m.version) { harnessVersion = m.version; break; }
-    } catch (e) { /* skip */ }
+  if (asar) {
+    const dsh = readAsarJson(asar, "dsh/package.json");
+    if (dsh && dsh.version) harnessVersion = dsh.version;
   }
-  return { layers, rows, packages, installed, nested, nmRoot, harnessVersion, truthSource: layers.some((l) => l.kind === "dump") ? "dump-config" : "scan" };
+  const harnessRoots = [];
+  if (nmRoot) harnessRoots.push(nmRoot, path.resolve(nmRoot, ".."), path.resolve(nmRoot, "..", ".."));
+  if (homeDir) harnessRoots.push(path.join(homeDir, "profiles", profile || "web", "node_modules"));
+  for (const r of harnessRoots) {
+    if (harnessVersion) break;
+    const nested = readJson(path.join(r, "@deepseek-ai", "dsh", "package.json"));
+    if (nested && nested.version) { harnessVersion = nested.version; break; }
+    const self = readJson(path.join(r, "package.json"));
+    if (self && self.name === "@deepseek-ai/dsh" && self.version) { harnessVersion = self.version; break; }
+  }
+  return { layers, missingBundles: Array.isArray(layers.missingBundles) ? layers.missingBundles : [], declared: layers.declared || {}, rows, packages, installed, nested, nmRoot, roots, harnessVersion, asar, layout: asar ? "desktop-asar" : "node_modules", truthSource: layers.some((l) => l.kind === "dump") ? "dump-config" : "scan" };
 }
 
 // Verify a range against the installed version; null when unknown.
@@ -401,16 +578,45 @@ export function rangeOk(installedVersion, range) {
   return satisfies(installedVersion, range);
 }
 
-// Resolve the version a given consumer package sees for a dependency
-// (nested node_modules first, then top-level, then packages map).
+// Resolve the version a given consumer package sees for a dependency. Node's
+// own lookup walks `<ancestor>/node_modules` from the consumer upwards, so a
+// vendored consumer (under <nm>/@deepseek-ai/dsh/node_modules) sees the
+// vendored copy first, not a different version hoisted into the profile.
 export function resolveInstalled(eco, consumerPkg, dep) {
   const m = eco.packages && eco.packages[consumerPkg];
+  // 1) On-disk consumer: Node resolves its own (possibly nested) copy first.
+  // A web plugin may vendor @deepseek-ai/* versions that differ from the
+  // desktop runtime; that local copy is what the plugin actually loads.
   if (m && m.dir) {
-    const probe = path.join(m.dir, "node_modules", ...dep.split("/"), "package.json");
-    if (fs.existsSync(probe)) {
-      const mm = readJson(probe);
-      if (mm && mm.version) return mm.version;
+    let dir = m.dir;
+    for (let depth = 0; depth < 8 && dir; depth++) {
+      const probe = path.join(dir, "node_modules", ...dep.split("/"), "package.json");
+      if (fs.existsSync(probe)) {
+        const mm = readJson(probe);
+        if (mm && mm.version) return mm.version;
+      }
+      const parent = path.dirname(dir);
+      if (parent === dir) break;
+      dir = parent;
     }
+  }
+  // 2) Archive-deployed consumer: walk its nested node_modules inside the
+  // archive (e.g. dsh-host-webserver's own negotiator), then fall back to the
+  // archive's top-level copy for harness packages.
+  if (m && m.asar && m.asar.entry) {
+    let rel = m.asar.entry;
+    for (let depth = 0; depth < 10 && rel; depth++) {
+      const probe = rel + "/node_modules/" + dep + "/package.json";
+      const mm = readAsarJson(m.asar.path, probe);
+      if (mm && mm.version) return mm.version;
+      const parent = rel.replace(/\/[^/]+$/, "");
+      if (!parent || parent === rel) break;
+      rel = parent;
+    }
+  }
+  if (eco.asar && dep.startsWith("@deepseek-ai/")) {
+    const am = readAsarManifest(eco.asar, dep);
+    if (am && am.manifest.version) return am.manifest.version;
   }
   if (eco.nested && eco.nested[dep] && eco.nested[dep][consumerPkg]) return eco.nested[dep][consumerPkg];
   if (eco.packages && eco.packages[dep]) return eco.packages[dep].version;

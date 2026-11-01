@@ -31,6 +31,8 @@ export function simulateTool(config) {
         type: "object",
         additionalProperties: false,
         properties: {
+          mode: { type: "string", required: true },
+          impact: { type: "object", required: true, additionalProperties: true },
           ops: { type: "object", required: true, additionalProperties: true },
           unknownDeps: { type: "array", required: true, items: { type: "string" } },
           baseline: { type: "object", required: true, additionalProperties: true },
@@ -44,12 +46,19 @@ export function simulateTool(config) {
       render(_args, v) {
         const lines = [
           "## 组合模拟",
-          "操作: add " + v.ops.add.length + " · remove " + v.ops.remove.length + " · override " + v.ops.override.length,
+          "操作: add " + v.ops.add.length + " · remove " + v.ops.remove.length + " id(s)/" + (v.ops.removeRows || 0) + " 行 · override " + v.ops.override.length,
           "基线: health " + v.baseline.health + " (avg " + v.baseline.avgScore + ", " + v.baseline.conflicts.total + " 冲突)",
           "合并后: health " + v.merged.health + " (avg " + v.merged.avgScore + ", " + v.merged.conflicts.total + " 冲突, " + v.merged.pluginCount + " 行)",
           "风险增量: " + (v.riskDelta > 0 ? "+" : "") + v.riskDelta,
           "判定: " + v.verdict
         ];
+        const imp = v.impact || {};
+        if ((imp.removedPackages || []).length) {
+          lines.push("假设推演（未执行）: 移除 " + imp.removedPackages.join(", "));
+          if ((imp.dependents || []).length) lines.push("- 失去依赖: " + imp.dependents.map((d) => d.package + " ← " + d.via.join(",")).join("; "));
+          if ((imp.brokenServices || []).length) lines.push("- 中断服务: " + imp.brokenServices.map((x) => x.service + " ← " + x.consumers.join(",")).join("; "));
+          if ((imp.disappearedSignals || []).length) lines.push("- 消失信号: " + imp.disappearedSignals.map((x) => x.package + "(" + x.score + ")").join("; "));
+        }
         for (const c of v.newConflicts) lines.push("- 新增[" + c.severity + "] " + c.message + " (" + c.confidence + ")");
         for (const c of v.resolvedConflicts) lines.push("- 解除: " + c.message);
         for (const u of v.unknownDeps) lines.push("- 注意: " + u);

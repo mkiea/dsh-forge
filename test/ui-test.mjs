@@ -126,7 +126,9 @@ const app = windowMock.__DSH_APP__;
 check("client app exposed (__DSH_APP__)", !!app);
 // fire DOMContentLoaded so th click handlers + click delegation register
 if (doc._handlers["DOMContentLoaded"]) doc._handlers["DOMContentLoaded"]();
-check("workspace has module tabs", tabCount === 11, tabCount + " tabs");
+check("workspace has module tabs", tabCount === 13, tabCount + " tabs");
+check("online-operations page present", pageIds.includes("page-ops"));
+check("web × desktop bridge page present", pageIds.includes("page-bridge"));
 check("default page is guide", pageIds[0] === "page-guide", pageIds[0]);
 check("guide page active by default", pages[0] && pages[0].classList.contains("active"));
 // v0.1.6 入门引导 + 名词解释（tooltip）

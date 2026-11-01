@@ -12,16 +12,25 @@ const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.re
 // history dir is runtime-generated and gitignored; smoke uses the versioned snapshot instead
 const SNAP = process.env.DSH_FORGE_SMOKE_SNAP || path.join(REPO_ROOT, "data", "ecosystem.json");
 
-// Use find-up approach to locate dsh agent-presets directory
+// Use find-up approach to locate the shipped agent presets: the 0.2.x layout
+// ships `<id>.patch.yml` under dsh-web-app/presets, the legacy layout
+// `<id>/agent.cordis.yml` under dsh/config/agent-presets.
 function findPresetDir() {
   const candidates = [];
   if (process.env.DSH_FORGE_PRESETS) candidates.push(process.env.DSH_FORGE_PRESETS);
   const dshHome = process.env.DSH_HOME;
   const userHome = process.env.USERPROFILE;
-  if (dshHome) candidates.push(path.join(dshHome, "profiles", "web", "node_modules", "@deepseek-ai", "dsh", "config", "agent-presets"));
+  const roots = [];
+  if (dshHome) roots.push(path.join(dshHome, "profiles", "web", "node_modules"));
   if (userHome) {
-    candidates.push(path.join(userHome, ".dsh", "profiles", "web", "node_modules", "@deepseek-ai", "dsh", "config", "agent-presets"));
-    candidates.push(path.join(userHome, "node_modules", "@deepseek-ai", "dsh", "config", "agent-presets"));
+    roots.push(path.join(userHome, ".dsh", "profiles", "web", "node_modules"));
+    roots.push(path.join(userHome, ".dsh", "profiles", "node_modules"));
+    roots.push(path.join(userHome, "node_modules"));
+  }
+  for (const root of roots) {
+    candidates.push(path.join(root, "@deepseek-ai", "dsh-web-app", "presets"));
+    candidates.push(path.join(root, "@deepseek-ai", "dsh", "config", "agent-presets"));
+    candidates.push(path.join(root, "@deepseek-ai", "dsh-agent-presets"));
   }
   for (const c of candidates) { try { if (c && fs.existsSync(c)) return c; } catch { /* skip */ } }
   return null;

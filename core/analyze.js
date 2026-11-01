@@ -151,14 +151,21 @@ export function baselineVersion(packages) {
 }
 
 // Risk scoring per plugin. Signals -> weights (cap 100).
+// `*` accepts any version; harness packages are prerelease-only, so npm's
+// prerelease exclusion would otherwise flag every `*` dependency as unsat.
+function isWildcardRange(range) {
+  const t = String(range == null ? "" : range).trim();
+  return t === "" || t === "*" || /^[xX]$/.test(t);
+}
+
 export function riskScore(pl, ctx) {
-  const { edges, packages, installed, conflicts, baseline } = ctx;
+  const { edges, packages, installed, conflicts, baseline, partial } = ctx;
   let score = 0;
   const signals = [];
   const mine = edges.filter((e) => e.from === pl.id);
 
   for (const e of mine) {
-    if (e.satisfied === false) {
+    if (e.satisfied === false && !isWildcardRange(e.range)) {
       const w = e.kind === "plugin" ? 40 : 35;
       score += w;
       signals.push({
@@ -168,9 +175,11 @@ export function riskScore(pl, ctx) {
       });
     }
   }
-  // unmounted service-bearing peer (name-inferred provider counts as mounted)
+  // unmounted service-bearing peer (name-inferred provider counts as mounted).
+  // A partial scan (bundle patches unresolvable) cannot see the composed
+  // runtime, so "peer never composed" is unprovable there and must not score.
   for (const e of mine) {
-    if (!e.peer) continue;
+    if (!e.peer || partial) continue;
     if (e.toPackage) continue; // composed
     if (!e.to.startsWith(SCOPE)) continue;
     if (KNOWN_LIBS.has(e.to)) continue;
@@ -180,6 +189,10 @@ export function riskScore(pl, ctx) {
       signals.push({ kind: "alternate-variant-peer", weight: 10, detail: e.to + " is an alternate implementation of the same domain; not composed here" });
       continue;
     }
+    // Installed but not composed: a peer package that exists in the
+    // deployment (e.g. a runtime library bundled in the archive) is a
+    // dependency, not an unmounted plugin service.
+    if (e.installed) continue;
     score += 25;
     signals.push({ kind: "unmounted-peer-service", weight: 25, detail: e.to + " required but never composed" });
   }
@@ -219,13 +232,14 @@ export function assess(eco, conflicts) {
   const graph = buildGraph(eco);
   const baseline = baselineVersion(eco.packages);
   const conflictList = conflicts ? conflicts.conflicts : [];
+  const partial = !!(eco.missingBundles && eco.missingBundles.length);
   const risk = {};
   for (const pl of graph.plugins) {
     if (pl.disabled === true) {
       risk[pl.id] = { score: 0, severity: "disabled", signals: [], disabled: true };
       continue;
     }
-    risk[pl.id] = riskScore(pl, { edges: graph.edges, packages: eco.packages, installed: eco.installed, conflicts: { conflicts: conflictList }, baseline });
+    risk[pl.id] = riskScore(pl, { edges: graph.edges, packages: eco.packages, installed: eco.installed, conflicts: { conflicts: conflictList }, baseline, partial });
   }
   // apply runtime-verified corrections (source-level evidence)
   const verified = runtimeVerified(eco);

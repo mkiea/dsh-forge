@@ -6,6 +6,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { satisfies } from "./semver.js";
 import { packageOf, resolveInstalled } from "./composition.js";
+import { readAsarSources } from "./asar.js";
 import { CLIENT_PLANE_SERVICES } from "./knowledge.js";
 import { scanScopeHints, classifyCollision } from "./scope.js";
 
@@ -13,15 +14,38 @@ const BUILTIN_SERVICES = new Set([
   "harness", "app", "loader", "timer", "status", "server", "reload", "logger"
 ]);
 
+// A dependency range that intentionally accepts any version. npm's `*` does
+// not match prereleases, but harness packages are prerelease-only, so a `*`
+// dependency is not a version skew worth warning about.
+function isWildcardRange(range) {
+  const t = String(range == null ? "" : range).trim();
+  return t === "" || t === "*" || /^[xX]$/.test(t);
+}
+
+// A name collision matters only when both registrations live in the same fiber
+// scope: agent presets/groups mount plugins in isolated child contexts, so the
+// same tool name in two presets is legal (their registries never meet).
+function collisionsInScope(pkgs, scopePackages) {
+  if (!scopePackages.size) return [{ key: "", pkgs }];
+  const out = [];
+  for (const [key, set] of scopePackages) {
+    const hit = pkgs.filter((p) => set.has(p));
+    if (hit.length > 1) out.push({ key, pkgs: hit });
+  }
+  return out;
+}
+
 // scan patterns for tool registrations: literal defineTool blocks and
 // common dynamic variants (name via variable is NOT statically resolvable ->
 // reported as a scan limitation, not silently missed)
 const TOOL_RE = /defineTool\s*\(\s*\{[\s\S]*?name:\s*["']([^"']+)["']/g;
 const TOOL_RE2 = /registerTool\([^)]*?defineTool\(\s*\{[\s\S]*?name:\s*["']([^"']+)["']/g;
 const TOOL_RE3 = /toolName:\s*["']([^"']+)["']/g;
-// Service registration idioms: ctx.service('x'), ctx.provide('x'), and the
-// cordis class pattern: class X extends Service { constructor(ctx) { super(ctx, "x") } }
-const PROVIDE_RE = /(?:ctx\.(?:service|provide)\(\s*["']|super\(ctx,\s*["'])([^"']+)["']/g;
+// Service registration idioms: ctx.service('x') / ctx.provide('x'), and the
+// cordis class pattern super(ctx, 'x') (liveness-filtered in liveSuperProvides).
+const DIRECT_PROVIDE_RE = /ctx\.(?:service|provide)\(\s*["']([^"']+)["']/g;
+const SUPER_RE = /super\(\s*ctx\s*,\s*["']([^"']+)["']\s*\)/g;
+const CLASS_DECL_RE = /\bclass\s+([A-Za-z_$][\w$]*)/g;
 const INJECT_RE = /inject:\s*\[([^\]]*)\]/g;
 const GET_RE = /ctx\.get\(\s*["']([^"']+)["']/g;
 const IDENT_RE = /^[a-zA-Z][a-zA-Z0-9]*$/;
@@ -33,9 +57,7 @@ export function scanToolNames(packages) {
   for (const [p, m] of Object.entries(packages)) {
     const names = new Set();
     let pkgDynamic = false;
-    for (const f of sourceFiles(m.dir)) {
-      let text;
-      try { text = fs.readFileSync(f, "utf8"); } catch { continue; }
+    for (const { text } of readPackageSources(m)) {
       if (text.length > 400000) continue;
       for (const re of [TOOL_RE, TOOL_RE2, TOOL_RE3]) {
         re.lastIndex = 0;
@@ -60,16 +82,15 @@ export function scanServices(packages) {
   for (const [p, m] of Object.entries(packages)) {
     const pv = new Set();
     const cs = new Set();
-    for (const f of sourceFiles(m.dir)) {
+    for (const { file: f, text } of readPackageSources(m)) {
       // client-plane bundles (lib/client.js, lib/types/client*.js) register
       // browser-side services that look like host-plane collisions
       if (/[\\/]client\.js$|[\\/]types[\\/]client/.test(f)) continue;
-      let text;
-      try { text = fs.readFileSync(f, "utf8"); } catch { continue; }
       if (text.length > 400000) continue;
       let mm;
-      PROVIDE_RE.lastIndex = 0;
-      while ((mm = PROVIDE_RE.exec(text))) if (IDENT_RE.test(mm[1])) pv.add(mm[1]);
+      DIRECT_PROVIDE_RE.lastIndex = 0;
+      while ((mm = DIRECT_PROVIDE_RE.exec(text))) if (IDENT_RE.test(mm[1])) pv.add(mm[1]);
+      for (const s of liveSuperProvides(text)) pv.add(s);
       GET_RE.lastIndex = 0;
       while ((mm = GET_RE.exec(text))) if (IDENT_RE.test(mm[1])) cs.add(mm[1]);
       INJECT_RE.lastIndex = 0;
@@ -84,6 +105,32 @@ export function scanServices(packages) {
     if (cs.size) consumes[p] = [...cs];
   }
   return { provides, consumes };
+}
+
+// Bundlers inline dependency code into a plugin's shipped entry. That code can
+// contain `super(ctx, "svc")` classes that are never assigned, exported or
+// instantiated (for example a discarded IIFE), so a naive regex reports the
+// plugin as a service provider. Keep only registrations whose class is
+// reachable in code (declaration + at least one more reference).
+function liveSuperProvides(text) {
+  const code = stripComments(text);
+  const out = [];
+  let mm;
+  SUPER_RE.lastIndex = 0;
+  while ((mm = SUPER_RE.exec(code))) {
+    const before = code.slice(0, mm.index);
+    CLASS_DECL_RE.lastIndex = 0;
+    let cls = null, cm;
+    while ((cm = CLASS_DECL_RE.exec(before))) cls = cm[1];
+    if (!cls) { out.push(mm[1]); continue; }
+    const re = new RegExp("\\b" + cls.replace(/\$/g, "\\$") + "\\b", "g");
+    if ((code.match(re) || []).length > 1) out.push(mm[1]);
+  }
+  return out;
+}
+
+function stripComments(s) {
+  return s.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:\\])\/\/[^\n]*/g, "$1");
 }
 
 // kebab-case parts of a camelCase identifier: 'sessionPersistence' -> ['session','persistence']
@@ -127,6 +174,18 @@ function sourceFiles(dir) {
   return out;
 }
 
+// Shipped sources for one package: on-disk lib/src for a normal install, or the
+// archive entries for the desktop app (resources/app.asar).
+function readPackageSources(m) {
+  if (!m) return [];
+  if (m.asar) return readAsarSources(m.asar.path, m.asar.package);
+  const out = [];
+  for (const f of sourceFiles(m.dir)) {
+    try { out.push({ file: f, text: fs.readFileSync(f, "utf8") }); } catch { /* unreadable */ }
+  }
+  return out;
+}
+
 export function checkConflicts(eco, { graph } = {}) {
   const conflicts = [];
   const g = graph || buildGraphLite(eco);
@@ -134,8 +193,18 @@ export function checkConflicts(eco, { graph } = {}) {
 
   // 1) version conflicts
   const CORE_RUNTIME = new Set(["@deepseek-ai/cordis", "@deepseek-ai/cosmokit", "@deepseek-ai/schemastery", "@deepseek-ai/dsh"]);
+  // A row id disabled in every scope contributes no runtime surface.
+  const rowsById = new Map();
+  for (const r of rows || []) {
+    if (!rowsById.has(r.id)) rowsById.set(r.id, []);
+    rowsById.get(r.id).push(r);
+  }
+  const disabledIds = new Set(
+    [...rowsById].filter(([, rs]) => rs.every((r) => r.disabled === true)).map(([id]) => id)
+  );
   for (const e of g.edges) {
-    if (e.satisfied === false) {
+    if (disabledIds.has(e.from)) continue;
+    if (e.satisfied === false && !isWildcardRange(e.range)) {
       const coreDep = CORE_RUNTIME.has(e.to);
       conflicts.push({
         type: "version-conflict",
@@ -152,9 +221,27 @@ export function checkConflicts(eco, { graph } = {}) {
     }
   }
 
+  // Fiber scopes: rows nested in another row's config (agent presets, cordis
+  // groups) live in an isolated child context. Only compare registrations that
+  // can actually meet, and ignore disabled/unmounted packages entirely.
+  const scopePackages = new Map();
+  for (const r of rows || []) {
+    if (r.disabled === true) continue;
+    const p = packageOf(r.name);
+    if (!p || !packages[p]) continue;
+    const key = Array.isArray(r.scope) && r.scope.length ? r.scope.join(" > ") : "";
+    if (!scopePackages.has(key)) scopePackages.set(key, new Set());
+    scopePackages.get(key).add(p);
+  }
+  const activePackages = {};
+  for (const set of scopePackages.values()) {
+    for (const p of set) activePackages[p] = packages[p];
+  }
+  const scanPackages = Object.keys(activePackages).length ? activePackages : packages;
+
   // 2) tool-name collisions (prefer persisted scan results from snapshots)
-  const toolNames = eco.toolNames || scanToolNames(packages);
-  const scopeHints = eco.scopeHints || scanScopeHints(packages);
+  const toolNames = eco.toolNames || scanToolNames(scanPackages);
+  const scopeHints = eco.scopeHints || scanScopeHints(scanPackages);
   const byTool = new Map();
   for (const [p, names] of Object.entries(toolNames)) {
     if (!Array.isArray(names)) continue;
@@ -163,8 +250,10 @@ export function checkConflicts(eco, { graph } = {}) {
       byTool.get(n).push(p);
     }
   }
-  for (const [tool, pkgs] of byTool) {
-    if (pkgs.length > 1) {
+  for (const [tool, allPkgs] of byTool) {
+    for (const grp of collisionsInScope(allPkgs, scopePackages)) {
+      const pkgs = grp.pkgs;
+      if (pkgs.length < 2) continue;
       const cls = classifyCollision(tool, pkgs, scopeHints);
       const scopedVariant = cls.kind === "scoped-variant";
       conflicts.push({
@@ -172,20 +261,21 @@ export function checkConflicts(eco, { graph } = {}) {
         kind: scopedVariant ? "heuristic" : "contract",
         evidenceTier: "static-suspect",
         severity: scopedVariant ? "info" : "high",
-        message: "Tool name '" + tool + "' is registered by " + pkgs.join(", ") + (scopedVariant ? " (all registrations carry scope markers)" : ""),
+        message: "Tool name '" + tool + "' is registered by " + pkgs.join(", ") + (grp.key ? " in scope " + grp.key : "") + (scopedVariant ? " (all registrations carry scope markers)" : ""),
         evidence: "defineTool(name) found in shipped sources; scope hints: " + pkgs.map((p) => p + "=" + (scopeHints[p] ? scopeHints[p].hint : "unknown")).join(", "),
         impact: scopedVariant
           ? "同名注册均带作用域标记（agent.ctx/scoped）：可能是合法 per-agent 变体；若确为全局注册需人工核对。"
           : "Verified: the tools registry rejects the duplicate registration with a loud error (tool \"X\" is already registered) — the second plugin fails to mount and its features are unavailable.",
         advice: scopedVariant ? "核对作用域归属：per-agent 变体合法，全局注册需改名。" : "Rename one tool or mount only one of the packages.",
         confidence: scopedVariant ? "low" : "high",
-        packages: pkgs
+        packages: pkgs,
+        scope: grp.key || undefined
       });
     }
   }
 
   // 2b) dynamic tool-name registrations (explicit scan limitation)
-  const dynamicPackages = toolNames.__dynamicPackages || [];
+  const dynamicPackages = (toolNames.__dynamicPackages || []).filter((p) => !!scanPackages[p]);
   if (dynamicPackages.length) {
     conflicts.push({
       type: "tool-name-dynamic-scan-limitation",
@@ -202,7 +292,7 @@ export function checkConflicts(eco, { graph } = {}) {
   }
 
   // 3) service provider collisions + 4) missing providers
-  const { provides, consumes } = eco.services || scanServices(packages);
+  const { provides, consumes } = eco.services || scanServices(scanPackages);
   const byService = new Map();
   for (const [p, svcs] of Object.entries(provides)) {
     for (const s of svcs) {
@@ -210,20 +300,23 @@ export function checkConflicts(eco, { graph } = {}) {
       byService.get(s).push(p);
     }
   }
-  for (const [svc, pkgs] of byService) {
-    if (pkgs.length > 1) {
+  for (const [svc, allPkgs] of byService) {
+    for (const grp of collisionsInScope(allPkgs, scopePackages)) {
+      const pkgs = grp.pkgs;
+      if (pkgs.length < 2) continue;
       conflicts.push({
         type: "service-collision",
         service: svc,
         kind: "contract",
         evidenceTier: "static-suspect",
         severity: "high",
-        message: "Service '" + svc + "' is provided by " + pkgs.join(", "),
+        message: "Service '" + svc + "' is provided by " + pkgs.join(", ") + (grp.key ? " in scope " + grp.key : ""),
         evidence: "ctx.service()/ctx.provide() registrations in shipped sources",
         impact: "待实证：cordis 注册为 fiber 作用域（卸载自动注销）；同作用域重复 provide 的拒绝/覆盖语义在源码中未见明确分支——需运行期实证后定论。",
         advice: "Keep a single provider for the service, or split service names.",
         confidence: "medium",
-        packages: pkgs
+        packages: pkgs,
+        scope: grp.key || undefined
       });
     }
   }
@@ -270,14 +363,14 @@ export function checkConflicts(eco, { graph } = {}) {
 
   // 5) row overrides across layers (patch semantics, informational)
   for (const row of rows) {
-    if (row.layers.length > 1) {
+    if ((row.layers || []).length > 1) {
       conflicts.push({
         type: "row-override",
         row: row.id,
         kind: "contract",
         evidenceTier: "contract-source",
         severity: "info",
-        message: "Row '" + row.id + "' is written by multiple layers: " + row.layers.join(" -> "),
+        message: "Row '" + row.id + "' is written by multiple layers: " + (row.layers || []).join(" -> "),
         evidence: "composition layers",
         impact: "Later layers win per row; earlier config is discarded entirely (no merge).",
         advice: "Intended patch behavior; keep single-purpose rows in one layer.",

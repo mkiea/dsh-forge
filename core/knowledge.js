@@ -5,6 +5,7 @@
 "use strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { compareVersions, parseVersion } from "./semver.js";
 
 // Packages that are pure shared libraries (no runtime service of their own).
 // Anything else under @deepseek-ai/dsh-* is treated as potentially
@@ -37,7 +38,9 @@ export const KNOWN_LIBS = new Set([
   "@deepseek-ai/dsh-launch-environment",
   "@deepseek-ai/dsh-output-retention",
   "@deepseek-ai/dsh-subagent-in-process-driver",
-  "@deepseek-ai/dsh-client-ui-attachment"
+  "@deepseek-ai/dsh-client-ui-attachment",
+  // 0.1.7 pure helper library (no runtime service of its own)
+  "@deepseek-ai/dsh-util-values"
 ]);
 
 // Runtime verification checklist (reports/runtime-verification-checklist.md).
@@ -83,6 +86,48 @@ export function knownPatterns(ctx) {
       evidence: "harnessVersion=" + ctx.harnessVersion + " vs PATTERNS_HARNESS_VERSION",
       confidence: "high"
     });
+  }
+  // 0.1.7 scan focus #1: the vendored layout. Plugins ship INSIDE the dsh
+  // package (<nm>/@deepseek-ai/dsh/node_modules), so a scan rooted only at the
+  // global node_modules sees rows but no manifests. Surfacing it explains why
+  // package/version checks can look empty.
+  const vendoredPkg = Object.values(ctx.packages || {}).some((m) => m && m.dir && /[\\/]@deepseek-ai[\\/]dsh[\\/]node_modules[\\/]/.test(m.dir));
+  if (vendoredPkg || (ctx.nmRoot && /[\\/]@deepseek-ai[\\/]dsh[\\/]node_modules$/.test(ctx.nmRoot))) {
+    notes.push({
+      id: "vendored-plugin-root",
+      severity: "info",
+      message: "harness 0.1.7+ 采用内嵌布局：插件包位于 <nm>/@deepseek-ai/dsh/node_modules 内。dsh-forge 已同时探测该内嵌根；若自定义 --root，请指向这个内嵌 node_modules 才能收集到全部清单。",
+      evidence: "nmRoot=" + (ctx.nmRoot || "(auto)") + (vendoredPkg ? ", vendored packages detected" : ""),
+      confidence: "high"
+    });
+  }
+  // 0.1.7 scan focus #2: dsh-llm removed exports (CallId et al). A dsh-tools
+  // older than 0.1.7 still imports them, producing an ESM link-time SyntaxError
+  // at import — invisible to static scans, caught by --dynamic.
+  const harnessV = ctx.harnessVersion;
+  const toolsV = (ctx.installed && ctx.installed["@deepseek-ai/dsh-tools"]) || null;
+  // 0.1.7 line starts at rc.2; compare parsed versions (the prerelease-aware
+  // comparator takes AST nodes, NOT raw strings).
+  const v017 = parseVersion("0.1.7-rc.2");
+  const harnessParsed = parseVersion(harnessV);
+  if (harnessParsed && v017 && compareVersions(harnessParsed, v017) >= 0) {
+    notes.push({
+      id: "dsh-llm-callid-removed",
+      severity: "info",
+      message: "harness 0.1.7 的 dsh-llm 移除了 CallId 等导出；任何仍从 dsh-llm 导入这些符号的插件都会在 import 时抛 \"does not provide an export named\"。静态扫描看不到链接期错误，请用 check --dynamic 或 verify_rows dynamic:true 定位。",
+      evidence: "@deepseek-ai/dsh-llm@0.1.7 exports（无 CallId）",
+      confidence: "high"
+    });
+    const toolsParsed = parseVersion(toolsV);
+    if (toolsParsed && compareVersions(toolsParsed, v017) < 0) {
+      notes.push({
+        id: "dsh-tools-pre-0.1.7",
+        severity: "high",
+        message: "当前部署的 dsh-tools 为 " + toolsV + "，低于 0.1.7：它与 0.1.7 的 dsh-llm 不匹配（旧版仍在导入已删除的 CallId），装载期会直接失败。请把 dsh-tools 升级到 ^0.1.7-rc.2。",
+        evidence: "installed[@deepseek-ai/dsh-tools]=" + toolsV + ", harnessVersion=" + harnessV,
+        confidence: "high"
+      });
+    }
   }
 
   const sq = row("session-query-sqlite");

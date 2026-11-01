@@ -16,10 +16,12 @@ import { fileURLToPath } from "node:url";
 import { isLoopbackHost, openBrowser, startWebServer } from "../core/web-server.js";
 import {
   runAnalysis, runAnalysisAsync, clearAnalysisCache, buildCheckReport, simulateUpgrade,
+  probeEcosystem, mergeDynamicFindings, DEFAULT_PROBE_TIMEOUT_MS,
   buildMarkdownReport, writeReport,
   UI_MODE, decideUiMode, decideAfterPortProbe,
   hasDesktop, COMPLEXITY_LIGHT, COMPLEXITY_HEAVY,
-  validatePolicy
+  validatePolicy, resolveDshHome, buildBridge, loadTruthEcosystem, DEFAULT_BRIDGE_PROFILES,
+  planSync, applySync, DEFAULT_SYNC_TIMEOUT_MS
 } from "../core/index.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -45,7 +47,9 @@ function parseArgs(argv) {
     host: DEFAULT_HOST,
     dataset: process.env.DSH_FORGE_DATASET || null,
     profile: process.env.DSH_FORGE_PROFILE || "web",
-    to: null
+    to: null,
+    dynamic: false,
+    dynamicTimeout: DEFAULT_PROBE_TIMEOUT_MS
   };
   const positional = [];
   for (let i = 0; i < argv.length; i++) {
@@ -57,7 +61,21 @@ function parseArgs(argv) {
     else if (a === "--host") { out.host = argv[++i] || out.host; }
     else if (a === "--dataset") { out.dataset = argv[++i] || out.dataset; }
     else if (a === "--profile") { out.profile = argv[++i] || out.profile; }
+    else if (a === "--profiles") { out.profiles = argv[++i] || out.profiles; }
+    else if (a === "--root") { out.root = argv[++i] || out.root; }
+    else if (a === "--static") out.static = true;
+    else if (a === "--apply") out.apply = true;
+    else if (a === "--confirm") { out.confirm = argv[++i] || out.confirm; }
+    else if (a === "--reference") { out.reference = argv[++i] || out.reference; }
+    else if (a === "--packages") { out.packages = argv[++i] || out.packages; }
+    else if (a === "--no-preflight") out.preflight = false;
+    else if (a === "--no-probe") out.probe = false;
+    else if (a === "--include-runtime") out.includeRuntime = true;
+    else if (a === "--force") out.force = true;
+    else if (a === "--sync-timeout") { out.syncTimeout = Number(argv[++i] || out.syncTimeout); }
     else if (a === "--policy") { out.policy = argv[++i] || out.policy; }
+    else if (a === "--dynamic") out.dynamic = true;
+    else if (a === "--dynamic-timeout") { out.dynamicTimeout = Number(argv[++i] || out.dynamicTimeout); }
     else if (a === "--help" || a === "-h") out.help = true;
     else if (a === "--version" || a === "-V") out.version = true;
     else if (!a.startsWith("-")) positional.push(a);
@@ -74,12 +92,29 @@ Usage:
   dsh-forge web|serve      start web server and open browser
   dsh-forge check|ci       plain CLI output, no UI (CI/CD scripts)
   dsh-forge plan --to X    offline upgrade-path prediction (advisory, never gates)
+  dsh-forge bridge         web ↔ desktop connector: compare both compositions
+  dsh-forge sync           align web plugins/versions to the desktop baseline
+                           (dry-run by default; --apply installs and verifies)
 
 Options:
   --profile <name>         profile to analyze (default: web)
+  --profiles <a,b>         bridge/sync: profiles to compare (default: web,desktop)
+  --root <dir>             bridge/sync: node_modules root used to resolve bundles
+  --static                 bridge: scan composition files only (skip dump-config truth)
   --dataset <path>         offline ecosystem snapshot JSON
   --to <pkg@ver,...>       plan: target versions, comma-separated (offline)
+  --apply                  sync: actually install the planned versions
+  --confirm <token>        sync: required with --apply (sync-<profile>)
+  --reference <name>       sync: baseline side (default: desktop; desktop is read-only)
+  --packages <a,b>         sync: limit alignment to these packages
+  --no-preflight           sync: skip registry existence checks before installing
+  --no-probe               sync: skip post-install dynamic import verification
+  --include-runtime        sync: also install desktop @deepseek-ai/* runtime packages into web
+  --force                  sync: proceed despite unresolved bundles (unsafe)
+  --sync-timeout <ms>      sync: install command timeout (default: ${DEFAULT_SYNC_TIMEOUT_MS})
   --policy <file.json>     gate policy (severity/tier/confidence -> block|warn|allow); opt-in verdict for check; absent = frozen gate
+  --dynamic                check: also import every package entry at runtime (catches removed exports like dsh-llm CallId)
+  --dynamic-timeout <ms>   runtime probe batch timeout (default: ${DEFAULT_PROBE_TIMEOUT_MS})
   --port <n>               web port (default: 3060, env DSH_FORGE_PORT)
   --host <addr>            web bind address (default: 127.0.0.1)
   --json, -j               machine-readable check output
@@ -138,6 +173,7 @@ function plainSummary(a) {
     "  truthSource    : " + (a.ecosystem.truthSource || "scan"),
     "  harnessVersion : " + (a.ecosystem.harnessVersion || "unknown")
   ];
+  if (a.ecosystem.layout === "desktop-asar") lines.push("  layout         : desktop-asar (resources/app.asar; profile not dumpable)");
   return lines.join("\n");
 }
 function jsonSummary(a, opts) {
@@ -349,6 +385,136 @@ function runInteractiveTui(getAnalysis, opts, initialAnalysis) {
   process.stdin.on("data", onData);
 }
 
+// Web ↔ desktop bridge: plain-text view of the same payload /api/bridge serves.
+function bridgeSummary(r) {
+  const L = ["dsh-forge bridge · " + r.generatedAt,
+    "home: " + (r.home || "(unknown)") + " · desktop asar: " + (r.desktop.available ? r.desktop.asar : "not found")];
+  for (const p of r.profiles) {
+    L.push("  " + String(p.name).padEnd(10) + " rows " + p.rows + " · packages " + p.packageCount +
+      " · harness " + (p.harnessVersion || "?") + " · " + (p.truthSource || "scan") +
+      (p.error ? " · ERROR " + p.error : ""));
+    if (p.missingBundles && p.missingBundles.length) {
+      L.push("             missing bundles: " + p.missingBundles.join(", "));
+    }
+  }
+  for (const x of r.pairs) {
+    L.push("");
+    L.push(x.left + " × " + x.right + ": " + x.verdict + " (similarity " + x.similarity + "%)");
+    L.push("  shared " + x.matched + "/" + x.union + " · rows " + x.rows.left + " vs " + x.rows.right +
+      " · harness " + (x.harness.left || "?") + " vs " + (x.harness.right || "?") + (x.harness.drift ? " (drift)" : ""));
+    if (x.complete === false) {
+      const parts = [];
+      if (x.missing && x.missing.left && x.missing.left.length) parts.push(x.left + ": " + x.missing.left.join(", "));
+      if (x.missing && x.missing.right && x.missing.right.length) parts.push(x.right + ": " + x.missing.right.join(", "));
+      L.push("  PARTIAL — unresolved bundles (" + parts.join("; ") +
+        "); similarity is limited by reachability — install that profile's harness, or pass --root <node_modules> for a complete comparison");
+    }
+    if (x.shared.length) L.push("  version drift: " + clampList(x.shared.map((s) => s.package + " " + s.left + "→" + s.right)));
+    if (x.onlyLeft.length) L.push("  only " + x.left + ": " + clampList(x.onlyLeft));
+    if (x.onlyRight.length) L.push("  only " + x.right + ": " + clampList(x.onlyRight));
+  }
+  return L.join("\n");
+}
+
+// Keep long package lists readable in a terminal; the JSON output stays complete.
+function clampList(items, max = 12) {
+  if (items.length <= max) return items.join(", ");
+  return items.slice(0, max).join(", ") + " … (+" + (items.length - max) + " more)";
+}
+
+// Shared payload for `bridge` and `sync`: non-desktop profiles prefer
+// dump-config ground truth, desktop is always an asar-enhanced static scan.
+async function collectBridgePayload(opts, profiles) {
+  const home = resolveDshHome() || process.env.DSH_HOME || undefined;
+  const ecosystems = {};
+  if (opts.static !== true) {
+    for (const name of profiles) {
+      if (name === "desktop") continue;
+      try {
+        const lt = await loadTruthEcosystem({ home, profile: name });
+        if (lt && lt.ok && lt.ecosystem) ecosystems[name] = lt.ecosystem;
+      } catch { /* fall back to the static scan for this profile */ }
+    }
+  }
+  const bridge = buildBridge({ home, profiles, ecosystems, root: opts.root });
+  return { home, bridge };
+}
+
+// Plain-text view of the alignment plan (same object POST/GET /api/sync serves).
+function syncSummary(plan) {
+  const L = ["dsh-forge sync · " + plan.generatedAt,
+    "web: " + plan.web + " ← reference: " + plan.reference + " · desktop: " + (plan.desktopAvailable ? plan.desktop : "未检测到")];
+  if (plan.status === "no-desktop") L.push("状态: no-desktop — 未检测到桌面端归档，没有可对齐的第二端");
+  else L.push("状态: " + plan.status + (plan.ok
+    ? (plan.actions.length ? " · 待对齐 " + plan.actions.length + " 个插件" : " · 已对齐")
+    : " · 需处理 " + plan.blocked.length + " 个阻塞项"));
+  if (plan.harness && plan.harness.drift) {
+    const h = plan.harness;
+    L.push("harness: web " + (h.web || "?") + " vs desktop " + (h.desktop || "?") +
+      (h.action && h.action.blocked ? "（桌面端需更新）" : " → web 对齐到 " + (h.action && h.action.to)));
+    if (h.action && h.action.command) L.push("  " + h.action.command);
+  }
+  const byDirection = { upgrade: [], downgrade: [], align: [], add: [] };
+  for (const a of plan.actions) {
+    if (a.kind !== "install") continue;
+    (byDirection[a.action === "add" ? "add" : a.direction] || byDirection.align).push(
+      a.package + " " + (a.from || "—") + " → " + a.to
+    );
+  }
+  for (const key of ["upgrade", "downgrade", "align", "add"]) {
+    if (!byDirection[key].length) continue;
+    L.push("  " + key + " (" + byDirection[key].length + "): " + clampList(byDirection[key]));
+  }
+  if (!plan.actions.length && plan.status === "ok") L.push("  无需改动：两端版本一致");
+  for (const b of plan.blocked) {
+    L.push("  BLOCKED [" + b.scope + "]" + (b.package ? " " + b.package : b.side ? " " + b.side : "") + ": " + b.reason);
+  }
+  for (const d of plan.desktopMissing) {
+    L.push("  桌面端缺口: " + d.package + "@" + (d.version || "?") + " — " + d.reason);
+  }
+  if (plan.desktopRuntime.length) {
+    L.push("  桌面端运行时包（未装入 web）: " + plan.desktopRuntime.length + " 个 — " +
+      clampList(plan.desktopRuntime.map((d) => d.package)) + "；需要时加 --include-runtime");
+  }
+  for (const w of plan.warnings) L.push("  ! " + w);
+  if (plan.install) {
+    L.push("安装计划: " + plan.install.count + " 个包 / " + plan.install.batches.length + " 批");
+    for (const batch of plan.install.batches) L.push("  " + batch.command);
+    L.push("执行: dsh-forge sync --apply --confirm sync-" + plan.web);
+  }
+  return L.join("\n");
+}
+
+function syncResultSummary(r) {
+  const L = [];
+  if (r.applied) L.push(r.ok ? "安装完成并通过验证" : "安装后验证失败，已回滚");
+  else if (r.skipped === "nothing-to-install") L.push("无需安装：两端已对齐");
+  else if (r.skipped === "no-desktop") L.push("无可对齐的桌面端");
+  else L.push("未执行安装" + (r.error ? "：" + r.error : ""));
+  for (const s of r.steps || []) {
+    L.push((s.ok ? "  OK   " : "  FAIL ") + s.command);
+    if (!s.ok && s.stderr) L.push("        " + String(s.stderr).split(/\r?\n/)[0]);
+  }
+  if (r.preflight && (r.preflight.unavailable.length || r.preflight.unknown.length)) {
+    L.push("预检: 不可用 " + r.preflight.unavailable.length + " · 未知 " + r.preflight.unknown.length +
+      (r.preflight.unavailable.length ? "（" + clampList(r.preflight.unavailable) + "）" : ""));
+  }
+  const v = r.verification;
+  if (v && !v.skipped) {
+    L.push("验证: 版本 " + (v.mismatches.length ? "不匹配 " + v.mismatches.length : "全部匹配") +
+      " · 动态导入 " + (v.dynamic ? v.dynamic.ok + "/" + v.dynamic.probed : "未执行"));
+    for (const m of v.mismatches || []) L.push("  " + m.package + ": 期望 " + m.expected + " 实际 " + (m.actual || "不可见"));
+    for (const f of v.loadFailures || []) L.push("  " + f.package + ": 导入失败（" + f.category + "） " + (f.error || ""));
+    for (const w of v.loadWarnings || []) L.push("  " + w.package + ": 导入告警（" + w.category + "） " + (w.error || ""));
+  }
+  if (r.rollback) {
+    L.push("已回滚 " + r.rollback.restored.length + " 个文件" +
+      (r.rollback.removed.length ? "，删除 " + r.rollback.removed.length + " 个新文件" : ""));
+    L.push("需要恢复依赖请执行: " + r.rollback.command);
+  }
+  return L.join("\n");
+}
+
 async function startWeb(initialAnalysis, opts) {
   const requested = opts.port;
   const degrade = (analysis) => {
@@ -358,10 +524,20 @@ async function startWeb(initialAnalysis, opts) {
       console.log(opts.json ? jsonSummary(analysis, opts) : plainSummary(analysis));
     }
   };
+  const home = resolveDshHome() || process.env.DSH_HOME;
+  const profileDir = home && opts.profile ? path.join(home, "profiles", opts.profile) : undefined;
   const server = await startWebServer({
     host: opts.host,
     port: requested,
     open: opts.open,
+    profile: opts.profile,
+    profileDir,
+    home: home || undefined,
+    root: opts.root,
+    bridgeProfiles: [opts.profile, "desktop"],
+    datasetPath: opts.dataset,
+    historyDir: HISTORY_DIR || undefined,
+    autoArchive: process.env.DSH_FORGE_AUTO_ARCHIVE !== "0",
     initialAnalysis,
     refresh: () => { clearAnalysisCache(); return runAnalysisAsync({ profile: opts.profile, datasetPath: opts.dataset }); },
     reportOpts,
@@ -416,7 +592,62 @@ async function main() {
     return;
   }
 
-  const analysis = await loadAnalysisAsync(opts);
+  // bridge: compare the web profile with the desktop app archive without
+  // loading a full analysis first. Non-desktop profiles prefer dump-config
+  // ground truth (the same truth source the dashboard uses); desktop is always
+  // an asar-enhanced static scan because the app refuses --dump-config.
+  if (opts.command === "bridge") {
+    const profiles = opts.profiles
+      ? String(opts.profiles).split(",").map((s) => s.trim()).filter(Boolean)
+      : DEFAULT_BRIDGE_PROFILES.slice();
+    const { bridge } = await collectBridgePayload(opts, profiles);
+    console.log(opts.json ? JSON.stringify(bridge, null, 2) : bridgeSummary(bridge));
+    return;
+  }
+
+  // sync: align the web profile to the desktop edition. The plan is always
+  // produced first; --apply installs the exact versions, then re-collects the
+  // composition and dynamically imports the touched packages. A failed install
+  // or verification restores the profile files instead of leaving a half state.
+  if (opts.command === "sync") {
+    const profiles = opts.profiles
+      ? String(opts.profiles).split(",").map((s) => s.trim()).filter(Boolean)
+      : [opts.profile, "desktop"].filter(Boolean);
+    const { home, bridge } = await collectBridgePayload(opts, profiles);
+    const plan = planSync(bridge, {
+      web: opts.profile,
+      desktop: "desktop",
+      reference: opts.reference,
+      packages: opts.packages ? String(opts.packages).split(",").map((s) => s.trim()).filter(Boolean) : null,
+      root: opts.root,
+      force: opts.force === true,
+      includeRuntime: opts.includeRuntime === true
+    });
+    if (!opts.apply) {
+      console.log(opts.json ? JSON.stringify(plan, null, 2) : syncSummary(plan));
+      return;
+    }
+    const result = await applySync(plan, {
+      apply: true,
+      confirm: opts.confirm,
+      home,
+      root: opts.root,
+      preflight: opts.preflight !== false,
+      probe: opts.probe !== false,
+      timeoutMs: opts.syncTimeout,
+      probeTimeoutMs: opts.dynamicTimeout
+    });
+    if (opts.json) console.log(JSON.stringify({ plan, result }, null, 2));
+    else {
+      console.log(syncSummary(plan));
+      console.log("");
+      console.log(syncResultSummary(result));
+    }
+    if (!result.ok) process.exitCode = 1;
+    return;
+  }
+
+  let analysis = await loadAnalysisAsync(opts);
 
   // plan: offline upgrade-path prediction — advisory only, never gate-exit.
   if (opts.command === "plan") {
@@ -443,6 +674,19 @@ async function main() {
   console.error("[dsh-forge] mode decision: " + decision.mode + " — " + decision.reasons.join("; "));
 
   if (decision.mode === UI_MODE.CHECK) {
+    // --dynamic: opt-in runtime import probe. Results are merged as
+    // runtime-probe findings before the gate so link-time failures (e.g. a
+    // removed dsh-llm export) can block CI, not just static suspicions.
+    if (opts.dynamic) {
+      const probe = await probeEcosystem(analysis.ecosystem, { timeoutMs: opts.dynamicTimeout });
+      analysis = mergeDynamicFindings(analysis, probe);
+      const dp = analysis.dynamicProbe || {};
+      console.error("[dsh-forge] dynamic probe: " + dp.probed + " packages, " + dp.failed + " failed, " + dp.elapsedMs + "ms" +
+        (dp.timedOut ? " (batch timed out; unfinished packages reported as unconfirmed)" : ""));
+      for (const r of (probe.results || [])) {
+        if (!r.ok) console.error("  [" + r.category + "] " + r.package + ": " + String(r.error || "").slice(0, 160));
+      }
+    }
     if (opts.json) console.log(jsonSummary(analysis, opts));
     else console.log(plainSummary(analysis));
     const gate = buildCheckReport(analysis, { policy: opts.policyObj }).gate;

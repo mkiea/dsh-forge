@@ -52,7 +52,9 @@ async function selectEco(args, config) {
     }
   }
   const eco = collectEcosystem(opts);
-  eco.truthFallback = "scan (dump-config unavailable; scan reconstructs from source and may diverge from the resolved composition)";
+  eco.truthFallback = eco.layout === "desktop-asar"
+    ? "scan (desktop app profile is managed by Electron; harness packages read from resources/app.asar)"
+    : "scan (dump-config unavailable; scan reconstructs from source and may diverge from the resolved composition)";
   return { eco, opts };
 }
 

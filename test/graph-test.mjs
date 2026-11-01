@@ -6,6 +6,8 @@
 //  B) clicking a node fills the right panel with 前置(→)/后置(←)
 //  C) 假设模拟 addRow() makes the new component appear in the graph
 //  D) round-2/3/4 graph helpers survive (adaptive filter, fitText)
+//  E) node-editor interactions: drag / palette add / Delete remove / restore /
+//     auto layout / external-lib toggle / edge evidence inspector
 import * as fs from "node:fs";
 import * as path from "node:path";
 import vm from "node:vm";
@@ -53,9 +55,12 @@ function makeElement(id) {
 }
 
 const elements = {};
-for (const id of ["q", "fLayer", "fSev", "fStatus", "rowCount", "simAdd", "simRemove", "simResult", "gDetail", "gZoomIn", "gZoomOut", "gZoomReset"]) elements[id] = makeElement(id);
+for (const id of ["q", "fLayer", "fSev", "fStatus", "rowCount", "simAdd", "simRemove", "simResult", "gDetail", "gZoomIn", "gZoomOut", "gZoomReset", "gFit", "gAuto", "gExt", "gClear", "gPalAdd", "gPalRemoved", "gPalAddCount", "gPalRemCount", "gPalSearch", "gTrash"]) elements[id] = makeElement(id);
 const graphHost = makeElement("dshGraph");
 elements.dshGraph = graphHost;
+// The generic mock rect covers the whole viewport; the drop-out target must
+// be a real (empty) rectangle or every node drag would count as a removal.
+elements.gTrash.getBoundingClientRect = () => ({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 });
 const tbody = makeElement("tbody");
 const doc = {
   _handlers: {},
@@ -123,6 +128,77 @@ check("adaptiveFilter helper present", clientSrc.indexOf("function adaptiveFilte
 check("fitText helper present", clientSrc.indexOf("function fitText") >= 0);
 check("importantEdge helper present", clientSrc.indexOf("function importantEdge") >= 0);
 check("graph detail panel re-rendered after add", elements.gDetail.innerHTML.length > 0);
+
+// ---- E) node-editor interactions (ComfyUI-style) ----
+check("palette rendered with addable candidates", elements.gPalAdd.innerHTML.indexOf("data-add=") >= 0);
+check("palette renders external-lib toggle + auto layout controls", clientSrc.indexOf("function wireGraphControls") >= 0 && clientSrc.indexOf("updateNodeVisual") >= 0);
+const posOf = (pkg) => {
+  const re = new RegExp('data-pkg="' + esc(pkg) + '"[^>]*transform="translate\\(([-0-9.]+),([-0-9.]+)\\)"');
+  const mm = graphHost.innerHTML.match(re);
+  return mm ? { x: Number(mm[1]), y: Number(mm[2]) } : null;
+};
+const basePos = posOf("dsh-forge");
+graphHost.onmousedown({ target: { getAttribute: (k) => (k === "data-pkg" ? "dsh-forge" : null), parentNode: graphHost }, clientX: 400, clientY: 300 });
+doc._handlers["mousemove"]({ clientX: 460, clientY: 340 });
+doc._handlers["mousemove"]({ clientX: 520, clientY: 380 });
+doc._handlers["mouseup"]({ clientX: 520, clientY: 380 });
+const draggedPos = posOf("dsh-forge");
+check("node drag moves the card", !!basePos && !!draggedPos && (draggedPos.x !== basePos.x || draggedPos.y !== basePos.y),
+  JSON.stringify(basePos) + " -> " + JSON.stringify(draggedPos));
+check("drag re-renders node card", graphHost.innerHTML.indexOf('<g class="g-node') >= 0);
+check("dragged node is not silently selected", elements.gDetail.innerHTML.indexOf("依赖图谱 · 总览") >= 0);
+
+// palette click-to-add goes through the same 假设模拟 state as addRow()
+const paletteName = "@forge/sim-palette-new";
+data.candidates.push({ name: paletteName, ver: "9.9.9", deps: [{ dep: "dsh-attachment", ok: true, range: "*" }] });
+elements.gPalAdd.onclick({ target: { getAttribute: (k) => (k === "data-add" ? paletteName : null), parentNode: elements.gPalAdd } });
+check("palette click adds a node", graphHost.innerHTML.indexOf('data-pkg="' + esc(paletteName) + '"') >= 0, paletteName);
+check("palette add lands in simulation state", app.state.added.some((a) => a.name === paletteName));
+
+// selection + Delete removes a composed node (hypothetical), palette can restore
+// A real click is mousedown -> mouseup -> click; the mock must do the same so
+// the drag-suppression flag (G.moved) is reset before the click.
+graphHost.onmousedown({ target: { parentNode: graphHost }, clientX: 10, clientY: 10 });
+doc._handlers["mouseup"]({ clientX: 10, clientY: 10 });
+graphHost.onclick({ target: { getAttribute: (k) => (k === "data-pkg" ? "dsh-forge" : null), parentNode: graphHost } });
+doc._handlers["keydown"]({ key: "Delete", target: { tagName: "DIV" }, preventDefault() { } });
+check("Delete removes the selected node", graphHost.innerHTML.indexOf('data-pkg="dsh-forge"') < 0);
+check("removed component listed as restorable", elements.gPalRemoved.innerHTML.indexOf('data-restore="dsh-forge"') >= 0);
+check("removal marks composition rows as hypothetical", app.state.removed.length > 0);
+elements.gPalRemoved.onclick({ target: { getAttribute: (k) => (k === "data-restore" ? "dsh-forge" : null), parentNode: elements.gPalRemoved } });
+check("palette restore brings the node back", graphHost.innerHTML.indexOf('data-pkg="dsh-forge"') >= 0);
+check("restore clears hypothetical removals", app.state.removed.length === 0);
+
+// auto layout resets the manual grid
+elements.gAuto.onclick();
+const relaid = posOf("dsh-forge");
+check("auto layout restores the layer grid position", !!relaid && !!basePos && relaid.x === basePos.x && relaid.y === basePos.y,
+  JSON.stringify(relaid));
+
+// external libraries can be hidden/shown without touching composition rows
+const extDep = (data.rows.find((r) => r.deps.some((d) => d.kind === "external")) || { deps: [] }).deps.find((d) => d.kind === "external");
+if (extDep) {
+  const before = graphHost.innerHTML.length;
+  elements.gExt.onclick();
+  const hiddenLen = graphHost.innerHTML.length;
+  check("hide external libs shrinks the canvas", hiddenLen < before && graphHost.innerHTML.indexOf('data-pkg="' + esc(extDep.dep) + '"') < 0, String(before) + "->" + String(hiddenLen));
+  check("ext toggle button reflects state", String(elements.gExt.textContent).indexOf("显示外部库") >= 0);
+  elements.gExt.onclick();
+  check("show external libs restores them", graphHost.innerHTML.indexOf('data-pkg="' + esc(extDep.dep) + '"') >= 0);
+} else {
+  check("external-lib toggle scenario available", false, "no external dep in snapshot");
+}
+
+// edge click opens the evidence inspector
+const causalHit = (data.causal && data.causal.edges || []).find((e) => e.id.indexOf("depends_on:plugin:") === 0);
+if (causalHit) {
+  graphHost.onclick({ target: { getAttribute: (k) => (k === "data-edge" ? causalHit.id : null), parentNode: graphHost } });
+  check("edge click fills evidence inspector", elements.gDetail.innerHTML.indexOf("证据层级") >= 0 || elements.gDetail.innerHTML.indexOf("清单声明依赖") >= 0);
+  elements.gClear.onclick();
+  check("clear selection returns to overview", elements.gDetail.innerHTML.indexOf("依赖图谱 · 总览") >= 0);
+} else {
+  check("causal edge available for inspector", false, "no depends_on edge in snapshot");
+}
 
 const report = [];
 report.push("# 依赖图谱测试报告（dsh-forge Graph Tests）");
